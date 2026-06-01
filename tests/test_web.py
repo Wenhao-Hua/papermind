@@ -26,7 +26,7 @@ def test_index_has_form_and_models():
     assert r.status_code == 200
     assert "PaperMind" in r.text and "<form" in r.text
     # model dropdown is populated from WEB_MODELS
-    assert "deepseek/deepseek-chat" in r.text
+    assert "deepseek/deepseek-v4-pro" in r.text
     assert any(label in r.text for _, label in WEB_MODELS)
 
 
