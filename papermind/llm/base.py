@@ -58,6 +58,31 @@ class LLMClient:
             if self.config.embedding_provider == "openai" and not self.config.embedding_model:
                 self.config.embedding_provider = "local"
 
+    # -- preflight ---------------------------------------------------------- #
+    def ensure_ready(self) -> None:
+        """Fail fast — before any download / parse / indexing — if this client's
+        model cannot run, with a clear, actionable message instead of a confusing
+        provider error 40 seconds in."""
+        if not _needs_key(self.model):  # ollama / local model
+            if not ollama_available():
+                name = self.model.split("/", 1)[-1]
+                raise LLMError(
+                    f"本地模式需要 Ollama，但没有检测到在运行的服务（模型 {self.model}）。\n"
+                    "  1) 安装：https://ollama.com\n"
+                    f"  2) 拉取模型：ollama pull {name}\n"
+                    "  3) 启动 Ollama 后重试。\n"
+                    "想零配置先体验，可看离线示例：papermind demo"
+                )
+            return
+        if _has_key_for(self.model, self.config):
+            return
+        raise LLMError(
+            f"模型 {self.model!r} 需要 API key，但没检测到，本地 Ollama 也不可用。三选一：\n"
+            "  A) 配置 key：papermind config set deepseek-key sk-...（或 openai-key / anthropic-key）\n"
+            "  B) 本地免费跑：装 Ollama(https://ollama.com) 后加 --local，例：papermind analyze <paper> --local\n"
+            "  C) 零配置先看离线示例：papermind demo"
+        )
+
     # -- text --------------------------------------------------------------- #
     def complete(
         self,
@@ -191,7 +216,7 @@ class LLMClient:
         except ImportError as exc:
             raise LLMError(
                 "Local embeddings need sentence-transformers. Install with: "
-                "pip install 'papermind[local-embeddings]'"
+                "pip install 'paper-mind[local-embeddings]'"
             ) from exc
         model_name = self.config.resolved_embedding_model()
         encoder = _get_local_encoder(model_name, SentenceTransformer)
@@ -428,6 +453,16 @@ def _extract(text: str, pattern: re.Pattern) -> Optional[str]:
 def _wrap_llm_error(exc: Exception, model: str) -> LLMError:
     msg = str(exc)
     low = msg.lower()
+    if model.lower().startswith(_KEYLESS_PREFIXES):  # local / Ollama
+        if any(s in low for s in ("connection", "connect", "refused", "max retries", "timed out", "timeout")):
+            return LLMError(
+                f"无法连接本地 Ollama（模型 {model}）。请确认已安装并在运行：\n"
+                "  安装 https://ollama.com，启动后重试（默认端口 11434）。\n"
+                f"原始错误：{msg}"
+            )
+        if any(s in low for s in ("not found", "does not exist", "try pulling", "no such model")):
+            name = model.split("/", 1)[-1]
+            return LLMError(f"本地模型未下载：{model}。先执行  ollama pull {name}  再重试。\n原始错误：{msg}")
     if "api key" in low or "authentication" in low or "no api_key" in low or "openai_api_key" in low:
         return LLMError(
             f"Authentication failed for model {model!r}.\n"
@@ -436,7 +471,7 @@ def _wrap_llm_error(exc: Exception, model: str) -> LLMError:
             f"Option B — run fully free & local with Ollama (no key needed):\n"
             f"            install from https://ollama.com, then:\n"
             f"            papermind analyze <paper> --model {OLLAMA_DEFAULT_MODEL}\n"
-            f"            (local embeddings: pip install 'papermind[local-embeddings]')\n"
+            f"            (local embeddings: pip install 'paper-mind[local-embeddings]')\n"
             f"Original error: {msg}"
         )
     if "model" in low and ("not found" in low or "does not exist" in low):

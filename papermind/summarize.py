@@ -24,6 +24,7 @@ def summarize(
     config = config or load_config()
     notice = (lambda msg: console.print(f"[dim]{msg}[/dim]")) if console is not None else None
     client = LLMClient(model=model, config=config, on_notice=notice)
+    client.ensure_ready()  # fail fast before download/parse if the model can't run
 
     resolved = resolve(source, config)
     if console is not None:

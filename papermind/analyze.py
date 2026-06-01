@@ -62,6 +62,8 @@ def analyze(
                 notice("已从缓存读取分析结果（未调用模型）；用 --refresh 重新分析。")
             return cached
 
+    client.ensure_ready()  # cache miss -> we will call the model: fail fast if it can't run
+
     steps = ["parse"] + [m for m in ALL_MODULES if m in modules]
     if with_figures and "technical" in modules:
         steps.append("figures")

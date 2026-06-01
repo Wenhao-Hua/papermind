@@ -41,6 +41,7 @@ class PaperChat:
         self.mode = mode
         notice = (lambda msg: console.print(f"[dim]{msg}[/dim]")) if console is not None else None
         self.client = LLMClient(model=model, config=self.config, on_notice=notice)
+        self.client.ensure_ready()  # fail fast before download/parse/index if the model can't run
 
         resolved = resolve(source, self.config)
         # Chat only needs text for indexing — skip the (potentially costly) figure work.

@@ -4,9 +4,12 @@ from __future__ import annotations
 
 from types import SimpleNamespace as NS
 
+import pytest
+
 from papermind.config import Config
+from papermind.errors import LLMError
 from papermind.llm import base
-from papermind.llm.base import OLLAMA_DEFAULT_MODEL, LLMClient, _chunk_delta, _usage_value
+from papermind.llm.base import OLLAMA_DEFAULT_MODEL, LLMClient, _chunk_delta, _usage_value, _wrap_llm_error
 from papermind.output.schema import Usage
 
 
@@ -149,3 +152,52 @@ def test_apply_local_forces_whole_stack(monkeypatch, tmp_path):
     env2 = {}
     assert _apply_local(True, "ollama/mistral", env2) is None
     assert env2["PAPERMIND_MODEL"] == "ollama/mistral"
+
+
+# --------------------------------------------------------------------------- #
+# Preflight (ensure_ready) and error messages — fail fast, fail clear
+# --------------------------------------------------------------------------- #
+def _no_all_keys(monkeypatch):
+    for var in ("OPENAI_API_KEY", "ANTHROPIC_API_KEY", "DEEPSEEK_API_KEY"):
+        monkeypatch.delenv(var, raising=False)
+
+
+def test_ensure_ready_raises_without_key(monkeypatch):
+    _no_all_keys(monkeypatch)
+    client = LLMClient(model="gpt-4o", config=Config(openai_key=None, default_model="gpt-4o"))
+    with pytest.raises(LLMError) as exc:
+        client.ensure_ready()
+    assert "config set" in str(exc.value) and "papermind demo" in str(exc.value)
+
+
+def test_ensure_ready_ok_with_key(monkeypatch):
+    _no_all_keys(monkeypatch)
+    LLMClient(model="gpt-4o", config=Config(openai_key="sk-test")).ensure_ready()  # no raise
+
+
+def test_ensure_ready_ollama_down(monkeypatch):
+    _no_all_keys(monkeypatch)
+    monkeypatch.setattr(base, "ollama_available", lambda timeout=1.0: False)
+    client = LLMClient(model="ollama/llama3.1", config=Config())
+    with pytest.raises(LLMError) as exc:
+        client.ensure_ready()
+    assert "Ollama" in str(exc.value) and "ollama pull llama3.1" in str(exc.value)
+
+
+def test_ensure_ready_ollama_up(monkeypatch):
+    _no_all_keys(monkeypatch)
+    monkeypatch.setattr(base, "ollama_available", lambda timeout=1.0: True)
+    LLMClient(model="ollama/llama3.1", config=Config()).ensure_ready()  # no raise
+
+
+def test_wrap_error_ollama_connection_and_pull():
+    conn = _wrap_llm_error(Exception("Connection refused by server"), "ollama/llama3.1")
+    assert "Ollama" in str(conn)
+    pull = _wrap_llm_error(Exception("model 'llama3.1' not found, try pulling it first"), "ollama/llama3.1")
+    assert "ollama pull llama3.1" in str(pull)
+
+
+def test_wrap_error_install_hint_uses_pypi_name():
+    msg = str(_wrap_llm_error(Exception("Invalid api key provided"), "gpt-4o"))
+    assert "paper-mind[local-embeddings]" in msg
+    assert "papermind[local-embeddings]" not in msg
