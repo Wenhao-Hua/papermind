@@ -123,7 +123,7 @@ def ui(
     from pathlib import Path
 
     if importlib.util.find_spec("streamlit") is None:
-        raise _fail("GUI 需要 Streamlit。安装：pip install 'paperis[ui]'")
+        raise _fail("GUI 需要 Streamlit。安装：pip install 'paper-mind[ui]'")
     ui_path = Path(__file__).parent / "ui.py"
     console.print(f"[bold cyan]PaperMind GUI[/bold cyan]  →  http://{host}:{port}  ·  Ctrl-C 停止")
     subprocess.run(

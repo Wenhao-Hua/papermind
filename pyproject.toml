@@ -4,8 +4,8 @@ build-backend = "hatchling.build"
 
 [project]
 # PyPI distribution name (the import package stays `papermind`); "papermind"
-# was taken on PyPI, so we publish as "paperis".
-name = "paperis"
+# was taken on PyPI, so we publish as "paper-mind".
+name = "paper-mind"
 version = "0.1.0"
 description = "Read arXiv papers for real: structured analysis, grounded RAG Q&A, and reproduction tutoring from the command line."
 readme = "README.md"

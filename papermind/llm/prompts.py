@@ -62,7 +62,10 @@ def summary_user(context: str) -> str:
 # --------------------------------------------------------------------------- #
 ANALYSIS_SYSTEM = (
     "你是严谨的 AI/ML 论文分析助手。只依据给定的论文文本作答，不要编造；"
-    "用中文（保留必要的英文术语）。严格输出 JSON，不要任何额外文字或代码围栏。"
+    "用中文（保留必要的英文术语）。"
+    "凡数学符号、变量、维度或公式——哪怕只是单个字母（如 $d_k$、$N$、$h$、$QK^\\top$、$O(N^2)$）"
+    "——一律用 $...$ 包裹成 LaTeX，不要写成纯文本（不要出现 d_k、sqrt、根号 这类未包裹写法）。"
+    "严格输出 JSON，不要任何额外文字或代码围栏。"
 )
 
 
@@ -170,20 +173,27 @@ def figure_match_user(point_names: List[str], figures_digest: str) -> str:
 
 
 MERMAID_SYSTEM = (
-    "你是把算法/模型结构画成清晰、好看的示意图的专家。为给定技术点生成一个 Mermaid flowchart："
-    "结构清晰，箭头表达数据流/依赖；每个节点文字简洁（≤8 字，可含简短公式）；"
-    "用 classDef 给不同角色的节点配色（输入、处理、输出各一色），让图美观且层次分明；"
-    "节点 id 用字母数字，语法必须合法可渲染。严格输出 JSON，不要额外文字或代码围栏。"
+    "你是把论文里的模型/算法结构画成**论文式结构图（block diagram）**的专家——像论文 Figure 那样"
+    "用方块表示模块、箭头表示数据流，用 subgraph 把相关模块成组（如 Encoder/Decoder/某个 Block），"
+    "体现层次与包含关系，而不是一条直线的流程图。要求：\n"
+    "- 用 Mermaid flowchart（方向 TB 或 LR 取决于结构）；\n"
+    "- 用 subgraph 分组体现结构层次；箭头可带标签说明传递的张量/信息；\n"
+    "- 节点文字简洁（可含 $ 包裹的简短公式或维度，如 d_model）；\n"
+    "- 用 classDef 给不同角色的模块配色，整体像一张干净的论文结构图；\n"
+    "- 节点 id 用字母数字，语法合法可渲染。严格输出 JSON，不要额外文字或代码围栏。"
 )
 
 
 def mermaid_user(name: str, explanation: str) -> str:
     return (
         f"技术点：{name}\n解释：{explanation}\n\n"
-        "请输出如下 JSON（mermaid 字段用 \\n 表示换行，务必带 classDef 配色）：\n"
-        '{"mermaid": "flowchart LR\\n  A[输入]:::in --> B[处理]\\n  B --> C[输出]:::out\\n'
-        "  classDef in fill:#dbeafe,stroke:#3b82f6,color:#1e3a8a;\\n"
-        '  classDef out fill:#dcfce7,stroke:#22c55e,color:#14532d;", '
+        "请画一张论文式结构图（用 subgraph 分组、箭头带标签）。输出如下 JSON（mermaid 用 \\n 换行）：\n"
+        '{"mermaid": "flowchart TB\\n'
+        "  subgraph Encoder\\n    direction TB\\n    E1[Multi-Head\\\\nAttention]:::attn --> E2[Add & Norm]:::norm\\n"
+        "    E2 --> E3[Feed Forward]:::ff --> E4[Add & Norm]:::norm\\n  end\\n"
+        "  X[输入嵌入 + 位置编码]:::io --> E1\\n  E4 --> Y[编码表示]:::io\\n"
+        "  classDef attn fill:#dbeafe,stroke:#3b82f6;classDef ff fill:#fef9c3,stroke:#ca8a04;\\n"
+        "  classDef norm fill:#f1f5f9,stroke:#94a3b8;classDef io fill:#dcfce7,stroke:#22c55e;\", "
         '"caption": "AI 生成示意图：……"}'
     )
 

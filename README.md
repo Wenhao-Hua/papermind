@@ -3,8 +3,8 @@
 > 读懂一篇 arXiv 论文，到能动手复现它 —— 一个命令行工具（含 Python API）。
 
 [![CI](https://github.com/Wenhao-Hua/papermind/actions/workflows/ci.yml/badge.svg)](https://github.com/Wenhao-Hua/papermind/actions/workflows/ci.yml)
-[![PyPI](https://img.shields.io/pypi/v/paperis)](https://pypi.org/project/paperis/)
-[![Python](https://img.shields.io/pypi/pyversions/paperis)](https://pypi.org/project/paperis/)
+[![PyPI](https://img.shields.io/pypi/v/paper-mind)](https://pypi.org/project/paper-mind/)
+[![Python](https://img.shields.io/pypi/pyversions/paper-mind)](https://pypi.org/project/paper-mind/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 
 PaperMind 不是又一个「论文摘要器」。给它一篇 arXiv 论文，它会产出**结构化分析报告**（贡献、最难懂的技术点+图示、知识脉络、完整复现指南），并提供**带原文依据的 RAG 问答**和**复现全程辅导**。每个回答都把「论文事实 / 基于论文的推理 / 超出论文范围」分层标注，**找不到依据时直说"原文未提及"，绝不编造**。
@@ -36,16 +36,16 @@ PaperMind 不是又一个「论文摘要器」。给它一篇 arXiv 论文，它
 **零配置先看一眼**（内置离线回放，无需 key、无需联网）：
 
 ```bash
-pip install paperis
+pip install paper-mind
 papermind demo
 ```
 
-> 📦 安装名是 **`paperis`**，命令名仍是 **`papermind`**（PyPI 上 `papermind` 已被占用）。
+> 📦 安装名是 **`paper-mind`**，命令名仍是 **`papermind`**（PyPI 上 `papermind` 已被占用）。
 
 **免费，无需 API key**（用本地 [Ollama](https://ollama.com)）：
 
 ```bash
-pip install paperis            # 或从源码： pip install -e ".[local-embeddings]"
+pip install paper-mind            # 或从源码： pip install -e ".[local-embeddings]"
 ollama pull llama3.1             # 装好 Ollama 后拉一个模型
 papermind analyze https://arxiv.org/abs/2307.08691 --model ollama/llama3.1 --format all -o ./report
 ```
@@ -53,7 +53,7 @@ papermind analyze https://arxiv.org/abs/2307.08691 --model ollama/llama3.1 --for
 **或用云端模型**（质量更高）：
 
 ```bash
-pip install paperis
+pip install paper-mind
 export OPENAI_API_KEY=sk-...
 papermind analyze https://arxiv.org/abs/2307.08691 --format all --output ./report
 ```
@@ -87,11 +87,11 @@ papermind analyze https://arxiv.org/abs/2307.08691 --format all --output ./repor
 不想用命令行？一个 [Streamlit](https://streamlit.io) 图形界面，把全部能力搬进浏览器：
 
 ```bash
-pip install "paperis[ui]"
+pip install "paper-mind[ui]"
 papermind ui                 # 打开 http://localhost:8501
 ```
 
-侧栏选模型/模式，标签页：**🎯 分析 · 💬 问答（多轮）· 📄 摘要 · 📊 对比 · 🛠️ 复现 · 🔎 搜索**；可粘贴 arXiv id/URL 或**上传 PDF**，报告内嵌渲染（公式、可折叠、深色模式）。
+**侧栏**常驻 💬 多轮问答 + 当前模型；**主区标签**：🎯 分析 · 📄 速读 · 📊 对比 · 🛠️ 复现 · 🔎 搜索。在侧栏粘贴 arXiv id/URL 或**上传 PDF**，即可分析（自动含图示）/问答；报告内嵌渲染（公式、可折叠、深色模式）。模型用你配置的默认值（`papermind config set model ...` 切换）。
 
 > 另有轻量 API/隧道端：`papermind serve`（FastAPI，默认只读缓存，适合公开演示）。
 
@@ -107,10 +107,10 @@ papermind ui                 # 打开 http://localhost:8501
 ## 安装
 
 ```bash
-pip install paperis
+pip install paper-mind
 
 # 可选：本地 embedding（配合 Ollama 实现完全离线、零成本）
-pip install "paperis[local-embeddings]"
+pip install "paper-mind[local-embeddings]"
 ```
 
 或从源码安装（开发）：
@@ -196,7 +196,7 @@ papermind cache clear <key> # 或 --all
 papermind open <source>     # 浏览器打开缓存的报告（--pdf 打开 PDF）
 papermind config show
 
-# Web 演示（需 pip install "paperis[web]"）
+# Web 演示（需 pip install "paper-mind[web]"）
 papermind serve --port 8080          # 默认演示模式：只展示已缓存的论文（公网暴露也不会烧 key）
 papermind serve --port 8080 --live   # 实时分析：用本机配置的 key（有成本）
 ```

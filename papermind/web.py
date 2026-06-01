@@ -41,7 +41,7 @@ def create_app(live: bool = False):
         from fastapi import FastAPI, Form
         from fastapi.responses import HTMLResponse
     except ImportError as exc:  # pragma: no cover
-        raise PaperMindError("Web demo 需要 FastAPI。安装：pip install 'paperis[web]'") from exc
+        raise PaperMindError("Web demo 需要 FastAPI。安装：pip install 'paper-mind[web]'") from exc
 
     app = FastAPI(title="PaperMind", docs_url=None, redoc_url=None)
 
@@ -180,7 +180,7 @@ def serve(host: str = "0.0.0.0", port: int = 8080, live: bool = False) -> None:
     try:
         import uvicorn
     except ImportError as exc:  # pragma: no cover
-        raise PaperMindError("Web demo 需要 uvicorn。安装：pip install 'paperis[web]'") from exc
+        raise PaperMindError("Web demo 需要 uvicorn。安装：pip install 'paper-mind[web]'") from exc
     uvicorn.run(create_app(live=live), host=host, port=port)
 
 

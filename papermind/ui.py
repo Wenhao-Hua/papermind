@@ -1,12 +1,15 @@
 """Streamlit GUI for PaperMind — run via ``papermind ui``.
 
-A graphical front end for the same engine the CLI uses: analyze, summarize,
-multi-turn chat, compare, reproduce, and arXiv search. Paste an arXiv id/URL or
-upload a PDF, pick a model in the sidebar, and read the result inline.
+Layout: a persistent Q&A chat in the sidebar (with the active model shown at the
+bottom), and the main area carries 分析 / 速读 / 对比 / 复现 / 搜索. The model is
+fixed to the configured default (no picker); figures are always generated.
+Results are kept in session state so reruns don't re-run analysis — a full page
+refresh starts fresh.
 """
 
 from __future__ import annotations
 
+import json
 import tempfile
 from pathlib import Path
 
@@ -15,56 +18,30 @@ import streamlit.components.v1 as components
 
 from papermind.errors import PaperMindError
 
-MODELS = [
-    ("", "默认（按配置）"),
-    ("gpt-4o-mini", "OpenAI · GPT-4o mini"),
-    ("gpt-4o", "OpenAI · GPT-4o"),
-    ("claude-3-5-sonnet-20241022", "Anthropic · Claude 3.5 Sonnet"),
-    ("deepseek/deepseek-chat", "DeepSeek · Chat (V3)"),
-    ("deepseek/deepseek-reasoner", "DeepSeek · Reasoner (R1)"),
-    ("gemini/gemini-1.5-flash", "Google · Gemini 1.5 Flash"),
-    ("ollama/llama3.1", "本地 · Ollama llama3.1"),
-]
+_MODEL_LABELS = {
+    "deepseek/deepseek-reasoner": "DeepSeek-V4 Pro Thinking",
+    "deepseek/deepseek-chat": "DeepSeek Chat",
+    "gpt-4o-mini": "OpenAI GPT-4o mini",
+    "gpt-4o": "OpenAI GPT-4o",
+}
 
 st.set_page_config(page_title="PaperMind", page_icon="📄", layout="wide")
 
 
-# --------------------------------------------------------------------------- #
-# Sidebar (model / mode / status)
-# --------------------------------------------------------------------------- #
-def _sidebar():
+def _model_label() -> str:
     from papermind.config import load_config
 
-    st.sidebar.title("📄 PaperMind")
-    st.sidebar.caption("读懂一篇 arXiv 论文：分析 · 问答 · 复现")
-
-    model = st.sidebar.selectbox("模型", MODELS, format_func=lambda x: x[1])[0] or None
-    mode = st.sidebar.selectbox("问答模式", ["balanced", "strict", "explore"])
-    figures = st.sidebar.checkbox("生成图示（Mermaid，较慢）", value=False)
-
-    cfg = load_config()
-    keys = []
-    if cfg.openai_key:
-        keys.append("OpenAI")
-    if cfg.anthropic_key:
-        keys.append("Anthropic")
-    if cfg.deepseek_key:
-        keys.append("DeepSeek")
-    st.sidebar.markdown("---")
-    st.sidebar.caption("已配置 key: " + ("、".join(keys) if keys else "无（可用本地 Ollama）"))
-    st.sidebar.caption(f"默认模型: `{cfg.default_model}`")
-    return model, mode, figures
+    m = load_config().default_model
+    return _MODEL_LABELS.get(m, m)
 
 
-def _source_input(key: str):
-    """A paper input + PDF uploader; returns a resolvable source string or None."""
-    src = st.text_input("arXiv id / URL", key=f"{key}_src", placeholder="2307.08691 或 https://arxiv.org/abs/2307.08691")
-    up = st.file_uploader("或上传 PDF", type="pdf", key=f"{key}_pdf")
-    if up is not None:
-        tmp = Path(tempfile.gettempdir()) / f"papermind_{up.name}"
-        tmp.write_bytes(up.getvalue())
+def _resolve_input(src: str, upload) -> str | None:
+    """A pasted id/URL or an uploaded PDF -> a source string."""
+    if upload is not None:
+        tmp = Path(tempfile.gettempdir()) / f"papermind_{upload.name}"
+        tmp.write_bytes(upload.getvalue())
         return str(tmp)
-    return src.strip() or None
+    return (src or "").strip() or None
 
 
 def _usage_caption(usage):
@@ -73,91 +50,63 @@ def _usage_caption(usage):
         st.caption(f"📊 {usage.calls} calls · {usage.total_tokens:,} tokens{cost}")
 
 
-def _embed_report(report):
-    components.html(report.to_html(), height=900, scrolling=True)
-
-
 # --------------------------------------------------------------------------- #
-# Tabs
+# Sidebar: persistent Q&A chat + model at the bottom
 # --------------------------------------------------------------------------- #
-def _tab_analyze(model, figures):
-    source = _source_input("an")
-    if st.button("🎯 分析", type="primary", key="an_go"):
-        if not source:
-            st.warning("请输入 arXiv id / URL 或上传 PDF。")
+def _sidebar():
+    with st.sidebar:
+        st.markdown("### 📄 PaperMind")
+        src = st.text_input("论文（arXiv id / URL）", key="paper_src", placeholder="2307.08691")
+        up = st.file_uploader("或上传 PDF", type="pdf", key="paper_pdf")
+        paper = _resolve_input(src, up)
+        st.divider()
+        st.markdown("**💬 问答**")
+        if not paper:
+            st.info("填入论文后即可在此提问。")
+        else:
+            st.caption(f"对象：`{paper[:48]}`")
+            for q, ans in st.session_state.get("chat_log", []):
+                with st.chat_message("user"):
+                    st.write(q)
+                with st.chat_message("assistant"):
+                    _render_answer(ans, compact=True)
+
+            q = st.text_input("问点什么？", key="chat_q", placeholder="为什么要除以 √d_k？")
+            if st.button("发送", key="chat_send", use_container_width=True) and q.strip():
+                _do_ask(paper, q.strip())
+                st.rerun()
+
+        st.divider()
+        st.caption(f"模型：**{_model_label()}**")
+    return paper
+
+
+def _do_ask(paper: str, question: str):
+    from papermind.qa.chat import PaperChat
+
+    if st.session_state.get("chat_paper") != paper or st.session_state.get("chat_obj") is None:
+        st.session_state["chat_paper"] = paper
+        st.session_state["chat_log"] = []
+        try:
+            st.session_state["chat_obj"] = PaperChat(paper, mode="balanced")
+        except PaperMindError as exc:
+            st.session_state["chat_obj"] = None
+            st.session_state.setdefault("chat_log", []).append((question, _error_answer(str(exc))))
             return
-        from papermind.analyze import analyze as run_analyze
-        from papermind.config import load_config
-
-        with st.spinner("分析中…（首次分析新论文约 15–40 秒）"):
-            try:
-                report = run_analyze(source, model=model, with_figures=figures, config=load_config())
-            except PaperMindError as exc:
-                st.error(str(exc))
-                return
-        _usage_caption(report.usage)
-        _embed_report(report)
+    try:
+        answer = st.session_state["chat_obj"].ask(question)
+    except PaperMindError as exc:
+        answer = _error_answer(str(exc))
+    st.session_state["chat_log"].append((question, answer))
 
 
-def _tab_summary(model):
-    source = _source_input("sm")
-    if st.button("📄 摘要", type="primary", key="sm_go"):
-        if not source:
-            st.warning("请输入论文。")
-            return
-        from papermind.summarize import summarize
+def _error_answer(msg: str):
+    from papermind.output.schema import Answer, AnswerSegment
 
-        with st.spinner("生成 TL;DR…"):
-            try:
-                result, usage = summarize(source, model=model)
-            except PaperMindError as exc:
-                st.error(str(exc))
-                return
-        st.subheader(result.title or "TL;DR")
-        st.write(result.tldr)
-        for point in result.key_points:
-            st.markdown(f"- {point}")
-        _usage_caption(usage)
+    return Answer(question="", segments=[AnswerSegment(kind="out_of_scope", text=msg)])
 
 
-def _tab_chat(model, mode):
-    source = st.text_input("论文（先设定再提问）", key="chat_src", placeholder="2307.08691")
-    if not source.strip():
-        st.info("先填一篇论文，然后在下方提问（支持多轮）。")
-        return
-
-    state_key = f"chat::{source.strip()}::{model}::{mode}"
-    if st.session_state.get("chat_key") != state_key:
-        st.session_state["chat_key"] = state_key
-        st.session_state["chat_obj"] = None
-        st.session_state["chat_log"] = []  # list of (question, Answer)
-
-    for question, answer in st.session_state["chat_log"]:
-        with st.chat_message("user"):
-            st.write(question)
-        with st.chat_message("assistant"):
-            _render_answer(answer)
-
-    prompt = st.chat_input("问点什么？（如：为什么要除以 √d_k？）")
-    if prompt:
-        from papermind.qa.chat import PaperChat
-
-        with st.chat_message("user"):
-            st.write(prompt)
-        with st.chat_message("assistant"):
-            with st.spinner("检索原文 · 生成分层回答…"):
-                try:
-                    if st.session_state["chat_obj"] is None:
-                        st.session_state["chat_obj"] = PaperChat(source.strip(), model=model, mode=mode)
-                    answer = st.session_state["chat_obj"].ask(prompt)
-                except PaperMindError as exc:
-                    st.error(str(exc))
-                    return
-            _render_answer(answer)
-        st.session_state["chat_log"].append((prompt, answer))
-
-
-def _render_answer(answer):
+def _render_answer(answer, compact: bool = False):
     boxes = {"fact": st.success, "inference": st.warning, "out_of_scope": st.error}
     labels = {"fact": "论文事实", "inference": "基于论文的推理", "out_of_scope": "超出论文范围"}
     for seg in answer.segments:
@@ -165,7 +114,7 @@ def _render_answer(answer):
         if seg.kind == "inference" and seg.confidence:
             text += f"（置信度: {seg.confidence}）"
         text += f"\n\n{seg.text}"
-        if seg.reasoning:
+        if seg.reasoning and not compact:
             text += f"\n\n*推理依据：{seg.reasoning}*"
         boxes.get(seg.kind, st.info)(text)
     if answer.evidence:
@@ -174,10 +123,62 @@ def _render_answer(answer):
                 loc = (e.section or "") + (f" p.{e.page}" if e.page else "")
                 flag = "" if e.verified else "⚠️ 未核实 · "
                 st.markdown(f"- **{loc or '—'}** — {flag}{e.text}")
-    _usage_caption(answer.usage)
+    _usage_caption(getattr(answer, "usage", None))
 
 
-def _tab_compare(model):
+# --------------------------------------------------------------------------- #
+# Main tabs
+# --------------------------------------------------------------------------- #
+def _tab_analyze(paper: str | None):
+    if not paper:
+        st.info("在左侧侧栏填入 arXiv id / URL 或上传 PDF。")
+        return
+    if st.button("🎯 分析这篇论文", type="primary", key="an_go"):
+        from papermind.analyze import analyze as run_analyze
+        from papermind.config import load_config
+
+        with st.spinner("分析中…（思考模型 + 图示，约 30–90 秒）"):
+            try:
+                # Web always generates figures; uses the configured default model.
+                report = run_analyze(paper, with_figures=True, config=load_config())
+                st.session_state["report"] = report
+                st.session_state["report_src"] = paper
+            except PaperMindError as exc:
+                st.error(str(exc))
+                return
+    # Persist across reruns: re-show the last report for this paper without re-running.
+    if st.session_state.get("report") is not None and st.session_state.get("report_src") == paper:
+        report = st.session_state["report"]
+        _usage_caption(report.usage)
+        components.html(report.to_html(), height=900, scrolling=True)
+
+
+def _tab_summary(paper: str | None):
+    st.caption("速读 = 一句话 TL;DR + 几条要点（一次调用，比完整分析快）。")
+    if not paper:
+        st.info("在左侧填入论文。")
+        return
+    if st.button("📄 速读", type="primary", key="sm_go"):
+        from papermind.summarize import summarize
+
+        with st.spinner("生成速读…"):
+            try:
+                result, usage = summarize(paper)
+                st.session_state["summary"] = (paper, result, usage)
+            except PaperMindError as exc:
+                st.error(str(exc))
+                return
+    cached = st.session_state.get("summary")
+    if cached and cached[0] == paper:
+        _, result, usage = cached
+        st.subheader(result.title or "TL;DR")
+        st.write(result.tldr)
+        for p in result.key_points:
+            st.markdown(f"- {p}")
+        _usage_caption(usage)
+
+
+def _tab_compare():
     raw = st.text_area("论文（每行一个，2–4 篇）", key="cmp_src", placeholder="2307.08691\n1706.03762")
     if st.button("📊 对比", type="primary", key="cmp_go"):
         items = [s.strip() for s in raw.splitlines() if s.strip()][:4]
@@ -188,76 +189,85 @@ def _tab_compare(model):
 
         with st.spinner("对比中…"):
             try:
-                comparison = run_compare(items, model=model)
+                st.session_state["comparison"] = run_compare(items)
             except PaperMindError as exc:
                 st.error(str(exc))
                 return
-        components.html(comparison.to_html(), height=700, scrolling=True)
-        _usage_caption(comparison.usage)
+    comp = st.session_state.get("comparison")
+    if comp is not None:
+        components.html(comp.to_html(), height=700, scrolling=True)
+        _usage_caption(comp.usage)
 
 
-def _tab_reproduce(model):
-    source = _source_input("rp")
+def _tab_reproduce(paper: str | None):
+    if not paper:
+        st.info("在左侧填入论文。")
+        return
     if st.button("🛠️ 生成复现指南", type="primary", key="rp_go"):
-        if not source:
-            st.warning("请输入论文。")
-            return
         from papermind.analyze import analyze as run_analyze
         from papermind.config import load_config
 
         with st.spinner("生成复现指南…"):
             try:
-                report = run_analyze(source, model=model, modules=["reproduction"], with_figures=False, config=load_config())
+                report = run_analyze(paper, modules=["reproduction"], with_figures=False, config=load_config())
+                st.session_state["repro"] = (paper, report)
             except PaperMindError as exc:
                 st.error(str(exc))
                 return
-        if report.reproduction is None:
-            st.warning("未能提取复现信息。")
-            return
+    cached = st.session_state.get("repro")
+    if cached and cached[0] == paper and cached[1].reproduction is not None:
+        report = cached[1]
         st.download_button("⬇️ setup.sh", report.to_setup_script(), file_name="setup.sh")
-        import json
-
         st.download_button("⬇️ repro.ipynb", json.dumps(report.to_notebook(), ensure_ascii=False, indent=1), file_name="repro.ipynb")
         st.code(report.to_setup_script(), language="bash")
-        _usage_caption(report.usage)
 
 
 def _tab_search():
-    query = st.text_input("搜索 arXiv（不调用模型）", key="se_q", placeholder="flash attention")
+    query = st.text_input("关键词搜索 arXiv（类似 arXiv 全文检索，不调用模型）", key="se_q", placeholder="flash attention")
     if st.button("🔎 搜索", type="primary", key="se_go") and query.strip():
         from papermind.parser.arxiv import search_arxiv
 
         with st.spinner("搜索中…"):
             try:
-                results = search_arxiv(query.strip(), max_results=15)
+                st.session_state["search"] = search_arxiv(query.strip(), max_results=20)
             except PaperMindError as exc:
                 st.error(str(exc))
                 return
+    results = st.session_state.get("search")
+    if results:
         st.dataframe(
             [
-                {"arXiv": r.arxiv_id, "年份": r.year, "标题": r.title, "作者": ", ".join(r.authors[:3])}
+                {
+                    "arXiv": r.arxiv_id,
+                    "原文": f"https://arxiv.org/abs/{r.arxiv_id}",
+                    "PDF": f"https://arxiv.org/pdf/{r.arxiv_id}.pdf",
+                    "年份": r.year,
+                    "标题": r.title,
+                }
                 for r in results
             ],
+            column_config={
+                "原文": st.column_config.LinkColumn("原文", display_text="打开"),
+                "PDF": st.column_config.LinkColumn("PDF", display_text="PDF"),
+            },
             use_container_width=True,
             hide_index=True,
         )
-        st.caption("复制 arXiv id 到「分析 / 问答」标签使用。")
+        st.caption("把某个 arXiv id 复制到左侧侧栏，即可分析 / 问答。")
 
 
 def main():
-    model, mode, figures = _sidebar()
-    tabs = st.tabs(["🎯 分析", "💬 问答", "📄 摘要", "📊 对比", "🛠️ 复现", "🔎 搜索"])
+    paper = _sidebar()
+    tabs = st.tabs(["🎯 分析", "📄 速读", "📊 对比", "🛠️ 复现", "🔎 搜索"])
     with tabs[0]:
-        _tab_analyze(model, figures)
+        _tab_analyze(paper)
     with tabs[1]:
-        _tab_chat(model, mode)
+        _tab_summary(paper)
     with tabs[2]:
-        _tab_summary(model)
+        _tab_compare()
     with tabs[3]:
-        _tab_compare(model)
+        _tab_reproduce(paper)
     with tabs[4]:
-        _tab_reproduce(model)
-    with tabs[5]:
         _tab_search()
 
 
