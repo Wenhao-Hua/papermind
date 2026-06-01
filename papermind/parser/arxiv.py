@@ -20,7 +20,7 @@ from papermind.output.schema import PaperMeta
 
 ARXIV_API = "http://export.arxiv.org/api/query"
 ARXIV_ATOM_NS = {"atom": "http://www.w3.org/2005/Atom"}
-USER_AGENT = "PaperMind/0.1 (https://github.com/uawh-JLU/papermind)"
+USER_AGENT = "PaperMind/0.1 (https://github.com/Wenhao-Hua/papermind)"
 
 # 2307.08691 / 2307.08691v2  (new) and hep-th/9901001 (old) schemes.
 _NEW_ID = r"\d{4}\.\d{4,5}(?:v\d+)?"

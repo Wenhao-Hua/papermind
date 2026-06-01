@@ -2,7 +2,7 @@
 
 > 读懂一篇 arXiv 论文，到能动手复现它 —— 一个命令行工具（含 Python API）。
 
-[![CI](https://github.com/uawh-JLU/papermind/actions/workflows/ci.yml/badge.svg)](https://github.com/uawh-JLU/papermind/actions/workflows/ci.yml)
+[![CI](https://github.com/Wenhao-Hua/papermind/actions/workflows/ci.yml/badge.svg)](https://github.com/Wenhao-Hua/papermind/actions/workflows/ci.yml)
 [![PyPI](https://img.shields.io/pypi/v/papermind)](https://pypi.org/project/papermind/)
 [![Python](https://img.shields.io/pypi/pyversions/papermind)](https://pypi.org/project/papermind/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
@@ -86,7 +86,7 @@ pip install "papermind[local-embeddings]"
 或从源码安装（开发）：
 
 ```bash
-git clone https://github.com/uawh-JLU/papermind
+git clone https://github.com/Wenhao-Hua/papermind
 cd papermind
 pip install -e ".[dev]"
 ```

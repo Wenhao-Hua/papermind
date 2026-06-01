@@ -43,9 +43,9 @@ dev = [
 ]
 
 [project.urls]
-Homepage = "https://github.com/uawh-JLU/papermind"
-Repository = "https://github.com/uawh-JLU/papermind"
-Issues = "https://github.com/uawh-JLU/papermind/issues"
+Homepage = "https://github.com/Wenhao-Hua/papermind"
+Repository = "https://github.com/Wenhao-Hua/papermind"
+Issues = "https://github.com/Wenhao-Hua/papermind/issues"
 
 [project.scripts]
 papermind = "papermind.cli:app"

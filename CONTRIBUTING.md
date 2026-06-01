@@ -5,7 +5,7 @@ Thanks for your interest! PaperMind aims to stay small, dependency-light, and ea
 ## Development setup
 
 ```bash
-git clone https://github.com/uawh-JLU/papermind
+git clone https://github.com/Wenhao-Hua/papermind
 cd papermind
 python -m venv .venv && source .venv/bin/activate   # Windows: .venv\Scripts\activate
 pip install -e ".[dev]"

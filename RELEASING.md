@@ -8,7 +8,7 @@ the [`Release`](.github/workflows/release.yml) workflow when a `vX.Y.Z` tag is p
 1. Create the project on PyPI (or reserve the name).
 2. Configure **Trusted Publishing** (no API token needed): on PyPI →
    *Manage project* → *Publishing* → add a GitHub Actions publisher for
-   `uawh-JLU/papermind`, workflow `release.yml`, environment `pypi`.
+   `Wenhao-Hua/papermind`, workflow `release.yml`, environment `pypi`.
 3. In the GitHub repo, create an Environment named `pypi`.
 
 ## Cutting a release
