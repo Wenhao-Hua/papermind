@@ -3,14 +3,14 @@
 from __future__ import annotations
 
 from papermind.llm.base import LLMClient
-from papermind.llm.prompts import CONNECTIONS_SYSTEM, connections_user
+from papermind.llm.prompts import ANALYSIS_SYSTEM, connections_user
 from papermind.modules._util import str_or_none
 from papermind.output.schema import Connection, ConnectionsSection
 from papermind.parser.pdf import ParsedPaper
 
 
 def run(parsed: ParsedPaper, client: LLMClient, context: str, max_items: int = 6) -> ConnectionsSection:
-    data = client.complete_json(CONNECTIONS_SYSTEM, connections_user(context, max_items))
+    data = client.complete_json(ANALYSIS_SYSTEM, connections_user(context, max_items))
     items = data.get("connections") if isinstance(data, dict) else data
     if not isinstance(items, list):
         return ConnectionsSection()

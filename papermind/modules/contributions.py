@@ -3,14 +3,14 @@
 from __future__ import annotations
 
 from papermind.llm.base import LLMClient
-from papermind.llm.prompts import CONTRIBUTIONS_SYSTEM, contributions_user
+from papermind.llm.prompts import ANALYSIS_SYSTEM, contributions_user
 from papermind.modules._util import int_or_none, str_or_none
 from papermind.output.schema import Contributions, Source
 from papermind.parser.pdf import ParsedPaper
 
 
 def run(parsed: ParsedPaper, client: LLMClient, context: str) -> Contributions:
-    data = client.complete_json(CONTRIBUTIONS_SYSTEM, contributions_user(context))
+    data = client.complete_json(ANALYSIS_SYSTEM, contributions_user(context))
     if not isinstance(data, dict):
         return Contributions()
     sources = []

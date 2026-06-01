@@ -53,19 +53,24 @@ def summary_user(context: str) -> str:
 
 
 # --------------------------------------------------------------------------- #
-# Module 1: Contributions
+# Analysis modules
+#
+# All four modules share ONE system prompt and put the (identical) paper context
+# at the FRONT of the user message, with the module-specific task at the END.
+# This shared prefix lets providers with automatic prompt caching (DeepSeek,
+# OpenAI) discount the repeated ~10k-token context across the four calls.
 # --------------------------------------------------------------------------- #
-CONTRIBUTIONS_SYSTEM = (
-    "你是一位严谨的 AI/ML 论文分析助手。请用中文（保留必要的英文术语）提炼论文的核心贡献。"
-    "只依据给定文本，不要编造。每个判断都尽量给出原文出处（章节名与页码）。"
-    "严格输出 JSON，不要任何额外文字或代码围栏。"
+ANALYSIS_SYSTEM = (
+    "你是严谨的 AI/ML 论文分析助手。只依据给定的论文文本作答，不要编造；"
+    "用中文（保留必要的英文术语）。严格输出 JSON，不要任何额外文字或代码围栏。"
 )
 
 
+# Module 1: Contributions
 def contributions_user(context: str) -> str:
     return (
         context
-        + "\n\n请输出如下 JSON：\n"
+        + "\n\n【任务】提炼论文的核心贡献，每个判断尽量给出原文出处（章节名+页码）。输出如下 JSON：\n"
         "{\n"
         '  "main_contribution": "一句话点明最核心的那一个贡献（聚焦、不堆砌）",\n'
         '  "novelty": "相比前人工作新在哪里",\n'
@@ -76,23 +81,14 @@ def contributions_user(context: str) -> str:
     )
 
 
-# --------------------------------------------------------------------------- #
 # Module 2: Technical details
-# --------------------------------------------------------------------------- #
-TECHNICAL_SYSTEM = (
-    "你是一位擅长把复杂方法讲清楚的 AI/ML 导师。请主动识别论文中最难懂的技术点"
-    "（模型结构、关键公式、训练技巧等）。解释要讲清它**如何运作**以及**为何这样设计/为何有效**"
-    "（而非只说它是什么），并给一个帮助建立直觉的类比。"
-    "若该技术点有核心公式，用 LaTeX 写在 formula 字段（不要带 $ 定界符）；"
-    "解释/类比中出现数学符号时，用 $...$ 包裹的 LaTeX 表示（如 $\\sqrt{d_k}$、$QK^\\top$）。"
-    "只依据给定文本，不要编造。严格输出 JSON，不要任何额外文字或代码围栏。"
-)
-
-
 def technical_user(context: str, max_points: int = 6) -> str:
     return (
         context
-        + f"\n\n请挑选最多 {max_points} 个最关键/最难懂的技术点，输出如下 JSON：\n"
+        + f"\n\n【任务】识别论文中最难懂的技术点（模型结构、关键公式、训练技巧等），最多 {max_points} 个。"
+        "解释要讲清它**如何运作**以及**为何这样设计/为何有效**（而非只说是什么），并给一个建立直觉的类比。"
+        "若有核心公式，用 LaTeX 写进 formula（不带 $）；解释/类比中的数学符号用 $...$ 包裹（如 $\\sqrt{d_k}$）。"
+        "输出如下 JSON：\n"
         "{\n"
         '  "technical_details": [\n'
         "    {\n"
@@ -111,20 +107,12 @@ def technical_user(context: str, max_points: int = 6) -> str:
     )
 
 
-# --------------------------------------------------------------------------- #
 # Module 3: Connections
-# --------------------------------------------------------------------------- #
-CONNECTIONS_SYSTEM = (
-    "你是熟悉 AI/ML 文献脉络的研究者。请把本文的关键技术点与已有经典工作挂钩，"
-    "说明继承/改进/对比关系。用中文。arxiv_link 仅在你确信该论文确有对应 arXiv 编号时给出，"
-    "否则填 null，绝不编造链接。严格输出 JSON，不要任何额外文字或代码围栏。"
-)
-
-
 def connections_user(context: str, max_items: int = 6) -> str:
     return (
         context
-        + f"\n\n请给出最多 {max_items} 条知识关联，输出如下 JSON：\n"
+        + f"\n\n【任务】把本文的关键技术点与已有经典工作挂钩，说明继承/改进/对比关系，最多 {max_items} 条。"
+        "arxiv_link 仅在你确信该论文确有对应 arXiv 编号时给出，否则填 null，绝不编造链接。输出如下 JSON：\n"
         "{\n"
         '  "connections": [\n'
         "    {\n"
@@ -138,21 +126,13 @@ def connections_user(context: str, max_items: int = 6) -> str:
     )
 
 
-# --------------------------------------------------------------------------- #
 # Module 4: Reproduction
-# --------------------------------------------------------------------------- #
-REPRODUCTION_SYSTEM = (
-    "你是一位帮助他人复现论文的资深工程师。请产出尽量完整、可操作的复现指南。"
-    "论文中明确的信息（官方代码、超参、基准数据）以论文为准；环境配置步骤、常见报错与修复"
-    "可结合通用的工程经验补充，但不要编造不存在的链接或版本号（不确定就填 null）。"
-    "命令要可直接复制运行。用中文。严格输出 JSON，不要任何额外文字或代码围栏。"
-)
-
-
 def reproduction_user(context: str) -> str:
     return (
         context
-        + "\n\n请输出如下 JSON：\n"
+        + "\n\n【任务】产出尽量完整、可操作的复现指南。论文中明确的信息（官方代码、超参、基准）以论文为准；"
+        "环境步骤、常见报错与修复可结合通用工程经验补充，但不要编造不存在的链接或版本号（不确定填 null）。"
+        "命令要可直接复制运行。输出如下 JSON：\n"
         "{\n"
         '  "official_code": "GitHub 链接或 null",\n'
         '  "version_tag": "与论文版本对应的 release/tag 或 null",\n'

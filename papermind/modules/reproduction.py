@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from papermind.llm.base import LLMClient
-from papermind.llm.prompts import REPRODUCTION_SYSTEM, reproduction_user
+from papermind.llm.prompts import ANALYSIS_SYSTEM, reproduction_user
 from papermind.modules._util import int_or_none, str_list, str_or_none
 from papermind.output.schema import (
     Benchmark,
@@ -16,7 +16,7 @@ from papermind.parser.pdf import ParsedPaper
 
 
 def run(parsed: ParsedPaper, client: LLMClient, context: str) -> Reproduction:
-    data = client.complete_json(REPRODUCTION_SYSTEM, reproduction_user(context))
+    data = client.complete_json(ANALYSIS_SYSTEM, reproduction_user(context))
     if not isinstance(data, dict):
         return Reproduction()
 

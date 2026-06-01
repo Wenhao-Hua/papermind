@@ -173,27 +173,35 @@ def analyze(
 def _write_outputs(report, fmt: str, output: str) -> None:
     from pathlib import Path
 
-    base = output
-    for ext in (".md", ".json", ".html"):
-        if base.lower().endswith(ext):
-            base = base[: -len(ext)]
+    base_path = _output_base(report, output)
+    base_path.parent.mkdir(parents=True, exist_ok=True)
+
+    writers = {"md": report.to_markdown, "json": report.to_json, "html": report.to_html}
     written = []
-    if fmt in ("md", "all"):
-        path = f"{base}.md"
-        report.to_markdown(path)
-        written.append(path)
-    if fmt in ("json", "all"):
-        path = f"{base}.json"
-        report.to_json(path)
-        written.append(path)
-    if fmt in ("html", "all"):
-        path = f"{base}.html"
-        report.to_html(path)
-        written.append(path)
-    parent = Path(written[0]).parent
-    if str(parent) not in ("", "."):
-        parent.mkdir(parents=True, exist_ok=True)
+    for ext, writer in writers.items():
+        if fmt in (ext, "all"):
+            path = f"{base_path}.{ext}"
+            writer(path)
+            written.append(path)
     console.print(f"[green]✓[/green] Wrote: {', '.join(written)}")
+
+
+def _output_base(report, output: str):
+    """Resolve the output path prefix (without extension).
+
+    If ``output`` is an existing directory or ends with a path separator, write
+    files *inside* it named by the paper; otherwise treat it as a file prefix.
+    """
+    from pathlib import Path
+
+    out = Path(output)
+    if output.endswith(("/", "\\")) or out.is_dir():
+        name = report.paper.arxiv_id or _safe_name(report.paper.title)
+        return out / name.replace("/", "_")
+    for ext in (".md", ".json", ".html"):
+        if output.lower().endswith(ext):
+            return Path(output[: -len(ext)])
+    return out
 
 
 def _open_path(path) -> None:
@@ -210,12 +218,10 @@ def _open_html_report(report, output: Optional[str]) -> None:
     from pathlib import Path
 
     if output:
-        base = output
-        for ext in (".md", ".json", ".html"):
-            if base.lower().endswith(ext):
-                base = base[: -len(ext)]
-        html_path = f"{base}.html"
+        base_path = _output_base(report, output)
+        html_path = f"{base_path}.html"
         if not Path(html_path).exists():
+            base_path.parent.mkdir(parents=True, exist_ok=True)
             report.to_html(html_path)
     else:
         tmp = tempfile.NamedTemporaryFile(prefix="papermind-", suffix=".html", delete=False)
@@ -245,10 +251,10 @@ def _estimate_cost(source: str, model: Optional[str], modules: List[str], with_f
 
     context = _build_context(parsed)
     builders = {
-        "contributions": (prompts.CONTRIBUTIONS_SYSTEM, prompts.contributions_user(context)),
-        "technical": (prompts.TECHNICAL_SYSTEM, prompts.technical_user(context)),
-        "connections": (prompts.CONNECTIONS_SYSTEM, prompts.connections_user(context)),
-        "reproduction": (prompts.REPRODUCTION_SYSTEM, prompts.reproduction_user(context)),
+        "contributions": (prompts.ANALYSIS_SYSTEM, prompts.contributions_user(context)),
+        "technical": (prompts.ANALYSIS_SYSTEM, prompts.technical_user(context)),
+        "connections": (prompts.ANALYSIS_SYSTEM, prompts.connections_user(context)),
+        "reproduction": (prompts.ANALYSIS_SYSTEM, prompts.reproduction_user(context)),
     }
     litellm = base._import_litellm()
     est_completion_per_call = 700

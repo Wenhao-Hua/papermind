@@ -153,6 +153,24 @@ def test_html_has_copy_bibtex_and_collapsible_points():
     assert 'id="pm-progress"' in html and 'id="pm-top"' in html      # progress bar + back-to-top
 
 
+def test_output_base_directory_vs_prefix(tmp_path):
+    from papermind.cli import _output_base
+
+    rep = Report(paper=PaperMeta(title="X", arxiv_id="1706.03762"))
+    # existing directory -> file inside, named by the paper (the bug: used to make 'dir.md')
+    inside = _output_base(rep, str(tmp_path))
+    assert inside.name == "1706.03762" and inside.parent == tmp_path
+    # trailing separator also means "directory"
+    inside2 = _output_base(rep, str(tmp_path) + "/")
+    assert inside2.name == "1706.03762"
+    # plain file prefix (extension stripped)
+    pref = _output_base(rep, "out/report.md")
+    assert str(pref).replace("\\", "/").endswith("out/report")
+    # arxiv ids with '/' are sanitized into the filename
+    rep2 = Report(paper=PaperMeta(title="Y", arxiv_id="hep-th/9901001"))
+    assert "/" not in _output_base(rep2, str(tmp_path) + "/").name
+
+
 def test_markdown_has_toc_with_anchors():
     report = Report(
         paper=PaperMeta(title="T"),

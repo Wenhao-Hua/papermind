@@ -7,7 +7,7 @@ this module stays focused on identifying and explaining the hard parts.
 from __future__ import annotations
 
 from papermind.llm.base import LLMClient
-from papermind.llm.prompts import TECHNICAL_SYSTEM, technical_user
+from papermind.llm.prompts import ANALYSIS_SYSTEM, technical_user
 from papermind.modules._util import int_or_none, str_or_none
 from papermind.output.schema import TechnicalPoint, TechnicalSection
 from papermind.parser.pdf import ParsedPaper
@@ -16,7 +16,7 @@ _VALID_DIFFICULTY = {"high", "mid", "low"}
 
 
 def run(parsed: ParsedPaper, client: LLMClient, context: str, max_points: int = 6) -> TechnicalSection:
-    data = client.complete_json(TECHNICAL_SYSTEM, technical_user(context, max_points))
+    data = client.complete_json(ANALYSIS_SYSTEM, technical_user(context, max_points))
     items = data.get("technical_details") if isinstance(data, dict) else data
     if not isinstance(items, list):
         return TechnicalSection()
