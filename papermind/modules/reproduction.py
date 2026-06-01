@@ -17,10 +17,7 @@ from papermind.parser.pdf import ParsedPaper
 
 def run(parsed: ParsedPaper, client: LLMClient, context: str) -> Reproduction:
     data = client.complete_json(ANALYSIS_SYSTEM, reproduction_user(context))
-    if not isinstance(data, dict):
-        return Reproduction()
-
-    return Reproduction(
+    repro = Reproduction() if not isinstance(data, dict) else Reproduction(
         official_code=str_or_none(data.get("official_code")),
         version_tag=str_or_none(data.get("version_tag")),
         requirements=str_or_none(data.get("requirements")),
@@ -32,6 +29,16 @@ def run(parsed: ParsedPaper, client: LLMClient, context: str) -> Reproduction:
         common_errors=_common_errors(data.get("common_errors")),
         gotchas=str_list(data.get("gotchas")),
     )
+
+    # Ground the guide in the real repo: a verified URL (and its real deps/run
+    # commands) beats the model's guess. Best-effort — never blocks analysis.
+    from papermind.repro.repo import find_and_inspect_repo
+
+    repo = find_and_inspect_repo(parsed)
+    if repo is not None:
+        repro.code_repo = repo
+        repro.official_code = repo.url  # prefer the verified URL over the model's
+    return repro
 
 
 def _setup_steps(value) -> list:

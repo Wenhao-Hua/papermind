@@ -36,7 +36,28 @@ def to_setup_script(report: Report) -> str:
         lines.append(f"# Key hyperparameters: {', '.join(r.key_hyperparams)}")
     lines.append("")
 
-    if r.official_code:
+    if r.code_repo is not None:
+        cr = r.code_repo
+        star = f" · ★{cr.stars}" if cr.stars else ""
+        official = " · 官方" if cr.is_official else ""
+        lines.append(f"# --- 官方代码仓库（已核实：{cr.source}{official}{star}） ---")
+        if cr.description:
+            lines.append(f"# {cr.description}")
+        lines.append(f"git clone {cr.url}")
+        repo_dir = cr.url.rstrip("/").rsplit("/", 1)[-1]
+        if repo_dir.endswith(".git"):
+            repo_dir = repo_dir[:-4]
+        lines.append(f"cd {repo_dir}")
+        if r.version_tag:
+            lines.append(f"git checkout {r.version_tag}")
+        for cmd in cr.install_commands:
+            lines.append(cmd)
+        if cr.run_commands:
+            lines.append("")
+            lines.append("# 运行命令（取自仓库 README，按需改参数后取消注释）：")
+            lines += [f"# {cmd}" for cmd in cr.run_commands]
+        lines.append("")
+    elif r.official_code:
         lines += ["# --- Official code ---", f"git clone {r.official_code}"]
         if r.version_tag:
             lines.append(f"# cd <repo> && git checkout {r.version_tag}")
@@ -75,7 +96,20 @@ def to_notebook(report: Report) -> dict:
         meta = _meta_block(r)
         if meta:
             cells.append(_md(meta))
-        if r.official_code:
+        if r.code_repo is not None:
+            cr = r.code_repo
+            star = f" · ★{cr.stars}" if cr.stars else ""
+            official = " · 官方" if cr.is_official else ""
+            cells.append(_md(f"## 官方代码仓库（已核实：{cr.source}{official}{star}）\n\n<{cr.url}>"))
+            repo_dir = cr.url.rstrip("/").rsplit("/", 1)[-1]
+            if repo_dir.endswith(".git"):
+                repo_dir = repo_dir[:-4]
+            clone = [f"!git clone {cr.url}", f"%cd {repo_dir}"] + [f"!{c}" for c in cr.install_commands]
+            cells.append(_code("\n".join(clone)))
+            if cr.run_commands:
+                cells.append(_md("### 运行命令（取自仓库 README，按需改参数）\n"
+                                 + "\n".join(f"- `{c}`" for c in cr.run_commands)))
+        elif r.official_code:
             cells.append(_code(f"!git clone {r.official_code}"))
         for step in r.env_setup_steps:
             header = f"## {step.step}. {step.title}"

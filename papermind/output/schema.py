@@ -174,8 +174,27 @@ class CommonError(BaseModel):
     fix_command: Optional[str] = None
 
 
+class RepoRef(BaseModel):
+    """A *verified* code repository for the paper — found from the paper text or
+    PapersWithCode and inspected via the GitHub API, so reproduction is grounded
+    in the real repo (deps, run commands) instead of an LLM guess."""
+
+    url: str
+    source: str = ""  # how it was found, e.g. "论文原文链接" / "PapersWithCode"
+    is_official: bool = False
+    stars: Optional[int] = None
+    description: Optional[str] = None
+    default_branch: str = "main"
+    language: Optional[str] = None
+    license: Optional[str] = None
+    dep_file: Optional[str] = None  # the dependency file actually present in the repo
+    install_commands: List[str] = Field(default_factory=list)  # derived from real files
+    run_commands: List[str] = Field(default_factory=list)  # detected from the real README
+
+
 class Reproduction(BaseModel):
     official_code: Optional[str] = None
+    code_repo: Optional[RepoRef] = None
     version_tag: Optional[str] = None
     requirements: Optional[str] = None
     recommended_hardware: Optional[str] = None

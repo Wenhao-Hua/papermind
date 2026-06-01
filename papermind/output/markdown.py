@@ -178,7 +178,17 @@ def _connections_md(works: List[Connection]) -> List[str]:
 
 def _reproduction_md(r: Reproduction) -> List[str]:
     out = ["## 🛠️ 复现指南", ""]
-    if r.official_code:
+    if r.code_repo is not None:
+        cr = r.code_repo
+        badge = " ✓官方" if cr.is_official else ""
+        star = f" · ★{cr.stars}" if cr.stars else ""
+        tag = f" (`{r.version_tag}`)" if r.version_tag else ""
+        out.append(f"- **官方代码（已核实 · {cr.source}{badge}{star}）:** [{cr.url}]({cr.url}){tag}")
+        cmds = list(cr.install_commands) + list(cr.run_commands)
+        if cmds:
+            out.append("- **安装 / 运行（取自仓库）:**")
+            out += [f"  - `{c}`" for c in cmds]
+    elif r.official_code:
         tag = f" (`{r.version_tag}`)" if r.version_tag else ""
         out.append(f"- **官方代码:** [{r.official_code}]({r.official_code}){tag}")
     if r.requirements:

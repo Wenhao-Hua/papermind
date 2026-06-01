@@ -279,7 +279,20 @@ def _connections(works: List[Connection]) -> List[str]:
 
 def _reproduction(r: Reproduction) -> List[str]:
     out = ['<h2 id="reproduction">🛠️ 复现指南</h2>', '<div class="card"><ul>']
-    if r.official_code:
+    if r.code_repo is not None:
+        cr = r.code_repo
+        badge = " ✓官方" if cr.is_official else ""
+        star = f" · ★{cr.stars}" if cr.stars else ""
+        tag = f" · <code>{esc(r.version_tag)}</code>" if r.version_tag else ""
+        out.append(
+            f'<li><b>官方代码（已核实 · {esc(cr.source)}{badge}{star}）：</b>'
+            f'<a href="{esc(cr.url)}">{esc(cr.url)}</a>{tag}</li>'
+        )
+        cmds = list(cr.install_commands) + list(cr.run_commands)
+        if cmds:
+            body = "\n".join(esc(c) for c in cmds)
+            out.append(f"<li><b>安装 / 运行（取自仓库）：</b><pre>{body}</pre></li>")
+    elif r.official_code:
         tag = f" (<code>{esc(r.version_tag)}</code>)" if r.version_tag else ""
         out.append(f'<li><b>官方代码：</b><a href="{esc(r.official_code)}">{esc(r.official_code)}</a>{tag}</li>')
     if r.requirements:

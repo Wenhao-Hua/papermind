@@ -114,7 +114,17 @@ def _render_connections(report: Report, console: Console) -> None:
 def _render_reproduction(report: Report, console: Console) -> None:
     r = report.reproduction
     info = Text()
-    if r.official_code:
+    if r.code_repo is not None:
+        cr = r.code_repo
+        badge = " ✓官方" if cr.is_official else ""
+        star = f" · ★{cr.stars}" if cr.stars else ""
+        info.append(f"官方代码 (已核实 · {cr.source}{badge}{star}): ", style="bold")
+        info.append(f"{cr.url}\n")
+        cmds = list(cr.install_commands) + list(cr.run_commands)
+        if cmds:
+            info.append("安装/运行: ", style="bold")
+            info.append("; ".join(cmds) + "\n")
+    elif r.official_code:
         tag = f" ({r.version_tag})" if r.version_tag else ""
         info.append("官方代码: ", style="bold")
         info.append(f"{r.official_code}{tag}\n")
