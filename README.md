@@ -3,8 +3,8 @@
 > 读懂一篇 arXiv 论文，到能动手复现它 —— 一个命令行工具（含 Python API）。
 
 [![CI](https://github.com/Wenhao-Hua/papermind/actions/workflows/ci.yml/badge.svg)](https://github.com/Wenhao-Hua/papermind/actions/workflows/ci.yml)
-[![PyPI](https://img.shields.io/pypi/v/papermind)](https://pypi.org/project/papermind/)
-[![Python](https://img.shields.io/pypi/pyversions/papermind)](https://pypi.org/project/papermind/)
+[![PyPI](https://img.shields.io/pypi/v/paperis)](https://pypi.org/project/paperis/)
+[![Python](https://img.shields.io/pypi/pyversions/paperis)](https://pypi.org/project/paperis/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 
 PaperMind 不是又一个「论文摘要器」。给它一篇 arXiv 论文，它会产出**结构化分析报告**（贡献、最难懂的技术点+图示、知识脉络、完整复现指南），并提供**带原文依据的 RAG 问答**和**复现全程辅导**。每个回答都把「论文事实 / 基于论文的推理 / 超出论文范围」分层标注，**找不到依据时直说"原文未提及"，绝不编造**。
@@ -36,14 +36,16 @@ PaperMind 不是又一个「论文摘要器」。给它一篇 arXiv 论文，它
 **零配置先看一眼**（内置离线回放，无需 key、无需联网）：
 
 ```bash
-pip install papermind
+pip install paperis
 papermind demo
 ```
+
+> 📦 安装名是 **`paperis`**，命令名仍是 **`papermind`**（PyPI 上 `papermind` 已被占用）。
 
 **免费，无需 API key**（用本地 [Ollama](https://ollama.com)）：
 
 ```bash
-pip install papermind            # 或从源码： pip install -e ".[local-embeddings]"
+pip install paperis            # 或从源码： pip install -e ".[local-embeddings]"
 ollama pull llama3.1             # 装好 Ollama 后拉一个模型
 papermind analyze https://arxiv.org/abs/2307.08691 --model ollama/llama3.1 --format all -o ./report
 ```
@@ -51,7 +53,7 @@ papermind analyze https://arxiv.org/abs/2307.08691 --model ollama/llama3.1 --for
 **或用云端模型**（质量更高）：
 
 ```bash
-pip install papermind
+pip install paperis
 export OPENAI_API_KEY=sk-...
 papermind analyze https://arxiv.org/abs/2307.08691 --format all --output ./report
 ```
@@ -92,10 +94,10 @@ papermind analyze https://arxiv.org/abs/2307.08691 --format all --output ./repor
 ## 安装
 
 ```bash
-pip install papermind
+pip install paperis
 
 # 可选：本地 embedding（配合 Ollama 实现完全离线、零成本）
-pip install "papermind[local-embeddings]"
+pip install "paperis[local-embeddings]"
 ```
 
 或从源码安装（开发）：
