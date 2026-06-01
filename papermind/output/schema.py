@@ -325,6 +325,7 @@ class EvidenceItem(BaseModel):
     text: str
     section: Optional[str] = None
     page: Optional[int] = None
+    verified: bool = True  # True if the snippet was matched against a retrieved passage
 
 
 class SourceRef(BaseModel):

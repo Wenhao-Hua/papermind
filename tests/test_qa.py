@@ -35,6 +35,43 @@ def _stub_paper(figures=None):
     )
 
 
+def test_long_paper_context_represents_every_section():
+    from papermind.analyze import _build_context
+
+    blocks = [
+        TextBlock(text=f"section {s} content " * 30, page=s + 1, section=f"S{s} 节")
+        for s in range(5)
+        for _ in range(8)
+    ]
+    parsed = ParsedPaper(
+        meta=PaperMeta(title="Long Paper"),
+        pages=["filler " * 800],  # full_text well over budget -> triggers aggregation
+        blocks=blocks,
+        sections=[],
+        figures=[],
+        cache_dir=Path("."),
+    )
+    ctx = _build_context(parsed, budget=1500)
+    for s in range(5):  # no section dropped (unlike head-truncation)
+        assert f"S{s} 节" in ctx
+    assert len(ctx) < 1500 * 2  # bounded
+
+
+def test_short_paper_context_unchanged():
+    from papermind.analyze import _build_context
+
+    parsed = ParsedPaper(
+        meta=PaperMeta(title="T"),
+        pages=["short body text here"],
+        blocks=[TextBlock(text="short body text here", page=1, section="Intro")],
+        sections=[],
+        figures=[],
+        cache_dir=Path("."),
+    )
+    ctx = _build_context(parsed, budget=1000)
+    assert "short body text here" in ctx and "[Intro]" not in ctx  # full text, not aggregated
+
+
 def test_build_chunks_preserve_section_and_page():
     chunks = build_chunks(_stub_paper(), target_chars=200, overlap_blocks=1)
     assert chunks
@@ -84,6 +121,34 @@ def test_strict_mode_drops_inference():
     }
     ans = chat._parse_answer("q", data)
     assert [s.kind for s in ans.segments] == ["fact"]
+
+
+def test_verify_evidence_matches_and_snaps_location():
+    from papermind.qa.chat import _verify_evidence
+    from papermind.output.schema import EvidenceItem
+
+    chunks = [
+        Chunk(idx=0, text="we scale the dot products by 1 over sqrt of d_k to keep gradients stable",
+              section="3.2.1 Scaled Dot-Product Attention", page=4),
+        Chunk(idx=1, text="unrelated experiments on translation datasets", section="6 Results", page=8),
+    ]
+    grounded = EvidenceItem(text="we scale the dot products by 1 over sqrt of d_k", section="WRONG", page=99)
+    fabricated = EvidenceItem(text="this sentence never appears anywhere in the paper at all", section="9", page=1)
+    _verify_evidence([grounded, fabricated], chunks)
+
+    assert grounded.verified is True
+    assert grounded.section == "3.2.1 Scaled Dot-Product Attention" and grounded.page == 4  # snapped
+    assert fabricated.verified is False
+
+
+def test_verify_evidence_chinese_overlap():
+    from papermind.qa.chat import _verify_evidence
+    from papermind.output.schema import EvidenceItem
+
+    chunks = [Chunk(idx=0, text="缩放点积注意力把点积除以根号 d_k 以避免梯度消失", section="3.2", page=4)]
+    item = EvidenceItem(text="点积除以根号 d_k 避免梯度消失")
+    _verify_evidence([item], chunks)
+    assert item.verified is True and item.section == "3.2"
 
 
 def test_parse_answer_empty_falls_back_to_out_of_scope():

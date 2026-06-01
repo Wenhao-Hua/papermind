@@ -185,7 +185,8 @@ def render_answer(answer: Answer, console: Console) -> None:
             loc = item.section or ""
             if item.page:
                 loc = f"{loc} p.{item.page}".strip()
-            ev.add_row(loc or "-", item.text)
+            mark = "" if item.verified else "[yellow]⚠ 未在检索段落中核实[/yellow]\n"
+            ev.add_row(loc or "-", mark + item.text)
         console.print(ev)
 
 

@@ -133,13 +133,37 @@ def _run_modules(selected: List[str], runners: dict, advance) -> dict:
 def _build_context(parsed: ParsedPaper, budget: int = _BODY_BUDGET) -> str:
     body = parsed.full_text
     if len(body) > budget:
-        body = body[:budget] + "\n...[truncated]..."
+        # Long paper: sample proportionally across sections so later sections
+        # (experiments / reproduction details) aren't truncated away.
+        body = _aggregate_sections(parsed, budget)
     return paper_context(
         title=parsed.meta.title,
         abstract=parsed.meta.abstract,
         outline=parsed.section_outline(),
         body=body,
     )
+
+
+def _aggregate_sections(parsed: ParsedPaper, budget: int) -> str:
+    """Keep a per-section slice proportional to the section's length, so every
+    section of a long paper is represented within the token budget."""
+    segments: List[tuple] = []  # (section, text), consecutive same-section blocks merged
+    for block in parsed.blocks:
+        if segments and segments[-1][0] == block.section:
+            segments[-1] = (block.section, segments[-1][1] + " " + block.text)
+        else:
+            segments.append((block.section, block.text))
+    if not segments:
+        return parsed.full_text[:budget]
+
+    total = sum(len(text) for _, text in segments) or 1
+    parts = []
+    for section, text in segments:
+        keep = max(150, int(budget * len(text) / total))  # floor so short sections still show
+        snippet = text[:keep] + (" …" if len(text) > keep else "")
+        parts.append(f"\n[{section}]\n{snippet}")
+    out = "\n".join(parts)
+    return out[: int(budget * 1.2)]  # cap if per-section floors overshot
 
 
 @contextmanager
