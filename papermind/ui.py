@@ -19,7 +19,9 @@ import streamlit.components.v1 as components
 from papermind.errors import PaperMindError
 
 _MODEL_LABELS = {
-    "deepseek/deepseek-reasoner": "DeepSeek-V4 Pro Thinking",
+    "deepseek/deepseek-v4-pro": "DeepSeek-V4 Pro（思考）",
+    "deepseek/deepseek-v4-flash": "DeepSeek-V4 Flash",
+    "deepseek/deepseek-reasoner": "DeepSeek Reasoner",
     "deepseek/deepseek-chat": "DeepSeek Chat",
     "gpt-4o-mini": "OpenAI GPT-4o mini",
     "gpt-4o": "OpenAI GPT-4o",

@@ -20,8 +20,8 @@ WEB_MODELS = [
     ("gpt-4o-mini", "OpenAI · GPT-4o mini（便宜）"),
     ("gpt-4o", "OpenAI · GPT-4o"),
     ("claude-3-5-sonnet-20241022", "Anthropic · Claude 3.5 Sonnet"),
-    ("deepseek/deepseek-chat", "DeepSeek · Chat (V3)"),
-    ("deepseek/deepseek-reasoner", "DeepSeek · Reasoner (R1)"),
+    ("deepseek/deepseek-v4-pro", "DeepSeek · V4 Pro（思考）"),
+    ("deepseek/deepseek-v4-flash", "DeepSeek · V4 Flash"),
     ("gemini/gemini-1.5-flash", "Google · Gemini 1.5 Flash"),
     ("ollama/llama3.1", "本地 · Ollama llama3.1"),
 ]
