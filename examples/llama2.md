@@ -50,6 +50,13 @@ flowchart TD
 
 34B/70B 模型采用 GQA：多个 query 头共享同一组 key/value 头，介于多头 (MHA) 与多查询 (MQA) 之间。这样推理时的 KV cache 显存与带宽大幅下降，长上下文与大 batch 推理更省资源，同时质量损失很小。
 
+KV cache 显存正比于 KV 头数；GQA 用 $g$ 个 query 头共享 1 组 KV，把它从 $n_h$ 降到 $n_{kv}$：
+
+$$
+n_{kv}=\frac{n_h}{g},\qquad
+\text{MHA: } g=1,\quad \text{MQA: } g=n_h,\quad \text{GQA: } 1<g<n_h
+$$
+
 > 💡 **类比:** 多个收银员（query）共用同一份价目表（KV），而不是人手一份，省空间也省更新成本。
 
 📍 出处: [Section 2.1 (p.5)](https://arxiv.org/pdf/2307.09288.pdf#page=5)

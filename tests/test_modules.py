@@ -137,15 +137,20 @@ def test_page_link():
 
 
 def test_html_has_copy_bibtex_and_collapsible_points():
+    from papermind.output.schema import Reproduction, SetupStep
+
     report = Report(
         paper=PaperMeta(title="Attention", arxiv_id="1706.03762", authors=["A. Vaswani"], year=2017),
         contributions=Contributions(main_contribution="c"),
         technical=TechnicalSection(details=[TechnicalPoint(name="SDPA", explanation="e", difficulty="high")]),
+        reproduction=Reproduction(env_setup_steps=[SetupStep(step=1, title="install", command="pip install x")]),
     )
     html = report.to_html()
     assert "复制 BibTeX" in html and 'id="pm-bibtex"' in html  # copy button + payload
     assert "@article{vaswani2017attention" in html               # bibtex embedded
     assert "<details class=\"tech\" open>" in html and "<summary>" in html  # collapsible
+    assert 'class="copy-code"' in html and "pip install x" in html  # command copy button
+    assert 'id="pm-progress"' in html and 'id="pm-top"' in html      # progress bar + back-to-top
 
 
 def test_markdown_has_toc_with_anchors():

@@ -21,7 +21,11 @@
 
 ### 1. 缩放点积注意力 (Scaled Dot-Product Attention)  `🔴 high`
 
-注意力把每个查询 (Query) 与所有键 (Key) 做点积得到相关性分数，softmax 归一化后对值 (Value) 加权求和。关键的"缩放"是除以 √d_k：当维度大时点积数值会很大，导致 softmax 进入梯度极小的饱和区，除以 √d_k 把方差拉回稳定范围。
+注意力把每个查询 (Query) 与所有键 (Key) 做点积得到相关性分数，softmax 归一化后对值 (Value) 加权求和。关键的"缩放"是除以 $\sqrt{d_k}$：当维度大时点积数值会很大，导致 softmax 进入梯度极小的饱和区，除以 $\sqrt{d_k}$ 把方差拉回稳定范围。
+
+$$
+\text{Attention}(Q,K,V)=\text{softmax}\!\left(\frac{QK^\top}{\sqrt{d_k}}\right)V
+$$
 
 > 💡 **类比:** 像搜索引擎：查询词 (Q) 与每篇文档的关键词 (K) 算匹配度，再按匹配度加权汇总文档内容 (V)；除以 √d_k 相当于先把分数标准化，避免某些项过分压倒其他。
 
@@ -41,7 +45,12 @@ flowchart LR
 
 ### 2. 多头注意力 (Multi-Head Attention)  `🟡 mid`
 
-把 Q/K/V 线性投影到 h 个较低维子空间，各自独立做注意力，再拼接并线性变换。不同的"头"可以学习关注不同类型的关系（如句法依赖、共指、局部 vs 长程），表达力强于单个全维注意力。
+把 Q/K/V 线性投影到 $h$ 个较低维子空间，各自独立做注意力，再拼接并线性变换。不同的"头"可以学习关注不同类型的关系（如句法依赖、共指、局部 vs 长程），表达力强于单个全维注意力。
+
+$$
+\text{MultiHead}(Q,K,V)=\text{Concat}(\text{head}_1,\dots,\text{head}_h)\,W^O,\quad
+\text{head}_i=\text{Attention}(QW_i^Q,KW_i^K,VW_i^V)
+$$
 
 > 💡 **类比:** 一个委员会从多个专业角度（语法、语义、指代…）同时审阅同一句话，再汇总意见，比一个人通览更全面。
 
@@ -63,6 +72,11 @@ flowchart TD
 ### 3. 位置编码 (Positional Encoding)  `🟡 mid`
 
 自注意力本身对顺序不敏感（打乱输入顺序结果不变），因此用不同频率的正弦/余弦函数为每个位置生成一个向量并加到词嵌入上，让模型据此感知相对与绝对位置。正弦形式还能外推到训练时未见过的更长序列。
+
+$$
+PE_{(pos,2i)}=\sin\!\left(\frac{pos}{10000^{2i/d_{\text{model}}}}\right),\quad
+PE_{(pos,2i+1)}=\cos\!\left(\frac{pos}{10000^{2i/d_{\text{model}}}}\right)
+$$
 
 > 💡 **类比:** 给每个座位贴上不同频率交织的"条形码"，模型即使不靠顺序排列也能读出谁坐在前、谁坐在后。
 

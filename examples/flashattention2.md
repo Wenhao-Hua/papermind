@@ -42,6 +42,13 @@ flowchart TD
 
 GPU 的 Tensor Core 对矩阵乘 (matmul) 极快，但 softmax 里的缩放、指数、归一化等逐元素操作走的是普通 ALU，单位 FLOP 慢一个数量级。FlashAttention-2 把在线 softmax 的重缩放推迟到块循环结束时只做一次，减少了每步都要乘的归一化因子，从而显著降低昂贵的非矩阵乘运算占比。
 
+逐块更新的在线 softmax 统计量（行最大值 $m$、归一化和 $\ell$）：
+
+$$
+m_i=\max\!\big(m_{i-1},\,\text{rowmax}(S_i)\big),\quad
+\ell_i=e^{\,m_{i-1}-m_i}\,\ell_{i-1}+\text{rowsum}\!\big(e^{\,S_i-m_i}\big)
+$$
+
 > 💡 **类比:** 记账时不必每记一笔就换算一次汇率，最后统一换算一次即可，省下大量重复计算。
 
 📍 出处: [Section 3.1 (p.5)](https://arxiv.org/pdf/2307.08691.pdf#page=5)
