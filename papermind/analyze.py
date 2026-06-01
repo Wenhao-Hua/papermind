@@ -70,7 +70,7 @@ def analyze(
         parsed = parse_pdf(resolved.pdf_path, resolved.meta, resolved.cache_dir)
         advance("parse")
 
-        context = _build_context(parsed)
+        context = _build_context(parsed, client, notice=notice)
         report = Report(paper=parsed.meta)
 
         # The four modules are independent -> run them concurrently (network-bound).
@@ -91,6 +91,10 @@ def analyze(
             report.connections = results["connections"]
         if "reproduction" in results:
             report.reproduction = results["reproduction"]
+
+        # Verify citations against the real paper text (no model calls): flag any
+        # quoted source we can't find, and snap each to its true section/page.
+        _verify_citations(report, parsed)
 
         if with_figures and "technical" in modules and report.technical.details:
             from papermind.figures.extract import match_original_figures
@@ -130,12 +134,15 @@ def _run_modules(selected: List[str], runners: dict, advance) -> dict:
     return results
 
 
-def _build_context(parsed: ParsedPaper, budget: int = _BODY_BUDGET) -> str:
+def _build_context(parsed: ParsedPaper, client=None, budget: int = _BODY_BUDGET, notice=None) -> str:
     body = parsed.full_text
     if len(body) > budget:
-        # Long paper: sample proportionally across sections so later sections
-        # (experiments / reproduction details) aren't truncated away.
-        body = _aggregate_sections(parsed, budget)
+        # Long paper: condense window-by-window so later sections (experiments /
+        # reproduction details) aren't truncated away. With a client we run an
+        # extractive map step (keeps verbatim wording); without one we fall back
+        # to proportional per-section sampling.
+        body = _long_paper_digest(parsed, client, budget, notice) if client is not None \
+            else _aggregate_sections(parsed, budget)
     return paper_context(
         title=parsed.meta.title,
         abstract=parsed.meta.abstract,
@@ -144,15 +151,63 @@ def _build_context(parsed: ParsedPaper, budget: int = _BODY_BUDGET) -> str:
     )
 
 
-def _aggregate_sections(parsed: ParsedPaper, budget: int) -> str:
-    """Keep a per-section slice proportional to the section's length, so every
-    section of a long paper is represented within the token budget."""
-    segments: List[tuple] = []  # (section, text), consecutive same-section blocks merged
+def _section_segments(parsed: ParsedPaper) -> List[tuple]:
+    """Merge consecutive same-section blocks into (section, text) segments."""
+    segments: List[tuple] = []
     for block in parsed.blocks:
         if segments and segments[-1][0] == block.section:
             segments[-1] = (block.section, segments[-1][1] + " " + block.text)
         else:
             segments.append((block.section, block.text))
+    return segments
+
+
+def _pack_windows(segments: List[tuple], budget: int) -> List[tuple]:
+    """Pack consecutive sections into ``<= budget`` char windows (splitting any
+    single oversized section). Each window is (label, text)."""
+    windows: List[tuple] = []
+    label, parts, size = "", [], 0
+    for section, text in segments:
+        for start in range(0, len(text), budget):
+            piece = text[start : start + budget]
+            if parts and size + len(piece) > budget:
+                windows.append((label, " ".join(parts)))
+                label, parts, size = "", [], 0
+            if not parts:
+                label = section
+            parts.append(piece)
+            size += len(piece)
+    if parts:
+        windows.append((label, " ".join(parts)))
+    return windows
+
+
+def _long_paper_digest(parsed: ParsedPaper, client, budget: int, notice=None) -> str:
+    """Extractive map-reduce: condense each window verbatim, then concatenate."""
+    from papermind.llm.prompts import CONDENSE_SYSTEM, condense_user
+
+    segments = _section_segments(parsed) or [("", parsed.full_text)]
+    windows = _pack_windows(segments, budget)
+    if not windows:
+        return _aggregate_sections(parsed, budget)
+    if notice:
+        notice(f"长论文（约 {len(parsed.full_text) // 1000}k 字）：分 {len(windows)} 段提炼关键内容…")
+
+    digests: List[str] = []
+    for label, text in windows:
+        try:
+            piece = client.complete(CONDENSE_SYSTEM, condense_user(label, text), max_tokens=1500)
+        except Exception:
+            piece = ""
+        digests.append(piece.strip() if piece and piece.strip() else text[: budget // len(windows)])
+    digest = "\n\n".join(d for d in digests if d)
+    return digest[: int(budget * 1.3)] if digest else _aggregate_sections(parsed, budget)
+
+
+def _aggregate_sections(parsed: ParsedPaper, budget: int) -> str:
+    """Keep a per-section slice proportional to the section's length, so every
+    section of a long paper is represented within the token budget."""
+    segments = _section_segments(parsed)
     if not segments:
         return parsed.full_text[:budget]
 
@@ -164,6 +219,24 @@ def _aggregate_sections(parsed: ParsedPaper, budget: int) -> str:
         parts.append(f"\n[{section}]\n{snippet}")
     out = "\n".join(parts)
     return out[: int(budget * 1.2)]  # cap if per-section floors overshot
+
+
+def _verify_citations(report: Report, parsed: ParsedPaper) -> None:
+    """Mark each quoted citation verified/unverified against the real paper text
+    and snap its section/page to the true source. No model calls."""
+    from papermind.qa.index import build_chunks
+    from papermind.qa.verify import verify_items
+
+    chunks = build_chunks(parsed)
+    if chunks and report.contributions and report.contributions.sources:
+        verify_items(report.contributions.sources, chunks)
+
+    # Technical points cite by section/page only (no quote): sanity-check the page.
+    npages = len(parsed.pages)
+    if npages:
+        for point in report.technical.details:
+            if point.page is not None and not (1 <= point.page <= npages):
+                point.page = None
 
 
 @contextmanager

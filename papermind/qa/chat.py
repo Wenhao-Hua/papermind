@@ -9,7 +9,6 @@ fabricate when the paper lacks support.
 
 from __future__ import annotations
 
-import re
 from typing import Callable, List, Optional
 
 from papermind.config import Config, load_config
@@ -181,30 +180,9 @@ class PaperChat:
 # --------------------------------------------------------------------------- #
 # Citation verification: check each cited snippet actually came from a retrieved
 # passage, and snap its section/page to that passage (parser-derived, reliable).
+# Shared with the analysis-module citations — see papermind.qa.verify.
 # --------------------------------------------------------------------------- #
-_VERIFY_THRESHOLD = 0.4
-
-
 def _verify_evidence(evidence, chunks) -> None:
-    chunk_shingles = [(c, _shingles(c.text)) for c in chunks]
-    for item in evidence:
-        ev = _shingles(item.text)
-        best, best_score = None, 0.0
-        for chunk, shing in chunk_shingles:
-            score = (len(ev & shing) / len(ev)) if ev else 0.0
-            if score > best_score:
-                best, best_score = chunk, score
-        if best is not None and best_score >= _VERIFY_THRESHOLD:
-            item.verified = True
-            item.section = best.section or item.section  # authoritative section/page
-            item.page = best.page or item.page
-        else:
-            item.verified = False
+    from papermind.qa.verify import verify_items
 
-
-def _shingles(text: str):
-    text = (text or "").lower()
-    tokens = set(re.findall(r"[a-z0-9]{2,}", text))  # english / numeric words
-    cjk = re.findall(r"[一-鿿]", text)
-    tokens |= {cjk[i] + cjk[i + 1] for i in range(len(cjk) - 1)}  # chinese char bigrams
-    return tokens
+    verify_items(evidence, chunks)

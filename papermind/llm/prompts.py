@@ -43,6 +43,24 @@ def compare_user(briefs: str) -> str:
     return "以下是各论文的要点：\n\n" + briefs + "\n\n请写一段对比小结："
 
 
+# --------------------------------------------------------------------------- #
+# Long-paper map step: extractive condensation (keeps verbatim wording so the
+# downstream analysis still cites real text, and no section gets truncated away).
+# --------------------------------------------------------------------------- #
+CONDENSE_SYSTEM = (
+    "你是论文信息抽取器。从给定的论文片段中**原样摘录**最关键的句子，"
+    "覆盖：研究问题与贡献声明、方法与公式、模型/算法细节、数据集、实验设置与超参数、"
+    "主要结果与数值、局限与结论。"
+    "保留原文措辞与出现的英文术语、公式、数字，**不要改写、不要翻译、不要总结成自己的话**；"
+    "保留出现的章节标题/编号。逐条摘录，去掉与复现无关的客套与引用列表。只输出摘录正文。"
+)
+
+
+def condense_user(section_label: str, text: str) -> str:
+    head = f"【片段：{section_label}】\n" if section_label else ""
+    return head + text + "\n\n请原样摘录上面片段中的关键句子："
+
+
 def summary_user(context: str) -> str:
     return (
         context

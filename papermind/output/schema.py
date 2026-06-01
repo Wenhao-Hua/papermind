@@ -32,6 +32,7 @@ class Source(BaseModel):
     text: str = Field(..., description="The quoted/paraphrased supporting snippet")
     section: Optional[str] = Field(None, description="e.g. 'Section 3.1' or 'Abstract'")
     page: Optional[int] = Field(None, description="1-based PDF page number")
+    verified: bool = Field(True, description="Whether the snippet was matched against the paper text")
 
 
 class PaperMeta(BaseModel):

@@ -213,7 +213,12 @@ def _src_link(report: Report, section: Optional[str], page: Optional[int]) -> st
 def _sources(report: Report, sources: List[Source]) -> str:
     if not sources:
         return ""
-    items = "".join(f"<li>{_src_link(report, s.section, s.page)}: {esc(s.text)}</li>" for s in sources)
+    unverified = "<span style='color:#b45309'>⚠ 未核实</span> · "
+    items = "".join(
+        f"<li>{_src_link(report, s.section, s.page)}: "
+        f"{'' if s.verified else unverified}{esc(s.text)}</li>"
+        for s in sources
+    )
     return f"<blockquote><b>原文出处</b><ul>{items}</ul></blockquote>"
 
 

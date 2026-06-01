@@ -103,7 +103,8 @@ def _sources_md(report: Report, sources: List[Source]) -> List[str]:
     out = ["", "> **原文出处:**"]
     for s in sources:
         link = _source_link(report, s.section, s.page)
-        out.append(f"> - {link}: {s.text}")
+        mark = "" if s.verified else "⚠️ 未核实 · "
+        out.append(f"> - {link}: {mark}{s.text}")
     return out
 
 
