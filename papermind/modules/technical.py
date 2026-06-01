@@ -33,6 +33,7 @@ def run(parsed: ParsedPaper, client: LLMClient, context: str, max_points: int = 
                 name=str(item["name"]),
                 explanation=str(item.get("explanation", "") or ""),
                 analogy=str(item.get("analogy", "") or ""),
+                formula=str_or_none(item.get("formula")),
                 source_section=str_or_none(item.get("source_section")),
                 page=int_or_none(item.get("page")),
                 difficulty=difficulty,

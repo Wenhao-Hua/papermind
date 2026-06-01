@@ -30,6 +30,7 @@ a { color:var(--accent); text-decoration:none; } a:hover { text-decoration:under
 .card { background:var(--card); border:1px solid var(--border); border-radius:12px; padding:18px 22px; margin:14px 0; }
 .pill { display:inline-block; font-size:.72rem; font-weight:700; color:#fff; padding:2px 9px; border-radius:999px; vertical-align:middle; margin-left:8px; }
 .analogy { background:#f4f4ff; border-left:4px solid var(--accent); padding:10px 16px; border-radius:0 8px 8px 0; margin:12px 0; }
+.formula { overflow-x:auto; padding:6px 0; margin:10px 0; }
 .src { color:var(--muted); font-size:.86rem; }
 blockquote { margin:12px 0; padding:8px 16px; border-left:3px solid var(--border); color:var(--muted); }
 table { border-collapse:collapse; width:100%; margin:12px 0; font-size:.95rem; }
@@ -56,6 +57,12 @@ _MERMAID = (
     "</script>"
 )
 
+_MATHJAX = (
+    "<script>window.MathJax={tex:{inlineMath:[['$','$'],['\\\\(','\\\\)']],"
+    "displayMath:[['$$','$$'],['\\\\[','\\\\]']]},svg:{fontCache:'global'}};</script>"
+    '<script async src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-svg.js"></script>'
+)
+
 
 def to_html(report: Report, path: Optional[str] = None) -> str:
     doc = "\n".join(_render(report))
@@ -76,6 +83,7 @@ def _render(report: Report) -> List[str]:
         f"<title>{esc(paper.title)} · PaperMind</title>",
         f"<style>{_CSS}</style>",
         _MERMAID,
+        _MATHJAX,
         '</head><body><div class="wrap">',
         f"<h1>{esc(paper.title)}</h1>",
         f'<div class="meta">{_meta(report)}</div>',
@@ -154,6 +162,8 @@ def _technical_point(report: Report, idx: int, p: TechnicalPoint) -> List[str]:
         f'<h3>{idx}. {esc(p.name)}<span class="pill" style="background:{color}">{label}</span></h3>',
         f"<p>{esc(p.explanation)}</p>",
     ]
+    if p.formula:
+        out.append(f'<div class="formula">$$ {esc(p.formula)} $$</div>')
     if p.analogy:
         out.append(f'<div class="analogy">💡 <b>类比：</b>{esc(p.analogy)}</div>')
     if p.source_section or p.page:

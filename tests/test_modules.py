@@ -49,6 +49,22 @@ def test_technical_run_clamps_difficulty_and_count():
     assert section.details[0].difficulty == "mid"  # invalid -> default
 
 
+def test_technical_parses_formula_and_renders_math():
+    client = FakeClient(
+        {"technical_details": [{"name": "SDPA", "explanation": "scale by $\\sqrt{d_k}$",
+                                 "formula": "\\text{softmax}(\\frac{QK^\\top}{\\sqrt{d_k}})V", "difficulty": "high"}]}
+    )
+    section = technical.run(None, client, "ctx")
+    assert section.details[0].formula.startswith("\\text{softmax}")
+
+    report = Report(paper=PaperMeta(title="T"), technical=section)
+    md = report.to_markdown()
+    assert "$$" in md and "\\sqrt{d_k}" in md  # display-math block emitted
+    html = report.to_html()
+    assert "MathJax" in html or "mathjax" in html  # MathJax loaded
+    assert 'class="formula"' in html
+
+
 def test_connections_drops_bad_links():
     client = FakeClient(
         {

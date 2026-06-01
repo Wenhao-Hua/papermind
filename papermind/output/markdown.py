@@ -113,6 +113,9 @@ def _technical_point_md(report: Report, idx: int, point: TechnicalPoint) -> List
     out = [f"### {idx}. {point.name}  `{badge}`", ""]
     out.append(point.explanation)
     out.append("")
+    if point.formula:
+        out.append(f"$$\n{point.formula}\n$$")
+        out.append("")
     if point.analogy:
         out.append(f"> 💡 **类比:** {point.analogy}")
         out.append("")

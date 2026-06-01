@@ -68,6 +68,9 @@ def _render_technical(report: Report, console: Console) -> None:
         header.append(f"[{point.difficulty}]", style=style)
         body = Text()
         body.append(point.explanation + "\n")
+        if point.formula:
+            body.append("\n🔢 公式: ", style="bold")
+            body.append(point.formula, style="cyan")
         if point.analogy:
             body.append("\n💡 类比: ", style="bold")
             body.append(point.analogy)

@@ -82,6 +82,8 @@ def contributions_user(context: str) -> str:
 TECHNICAL_SYSTEM = (
     "你是一位擅长把复杂方法讲清楚的 AI/ML 导师。请主动识别论文中最难懂的技术点"
     "（模型结构、关键公式、训练技巧等），用直白的中文解释，并给一个帮助建立直觉的类比。"
+    "若该技术点有核心公式，用 LaTeX 写在 formula 字段（不要带 $ 定界符）；"
+    "解释/类比中出现数学符号时，用 $...$ 包裹的 LaTeX 表示（如 $\\sqrt{d_k}$、$QK^\\top$）。"
     "只依据给定文本，不要编造。严格输出 JSON，不要任何额外文字或代码围栏。"
 )
 
@@ -94,15 +96,17 @@ def technical_user(context: str, max_points: int = 6) -> str:
         '  "technical_details": [\n'
         "    {\n"
         '      "name": "技术点名称",\n'
-        '      "explanation": "用直白语言解释（2-4 句）",\n'
+        '      "explanation": "用直白语言解释（2-4 句），数学符号用 $...$ LaTeX",\n'
         '      "analogy": "一个建立直觉的类比",\n'
+        '      "formula": "核心公式的 LaTeX（不带 $），无公式则为 null",\n'
         '      "source_section": "Section 3.1",\n'
         '      "page": 5,\n'
         '      "difficulty": "high|mid|low"\n'
         "    }\n"
         "  ]\n"
         "}\n"
-        "page 为整数页码（未知则用 null）。按难度从高到低排序。"
+        r'formula 示例：\text{Attention}(Q,K,V)=\text{softmax}(\frac{QK^\top}{\sqrt{d_k}})V'
+        "\npage 为整数页码（未知则用 null）。按难度从高到低排序。"
     )
 
 

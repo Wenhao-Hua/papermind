@@ -103,6 +103,7 @@ class TechnicalPoint(BaseModel):
     name: str
     explanation: str
     analogy: str = ""
+    formula: Optional[str] = None  # key equation in LaTeX (no delimiters), if any
     source_section: Optional[str] = None
     page: Optional[int] = None
     difficulty: Difficulty = "mid"
