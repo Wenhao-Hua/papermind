@@ -15,9 +15,22 @@ picker — the active model is shown subtly in the footer.
 from __future__ import annotations
 
 import html as _html
+import secrets
+import threading
 from typing import Optional
 
 from papermind.errors import PaperMindError
+
+try:  # so route annotations (e.g. UploadFile) resolve under `from __future__ import annotations`
+    from fastapi import Cookie, File, Form, Request, UploadFile  # noqa: F401
+except ImportError:  # pragma: no cover - a friendly error is raised in create_app
+    pass
+
+# In-memory chat sessions for multi-turn 问答 (keyed by a per-browser cookie).
+# Each entry: {"paper": str, "chat": PaperChat, "log": [(question, Answer)]}.
+_ASK_SESSIONS: dict = {}
+_ASK_LOCK = threading.Lock()
+_ASK_MAX_SESSIONS = 32
 
 # Kept for reference / tests: the models the server can talk to. The web UI no
 # longer renders a picker — the active model comes from the server's config.
@@ -53,7 +66,7 @@ _TABS = [
 
 def create_app(live: bool = False):
     try:
-        from fastapi import FastAPI, Form
+        from fastapi import Cookie, FastAPI, File, Form, UploadFile
         from fastapi.responses import HTMLResponse
     except ImportError as exc:  # pragma: no cover
         raise PaperMindError("Web demo 需要 FastAPI。安装：pip install 'paper-mind[web]'") from exc
@@ -76,8 +89,11 @@ def create_app(live: bool = False):
         return _page("/", _analyze_form(live), live)
 
     @app.post("/analyze", response_class=HTMLResponse)
-    def analyze_route(source: str = Form(...), model: str = Form("")):
-        report, err = _report_for(source, model, live)
+    def analyze_route(source: str = Form(""), model: str = Form(""), file: Optional[UploadFile] = File(None)):
+        src = _resolve_upload(source, file)
+        if not src:
+            return _page("/", _analyze_form(live, "请填入 arXiv id / URL，或上传 PDF。"), live)
+        report, err = _report_for(src, model, live)
         if err:
             return _page("/", _analyze_form(live, err), live)
         return report.to_html()
@@ -91,25 +107,52 @@ def create_app(live: bool = False):
             return _page("/", _analyze_form(live, err), live)
         return report.to_html()
 
-    # -- ask (single-shot grounded Q&A) -------------------------------------- #
+    # -- ask (multi-turn grounded Q&A) --------------------------------------- #
     @app.get("/ask", response_class=HTMLResponse)
-    def ask_form():
-        return _page("/ask", _ask_form(live), live)
+    def ask_form(pm_sid: Optional[str] = Cookie(None)):
+        sess = _session_for(pm_sid)
+        log = _chat_log_html(sess["log"]) if sess and sess.get("log") else ""
+        return _page("/ask", log + _ask_form(live), live)
 
     @app.post("/ask", response_class=HTMLResponse)
-    def ask_route(source: str = Form(...), question: str = Form(...), model: str = Form(""), mode: str = Form("balanced")):
+    def ask_route(
+        source: str = Form(...),
+        question: str = Form(...),
+        model: str = Form(""),
+        mode: str = Form("balanced"),
+        pm_sid: Optional[str] = Cookie(None),
+    ):
         if not live:
             return _page("/ask", _ask_form(live, "演示模式不支持问答（需调用模型）。请以 --live 启动。"), live)
+
+        sid = pm_sid
+        sess = _session_for(sid)
+        prior = _chat_log_html(sess["log"]) if sess and sess.get("log") else ""
         if not source.strip() or not question.strip():
-            return _page("/ask", _ask_form(live, "请填写论文和问题。"), live)
+            return _page("/ask", prior + _ask_form(live, "请填写论文和问题。"), live)
+
         from papermind.qa.chat import PaperChat
 
+        sid = sid or secrets.token_hex(8)
+        paper = source.strip()
+        if sess is None or sess.get("paper") != paper:
+            try:
+                sess = {"paper": paper, "chat": PaperChat(paper, model=(model or None), mode=mode), "log": []}
+            except PaperMindError as exc:
+                return _page("/ask", _ask_form(live, str(exc)), live)
+            prior = ""  # new paper -> fresh conversation
+        sess["chat"].mode = mode  # honor a mode change between turns
         try:
-            chat = PaperChat(source.strip(), model=(model or None), mode=mode)
-            answer = chat.ask(question.strip())
+            answer = sess["chat"].ask(question.strip())
         except PaperMindError as exc:
-            return _page("/ask", _ask_form(live, str(exc)), live)
-        return _page("/ask", _answer_html(answer) + _ask_form(live), live)
+            _store_session(sid, sess)
+            body = _chat_log_html(sess["log"]) + _ask_form(live, str(exc))
+            return _with_session(HTMLResponse(_page("/ask", body, live)), sid)
+
+        sess["log"].append((question.strip(), answer))
+        _store_session(sid, sess)
+        body = _chat_log_html(sess["log"]) + _ask_form(live)
+        return _with_session(HTMLResponse(_page("/ask", body, live)), sid)
 
     # -- summary -------------------------------------------------------------- #
     @app.get("/summary", response_class=HTMLResponse)
@@ -239,6 +282,42 @@ def _report_for(source: str, model: str, live: bool, need: Optional[str] = None)
 
 
 # --------------------------------------------------------------------------- #
+# Sessions (multi-turn 问答) and PDF upload
+# --------------------------------------------------------------------------- #
+def _session_for(sid: Optional[str]):
+    if not sid:
+        return None
+    with _ASK_LOCK:
+        return _ASK_SESSIONS.get(sid)
+
+
+def _store_session(sid: str, sess: dict) -> None:
+    with _ASK_LOCK:
+        _ASK_SESSIONS[sid] = sess
+        while len(_ASK_SESSIONS) > _ASK_MAX_SESSIONS:
+            _ASK_SESSIONS.pop(next(iter(_ASK_SESSIONS)))
+
+
+def _with_session(response, sid: str):
+    response.set_cookie("pm_sid", sid, httponly=True, samesite="lax", max_age=86400)
+    return response
+
+
+def _resolve_upload(source: str, file) -> Optional[str]:
+    """An uploaded PDF (saved to a temp file) wins; otherwise the pasted id/URL."""
+    if file is not None and getattr(file, "filename", ""):
+        import pathlib
+        import tempfile
+
+        data = file.file.read()
+        if data:
+            tmp = pathlib.Path(tempfile.gettempdir()) / f"papermind_{file.filename}"
+            tmp.write_bytes(data)
+            return str(tmp)
+    return (source or "").strip() or None
+
+
+# --------------------------------------------------------------------------- #
 # Design system — minimal academic (system serif display + sans body, warm
 # paper, one ink-navy accent). Light/dark via CSS variables; reduced-motion safe.
 # --------------------------------------------------------------------------- #
@@ -281,10 +360,21 @@ input,textarea,select{width:100%;font:inherit;color:var(--ink);background:var(--
 input:focus,textarea:focus,select:focus{outline:none;border-color:var(--accent);
   box-shadow:0 0 0 3px var(--accent-soft)}
 textarea{min-height:96px;resize:vertical}
+input[type=file]{padding:9px 12px;font-size:.9rem;color:var(--soft)}
+input[type=file]::file-selector-button{font:600 .85rem var(--sans);color:var(--accent);background:var(--accent-soft);
+  border:0;border-radius:6px;padding:6px 12px;margin-right:12px;cursor:pointer}
 button{font:600 .98rem var(--sans);background:var(--accent);color:#fff;border:0;border-radius:var(--rc);
   padding:11px 24px;cursor:pointer;transition:filter .15s,transform .08s}
 button:hover{filter:brightness(1.08)}button:active{transform:translateY(1px)}
 @media(prefers-color-scheme:dark){button{color:#15141a}}
+.ex{margin:16px 0 0;color:var(--soft);font-size:.88rem}
+.ex a{display:inline-block;margin-left:6px;padding:3px 11px;border:1px solid var(--line);border-radius:var(--rc);
+  text-decoration:none;color:var(--accent)}
+.ex a:hover{background:var(--accent-soft)}
+.chat .turn{padding:20px 0;border-top:1px solid var(--line)}
+.chat .turn:first-child{padding-top:0;border-top:0}
+.q{font-weight:600;margin:0 0 12px}
+.q::before{content:'问 ';color:var(--accent);font-weight:700}
 .err{color:var(--red);margin:0 0 14px;font-size:.92rem}
 .seg{border-left:3px solid var(--line);padding:2px 0 2px 16px;margin:16px 0}
 .seg .tag{display:block;font:600 .8rem var(--sans);letter-spacing:.02em;margin-bottom:5px}
@@ -336,7 +426,10 @@ def _page(active: str, body: str, live: bool) -> str:
         f"<span>当前模型 <span class='m'>{_e(_active_model_label())}</span></span>"
         f"<span>{mode}</span><a href='/demo'>离线示例</a></footer>"
         "</div><script>document.addEventListener('submit',function(e){var b=e.target.querySelector('button');"
-        "if(b&&!b.dataset.t){b.dataset.t=b.textContent;b.disabled=true;b.textContent='处理中…';}});</script>"
+        "if(b&&!b.dataset.t){b.dataset.t=b.textContent;b.disabled=true;b.textContent='处理中…';}});"
+        "document.addEventListener('click',function(e){var a=e.target.closest('.ex a');if(!a)return;"
+        "e.preventDefault();var i=document.querySelector(\"input[name='source']\");"
+        "if(i){i.value=a.dataset.id;i.focus();}});</script>"
         "</body></html>"
     )
 
@@ -345,16 +438,27 @@ def _err(error: str) -> str:
     return f"<p class='err'>{_e(error)}</p>" if error else ""
 
 
+_EXAMPLES = [("1706.03762", "Transformer"), ("2307.08691", "FlashAttention-2"), ("1810.04805", "BERT")]
+
+
+def _examples_row() -> str:
+    chips = "".join(f"<a href='#' data-id='{_e(i)}'>{_e(name)}</a>" for i, name in _EXAMPLES)
+    return f"<p class='ex'>没有目标？试试 {chips}</p>"
+
+
 def _analyze_form(live: bool, error: str = "") -> str:
     note = "" if live else "<p class='lead'>演示模式：仅展示已缓存论文。分析新论文请用 CLI，或以 <code>--live</code> 启动。</p>"
     return (
         "<section class='panel'><h2>分析一篇论文</h2>"
         "<p class='lead'>四模块结构化解读：核心贡献 · 方法与图示 · 关联工作 · 复现要点。</p>"
         f"{note}{_err(error)}"
-        "<form method='post' action='/analyze'>"
+        "<form method='post' action='/analyze' enctype='multipart/form-data'>"
         "<label>论文 <span class='hint'>arXiv id / URL</span></label>"
         "<input name='source' placeholder='2307.08691  或  https://arxiv.org/abs/2307.08691' autofocus>"
-        "<button>分析</button></form></section>"
+        "<label>或上传 PDF <span class='hint'>本地论文</span></label>"
+        "<input type='file' name='file' accept='application/pdf'>"
+        "<button>分析</button></form>"
+        f"{_examples_row()}</section>"
     )
 
 
@@ -418,7 +522,7 @@ def _search_form(error: str = "") -> str:
     )
 
 
-def _answer_html(answer) -> str:
+def _answer_segments_html(answer) -> str:
     kind = {"fact": ("论文事实", "fact"), "inference": ("基于论文的推理", "inf"), "out_of_scope": ("超出论文范围", "oos")}
     segs = []
     for s in answer.segments:
@@ -436,7 +540,14 @@ def _answer_html(answer) -> str:
             mark = "" if e.verified else "<span class='hint'>未核实 · </span>"
             rows += f"<tr><td class='aid'>{_e(loc) or '—'}</td><td>{mark}{_e(e.text)}</td></tr>"
         ev = f"<h3>原文依据</h3><table><tbody>{rows}</tbody></table>"
-    return f"<section class='panel'>{''.join(segs)}{ev}</section>"
+    return f"{''.join(segs)}{ev}"
+
+
+def _chat_log_html(log) -> str:
+    turns = ""
+    for question, answer in log:
+        turns += f"<div class='turn'><p class='q'>{_e(question)}</p>{_answer_segments_html(answer)}</div>"
+    return f"<section class='panel chat'>{turns}</section>" if turns else ""
 
 
 def _e(text) -> str:
