@@ -11,6 +11,7 @@ from typing import List, Optional
 
 import typer
 from rich.console import Console
+from rich.markup import escape
 
 from papermind import __version__
 from papermind.errors import PaperMindError
@@ -62,7 +63,7 @@ def main(
 
 def _fail(message: str) -> "typer.Exit":
     """Print a clean error and return an Exit(1) to raise."""
-    err_console.print(f"[bold red]Error:[/bold red] {message}")
+    err_console.print(f"[bold red]Error:[/bold red] {escape(message)}")
     return typer.Exit(code=1)
 
 
@@ -313,7 +314,7 @@ def chat(
         try:
             answer = _run_answer(lambda on_delta: chat_session.ask(question, on_delta=on_delta), not no_stream)
         except PaperMindError as exc:
-            err_console.print(f"[red]{exc}[/red]")
+            err_console.print(f"[red]{escape(str(exc))}[/red]")
             continue
         render_answer(answer, console)
         render_usage(answer.usage, console, label="本轮")
@@ -418,7 +419,7 @@ def tutor(
         try:
             answer = _run_answer(lambda on_delta: session.tutor(question, on_delta=on_delta), not no_stream)
         except PaperMindError as exc:
-            err_console.print(f"[red]{exc}[/red]")
+            err_console.print(f"[red]{escape(str(exc))}[/red]")
             continue
         render_answer(answer, console)
         render_usage(answer.usage, console, label="本轮")

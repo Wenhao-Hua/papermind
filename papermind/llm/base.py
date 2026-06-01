@@ -49,12 +49,12 @@ class LLMClient:
             self.model = _resolve_default_model(self.config, on_notice)
         else:
             self.model = model
-        # Keyless local model + no OpenAI key -> use local embeddings too.
-        if self.model.startswith(_KEYLESS_PREFIXES) and not _has_openai_key(self.config):
+        # Non-OpenAI LLM + no OpenAI key -> OpenAI embeddings can't work, use local.
+        # (Silent: only the Q&A family actually needs embeddings; if local deps are
+        # missing, embed() raises a clear, actionable error at that point.)
+        if not _is_openai_model(self.model) and not _has_openai_key(self.config):
             if self.config.embedding_provider == "openai" and not self.config.embedding_model:
                 self.config.embedding_provider = "local"
-                if on_notice:
-                    on_notice("使用本地 embedding（BAAI/bge-small，需 papermind[local-embeddings]）。")
 
     # -- text --------------------------------------------------------------- #
     def complete(
@@ -282,11 +282,18 @@ def _has_key_for(model: str, config: Config) -> bool:
     m = model.lower()
     if "claude" in m or m.startswith("anthropic/"):
         return bool(config.anthropic_key or os.environ.get("ANTHROPIC_API_KEY"))
+    if "deepseek" in m or m.startswith("deepseek/"):
+        return bool(config.deepseek_key or os.environ.get("DEEPSEEK_API_KEY"))
     return bool(config.openai_key or os.environ.get("OPENAI_API_KEY"))
 
 
 def _has_openai_key(config: Config) -> bool:
     return bool(config.openai_key or os.environ.get("OPENAI_API_KEY"))
+
+
+def _is_openai_model(model: str) -> bool:
+    m = model.lower()
+    return m.startswith(("gpt", "o1", "o3", "openai/", "chatgpt"))
 
 
 def ollama_available(timeout: float = 1.0) -> bool:
@@ -361,7 +368,7 @@ def _import_litellm():
 
 def _supports_json_mode(model: str) -> bool:
     m = model.lower()
-    return any(tag in m for tag in ("gpt-4", "gpt-3.5", "gpt-4o", "o1", "o3", "gpt-5"))
+    return any(tag in m for tag in ("gpt-4", "gpt-3.5", "gpt-4o", "o1", "o3", "gpt-5", "deepseek"))
 
 
 def _try_parse_json(text: str):

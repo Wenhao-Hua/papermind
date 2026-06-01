@@ -39,24 +39,38 @@ class ResolvedSource:
     cache_dir: Path
 
 
-def search_arxiv(query: str, max_results: int = 10):
-    """Search arXiv and return a list of :class:`PaperMeta` (no PDF download)."""
+def _query_arxiv(params: dict) -> str:
+    """GET the arXiv API with retry/backoff on 429 (rate limit) and 5xx."""
+    import time
+
     import httpx
 
-    try:
-        resp = httpx.get(
-            ARXIV_API,
-            params={"search_query": f"all:{query}", "start": 0, "max_results": max_results, "sortBy": "relevance"},
-            headers={"User-Agent": USER_AGENT},
-            timeout=30.0,
-            follow_redirects=True,
-        )
-        resp.raise_for_status()
-    except httpx.HTTPError as exc:
-        raise SourceError(f"arXiv 搜索失败: {exc}") from exc
+    for attempt in range(3):
+        try:
+            resp = httpx.get(
+                ARXIV_API, params=params, headers={"User-Agent": USER_AGENT}, timeout=30.0, follow_redirects=True
+            )
+            if resp.status_code in (429, 500, 502, 503, 504) and attempt < 2:
+                retry_after = resp.headers.get("retry-after")
+                time.sleep(float(retry_after) if retry_after else 3.0 * (attempt + 1))
+                continue
+            resp.raise_for_status()
+            return resp.text
+        except httpx.HTTPError as exc:
+            if attempt < 2:
+                time.sleep(3.0 * (attempt + 1))
+                continue
+            raise SourceError(f"arXiv 请求失败（可能被限流，请稍后重试）：{exc}") from exc
+    raise SourceError("arXiv 多次请求失败（可能被限流），请稍后再试。")
 
+
+def search_arxiv(query: str, max_results: int = 10):
+    """Search arXiv and return a list of :class:`PaperMeta` (no PDF download)."""
+    text = _query_arxiv(
+        {"search_query": f"all:{query}", "start": 0, "max_results": max_results, "sortBy": "relevance"}
+    )
     try:
-        root = ET.fromstring(resp.text)
+        root = ET.fromstring(text)
     except ET.ParseError as exc:
         raise SourceError(f"arXiv 搜索返回无法解析的响应: {exc}") from exc
 
@@ -150,22 +164,9 @@ def _resolve_arxiv(arxiv_id: str, config: Config) -> ResolvedSource:
 
 
 def _fetch_arxiv_metadata(arxiv_id: str) -> PaperMeta:
-    import httpx
-
+    text = _query_arxiv({"id_list": arxiv_id, "max_results": 1})
     try:
-        resp = httpx.get(
-            ARXIV_API,
-            params={"id_list": arxiv_id, "max_results": 1},
-            headers={"User-Agent": USER_AGENT},
-            timeout=30.0,
-            follow_redirects=True,
-        )
-        resp.raise_for_status()
-    except httpx.HTTPError as exc:
-        raise SourceError(f"Failed to reach arXiv for id {arxiv_id!r}: {exc}") from exc
-
-    try:
-        root = ET.fromstring(resp.text)
+        root = ET.fromstring(text)
     except ET.ParseError as exc:
         raise SourceError(f"arXiv returned an unparseable response for {arxiv_id!r}: {exc}") from exc
 

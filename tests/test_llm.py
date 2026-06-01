@@ -119,6 +119,16 @@ def test_explicit_ollama_model_uses_local_embeddings(monkeypatch):
     assert cfg.embedding_provider == "local"
 
 
+def test_deepseek_keeps_model_and_switches_embeddings(monkeypatch):
+    _no_keys(monkeypatch)
+    monkeypatch.delenv("DEEPSEEK_API_KEY", raising=False)
+    monkeypatch.setattr(base, "ollama_available", lambda timeout=1.0: True)  # must NOT be used
+    cfg = Config(deepseek_key="sk-x", default_model="deepseek/deepseek-chat")
+    client = LLMClient(config=cfg)
+    assert client.model == "deepseek/deepseek-chat"  # has deepseek key -> not swapped to ollama
+    assert cfg.embedding_provider == "local"         # no openai key -> local embeddings for RAG
+
+
 def test_apply_local_forces_whole_stack(monkeypatch, tmp_path):
     # Isolate config: empty PAPERMIND_HOME, no PAPERMIND_MODEL leaking in.
     monkeypatch.setenv("PAPERMIND_HOME", str(tmp_path))

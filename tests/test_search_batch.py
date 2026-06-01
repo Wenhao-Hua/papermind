@@ -32,6 +32,8 @@ _ATOM = """<?xml version="1.0" encoding="UTF-8"?>
 
 class _FakeResp:
     text = _ATOM
+    status_code = 200
+    headers: dict = {}
 
     def raise_for_status(self):
         return None
