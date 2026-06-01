@@ -1,23 +1,28 @@
-"""Full-featured web app for PaperMind (``papermind serve``).
+"""Full-featured web app for PaperMind (``papermind serve`` / ``papermind ui``).
 
-Tabs for every capability — 分析 / 问答 / 摘要 / 对比 / 复现 / 搜索 — each reusing
+Tabs for every capability — 分析 / 问答 / 速读 / 对比 / 复现 / 搜索 — each reusing
 the same core functions and HTML renderers as the CLI.
 
 Safe by default (**demo mode**): features that would call a model only run when
 their result is already cached; ``--live`` unlocks live analysis using the
 server's configured keys. (搜索 is always available — it makes no model calls.)
+
+The look is a single minimal-academic design system (system serif display + sans
+body, warm paper, one ink-navy accent, light/dark via CSS variables). No model
+picker — the active model is shown subtly in the footer.
 """
 
 from __future__ import annotations
 
 import html as _html
-from typing import List, Optional
+from typing import Optional
 
 from papermind.errors import PaperMindError
 
+# Kept for reference / tests: the models the server can talk to. The web UI no
+# longer renders a picker — the active model comes from the server's config.
 WEB_MODELS = [
-    ("", "默认（按服务器配置）"),
-    ("gpt-4o-mini", "OpenAI · GPT-4o mini（便宜）"),
+    ("gpt-4o-mini", "OpenAI · GPT-4o mini"),
     ("gpt-4o", "OpenAI · GPT-4o"),
     ("claude-3-5-sonnet-20241022", "Anthropic · Claude 3.5 Sonnet"),
     ("deepseek/deepseek-v4-pro", "DeepSeek · V4 Pro"),
@@ -26,13 +31,23 @@ WEB_MODELS = [
     ("ollama/llama3.1", "本地 · Ollama llama3.1"),
 ]
 
+_MODEL_LABELS = {
+    "deepseek/deepseek-v4-pro": "DeepSeek-V4 Pro",
+    "deepseek/deepseek-v4-flash": "DeepSeek-V4 Flash",
+    "deepseek/deepseek-reasoner": "DeepSeek Reasoner",
+    "deepseek/deepseek-chat": "DeepSeek Chat",
+    "gpt-4o-mini": "OpenAI GPT-4o mini",
+    "gpt-4o": "OpenAI GPT-4o",
+    "claude-3-5-sonnet-20241022": "Claude 3.5 Sonnet",
+}
+
 _TABS = [
-    ("/", "🎯 分析"),
-    ("/ask", "💬 问答"),
-    ("/summary", "📄 摘要"),
-    ("/compare", "📊 对比"),
-    ("/reproduce", "🛠️ 复现"),
-    ("/search", "🔎 搜索"),
+    ("/", "分析"),
+    ("/ask", "问答"),
+    ("/summary", "速读"),
+    ("/compare", "对比"),
+    ("/reproduce", "复现"),
+    ("/search", "搜索"),
 ]
 
 
@@ -58,104 +73,104 @@ def create_app(live: bool = False):
     # -- analyze -------------------------------------------------------------- #
     @app.get("/", response_class=HTMLResponse)
     def index():
-        return _page("/", _analyze_form(live))
+        return _page("/", _analyze_form(live), live)
 
     @app.post("/analyze", response_class=HTMLResponse)
     def analyze_route(source: str = Form(...), model: str = Form("")):
         report, err = _report_for(source, model, live)
         if err:
-            return _page("/", _analyze_form(live, err))
+            return _page("/", _analyze_form(live, err), live)
         return report.to_html()
 
     @app.get("/analyze", response_class=HTMLResponse)
     def analyze_get(source: str = ""):
         if not source.strip():
-            return _page("/", _analyze_form(live))
+            return _page("/", _analyze_form(live), live)
         report, err = _report_for(source, "", live)
         if err:
-            return _page("/", _analyze_form(live, err))
+            return _page("/", _analyze_form(live, err), live)
         return report.to_html()
 
     # -- ask (single-shot grounded Q&A) -------------------------------------- #
     @app.get("/ask", response_class=HTMLResponse)
     def ask_form():
-        return _page("/ask", _ask_form(live))
+        return _page("/ask", _ask_form(live), live)
 
     @app.post("/ask", response_class=HTMLResponse)
     def ask_route(source: str = Form(...), question: str = Form(...), model: str = Form(""), mode: str = Form("balanced")):
         if not live:
-            return _page("/ask", _ask_form(live, "演示模式不支持问答（需调用模型）。请以 --live 启动。"))
+            return _page("/ask", _ask_form(live, "演示模式不支持问答（需调用模型）。请以 --live 启动。"), live)
         if not source.strip() or not question.strip():
-            return _page("/ask", _ask_form(live, "请填写论文和问题。"))
+            return _page("/ask", _ask_form(live, "请填写论文和问题。"), live)
         from papermind.qa.chat import PaperChat
 
         try:
             chat = PaperChat(source.strip(), model=(model or None), mode=mode)
             answer = chat.ask(question.strip())
         except PaperMindError as exc:
-            return _page("/ask", _ask_form(live, str(exc)))
-        return _page("/ask", _answer_html(answer) + _ask_form(live))
+            return _page("/ask", _ask_form(live, str(exc)), live)
+        return _page("/ask", _answer_html(answer) + _ask_form(live), live)
 
     # -- summary -------------------------------------------------------------- #
     @app.get("/summary", response_class=HTMLResponse)
     def summary_form():
-        return _page("/summary", _simple_form("/summary", "快速 TL;DR（一次调用）", live))
+        return _page("/summary", _summary_form(live), live)
 
     @app.post("/summary", response_class=HTMLResponse)
     def summary_route(source: str = Form(...), model: str = Form("")):
         if not live:
-            return _page("/summary", _simple_form("/summary", "快速 TL;DR", live, "演示模式不支持摘要（需调用模型）。请以 --live 启动。"))
+            return _page("/summary", _summary_form(live, "演示模式不支持速读（需调用模型）。请以 --live 启动。"), live)
         from papermind.summarize import summarize
 
         try:
             result, _usage = summarize(source.strip(), model=(model or None))
         except PaperMindError as exc:
-            return _page("/summary", _simple_form("/summary", "快速 TL;DR", live, str(exc)))
+            return _page("/summary", _summary_form(live, str(exc)), live)
         points = "".join(f"<li>{_e(p)}</li>" for p in result.key_points)
-        body = f"<div class='card'><h2>{_e(result.title)}</h2><p>{_e(result.tldr)}</p><ul>{points}</ul></div>"
-        return _page("/summary", body + _simple_form("/summary", "再来一篇", live))
+        body = f"<section class='panel'><h2>{_e(result.title)}</h2><p>{_e(result.tldr)}</p><ul>{points}</ul></section>"
+        return _page("/summary", body + _summary_form(live), live)
 
     # -- compare -------------------------------------------------------------- #
     @app.get("/compare", response_class=HTMLResponse)
     def compare_form():
-        return _page("/compare", _compare_form(live))
+        return _page("/compare", _compare_form(live), live)
 
     @app.post("/compare", response_class=HTMLResponse)
     def compare_route(sources: str = Form(...), model: str = Form("")):
         items = [s.strip() for s in sources.splitlines() if s.strip()][:4]
         if len(items) < 2:
-            return _page("/compare", _compare_form(live, "请每行一个来源，至少 2 篇。"))
+            return _page("/compare", _compare_form(live, "请每行一个来源，至少 2 篇。"), live)
         from papermind.compare import compare as run_compare
 
         try:
             comparison = run_compare(items, model=(model or None), synthesize=live)
         except PaperMindError as exc:
-            return _page("/compare", _compare_form(live, str(exc)))
+            return _page("/compare", _compare_form(live, str(exc)), live)
         return comparison.to_html()
 
     # -- reproduce ------------------------------------------------------------ #
     @app.get("/reproduce", response_class=HTMLResponse)
     def reproduce_form():
-        return _page("/reproduce", _simple_form("/reproduce", "导出复现指南（setup.sh）", live))
+        return _page("/reproduce", _reproduce_form(live), live)
 
     @app.post("/reproduce", response_class=HTMLResponse)
     def reproduce_route(source: str = Form(...), model: str = Form("")):
         report, err = _report_for(source, model, live, need="reproduction")
         if err:
-            return _page("/reproduce", _simple_form("/reproduce", "导出复现指南", live, err))
+            return _page("/reproduce", _reproduce_form(live, err), live)
         script = report.to_setup_script()
         body = (
-            "<div class='card'><h2>setup.sh</h2>"
+            "<section class='panel'><h2>setup.sh</h2>"
             "<button class='copy-btn' onclick=\"navigator.clipboard.writeText("
-            "document.getElementById('sh').textContent)\">📋 复制</button>"
-            f"<pre id='sh'>{_e(script)}</pre></div>"
+            "document.getElementById('sh').textContent)\">复制</button>"
+            f"<pre id='sh'>{_e(script)}</pre></section>"
         )
-        return _page("/reproduce", body + _simple_form("/reproduce", "再导一篇", live))
+        return _page("/reproduce", body + _reproduce_form(live), live)
 
     # -- search (no model calls -> always available) ------------------------- #
     @app.get("/search", response_class=HTMLResponse)
     def search_form():
-        return _page("/search", _search_form())
+        return _page("/search", _search_form(), live)
 
     @app.post("/search", response_class=HTMLResponse)
     def search_route(query: str = Form(...)):
@@ -164,14 +179,20 @@ def create_app(live: bool = False):
         try:
             results = search_arxiv(query.strip(), max_results=12)
         except PaperMindError as exc:
-            return _page("/search", _search_form(str(exc)))
-        rows = "".join(
-            f"<tr><td><a href='/analyze?source={_e(r.arxiv_id)}'>{_e(r.arxiv_id)}</a></td>"
-            f"<td>{r.year or '-'}</td><td>{_e(r.title)}</td></tr>"
-            for r in results
+            return _page("/search", _search_form(str(exc)), live)
+        rows = ""
+        for r in results:
+            abs_url = f"https://arxiv.org/abs/{_e(r.arxiv_id)}"
+            rows += (
+                f"<tr><td class='aid'><a href='/analyze?source={_e(r.arxiv_id)}'>{_e(r.arxiv_id)}</a></td>"
+                f"<td>{r.year or '—'}</td>"
+                f"<td class='ttl'><a href='{abs_url}' target='_blank' rel='noopener'>{_e(r.title)}</a></td></tr>"
+            )
+        table = (
+            "<table><thead><tr><th>arXiv</th><th>年份</th><th>标题（原文）</th></tr></thead>"
+            f"<tbody>{rows}</tbody></table>"
         )
-        table = f"<table><thead><tr><th>arXiv</th><th>年份</th><th>标题</th></tr></thead><tbody>{rows}</tbody></table>"
-        return _page("/search", _search_form() + f"<div class='card'>{table}</div>")
+        return _page("/search", _search_form() + f"<section class='panel'>{table}</section>", live)
 
     return app
 
@@ -218,109 +239,182 @@ def _report_for(source: str, model: str, live: bool, need: Optional[str] = None)
 
 
 # --------------------------------------------------------------------------- #
-# HTML
+# Design system — minimal academic (system serif display + sans body, warm
+# paper, one ink-navy accent). Light/dark via CSS variables; reduced-motion safe.
 # --------------------------------------------------------------------------- #
-_CSS = (
-    "body{font:16px/1.6 -apple-system,Segoe UI,Roboto,'PingFang SC','Microsoft YaHei',sans-serif;"
-    "max-width:820px;margin:0 auto;padding:24px 20px 80px;color:#1a1a2e;background:#fbfbfd}"
-    "@media(prefers-color-scheme:dark){body{background:#0f0f17;color:#e6e6f0}"
-    ".card{background:#16161f!important;border-color:#2a2a3c!important}"
-    "input,select,textarea{background:#16161f!important;color:#e6e6f0!important;border-color:#2a2a3c!important}"
-    ".nav a{color:#9aa3b2}.nav a.on{color:#a5b4fc}}"
-    "h1{font-size:1.7rem;margin:.2em 0}.sub{color:#6b7280;margin:0 0 18px}"
-    ".nav{display:flex;flex-wrap:wrap;gap:14px;border-bottom:1px solid #e5e7eb;padding-bottom:10px;margin-bottom:20px}"
-    ".nav a{text-decoration:none;color:#6b7280;font-weight:600}.nav a.on{color:#5b5bd6}"
-    ".card{background:#fff;border:1px solid #e5e7eb;border-radius:14px;padding:20px;margin:14px 0}"
-    "label{font-weight:600;font-size:.92rem}input,select,textarea{width:100%;font:inherit;padding:10px 12px;"
-    "border:1px solid #e5e7eb;border-radius:8px;margin:6px 0 14px}textarea{min-height:90px}"
-    "button{font:inherit;font-weight:600;background:#5b5bd6;color:#fff;border:0;border-radius:8px;padding:11px 18px;cursor:pointer}"
-    "button:hover{background:#4a4ac0}.err{color:#e5484d}.note{color:#b45309}"
-    "table{border-collapse:collapse;width:100%}th,td{border:1px solid #e5e7eb;padding:8px 10px;text-align:left;vertical-align:top}"
-    "pre{background:#1e1e2e;color:#e6e6f0;padding:14px;border-radius:10px;overflow-x:auto;white-space:pre-wrap}"
-    ".copy-btn{background:#eef;color:#333;border:1px solid #ccd;border-radius:8px;padding:4px 12px;margin-bottom:8px}"
-    ".seg{padding:10px 14px;border-radius:10px;margin:10px 0}.fact{background:#dcfce7}.inf{background:#fef9c3}.oos{background:#fee2e2}"
-    "@media(prefers-color-scheme:dark){.fact{background:#14321f}.inf{background:#3a3410}.oos{background:#3a1414}}"
-    ".tag{font-weight:700;font-size:.8rem}a{color:#5b5bd6}"
-)
+_CSS = """
+:root{
+  --paper:#f5f4ef;--surface:#fffdf8;--ink:#211f1b;--soft:#5d5a52;--line:#e4e1d7;
+  --accent:#2c3a66;--accent-soft:#ecedf4;--green:#3f7d52;--amber:#946312;--red:#a8443f;
+  --rp:12px;--rc:8px;
+  --serif:"Iowan Old Style","Palatino Linotype","Book Antiqua",Palatino,"Songti SC",Georgia,serif;
+  --sans:-apple-system,"Segoe UI",Roboto,"PingFang SC","Microsoft YaHei",sans-serif;
+  --mono:"SF Mono","Cascadia Code","JetBrains Mono",Consolas,monospace;
+}
+@media(prefers-color-scheme:dark){:root{
+  --paper:#15141a;--surface:#1d1c24;--ink:#ece9e1;--soft:#a6a299;--line:#2d2c35;
+  --accent:#9fb0e8;--accent-soft:#23222e;--green:#7fb98f;--amber:#d6ab63;--red:#e08a85;
+}}
+*{box-sizing:border-box}
+body{margin:0;background:var(--paper);color:var(--ink);font:16px/1.7 var(--sans);
+  -webkit-font-smoothing:antialiased;text-rendering:optimizeLegibility}
+.pm-wrap{max-width:880px;margin:0 auto;padding:0 22px 96px}
+.pm-mast{padding:44px 0 18px}
+.pm-logo{font:600 1.95rem/1 var(--serif);letter-spacing:-.01em}
+.pm-tag{display:block;margin-top:9px;color:var(--soft);font-size:.92rem}
+.pm-nav{display:flex;flex-wrap:wrap;gap:24px;border-bottom:1px solid var(--line);margin-bottom:30px}
+.pm-nav a{text-decoration:none;color:var(--soft);font-weight:600;font-size:.95rem;
+  padding-bottom:13px;border-bottom:2px solid transparent;transition:color .15s,border-color .15s}
+.pm-nav a:hover{color:var(--ink)}
+.pm-nav a.on{color:var(--accent);border-bottom-color:var(--accent)}
+.panel{background:var(--surface);border:1px solid var(--line);border-radius:var(--rp);
+  padding:26px 28px;margin:18px 0;box-shadow:0 1px 2px rgba(33,31,27,.04),0 10px 28px rgba(33,31,27,.05)}
+h1,h2,h3{font-family:var(--serif);font-weight:600;letter-spacing:-.01em;line-height:1.25}
+.panel h2{margin:0 0 .35em;font-size:1.4rem}.panel h3{margin:1.4em 0 .4em;font-size:1.1rem}
+.panel p{margin:.2em 0 .9em}.lead{color:var(--soft);margin:0 0 18px;font-size:.96rem}
+.panel ul{padding-left:1.15em;margin:.4em 0}.panel li{margin:.35em 0}
+label{display:block;font-weight:600;font-size:.92rem;margin:2px 0 6px}
+.hint{color:var(--soft);font-weight:400}
+code{font-family:var(--mono);font-size:.86em;background:var(--accent-soft);padding:1px 6px;border-radius:5px}
+input,textarea,select{width:100%;font:inherit;color:var(--ink);background:var(--paper);
+  border:1px solid var(--line);border-radius:var(--rc);padding:11px 13px;margin-bottom:18px}
+input:focus,textarea:focus,select:focus{outline:none;border-color:var(--accent);
+  box-shadow:0 0 0 3px var(--accent-soft)}
+textarea{min-height:96px;resize:vertical}
+button{font:600 .98rem var(--sans);background:var(--accent);color:#fff;border:0;border-radius:var(--rc);
+  padding:11px 24px;cursor:pointer;transition:filter .15s,transform .08s}
+button:hover{filter:brightness(1.08)}button:active{transform:translateY(1px)}
+@media(prefers-color-scheme:dark){button{color:#15141a}}
+.err{color:var(--red);margin:0 0 14px;font-size:.92rem}
+.seg{border-left:3px solid var(--line);padding:2px 0 2px 16px;margin:16px 0}
+.seg .tag{display:block;font:600 .8rem var(--sans);letter-spacing:.02em;margin-bottom:5px}
+.seg small{display:block;margin-top:6px;color:var(--soft)}
+.seg.fact{border-left-color:var(--green)}.seg.fact .tag{color:var(--green)}
+.seg.inf{border-left-color:var(--amber)}.seg.inf .tag{color:var(--amber)}
+.seg.oos{border-left-color:var(--red)}.seg.oos .tag{color:var(--red)}
+table{border-collapse:collapse;width:100%;font-size:.95rem}
+th{text-align:left;font:600 .76rem var(--sans);letter-spacing:.04em;text-transform:uppercase;
+  color:var(--soft);padding:0 12px 10px}
+td{padding:12px;border-top:1px solid var(--line);vertical-align:top}
+.aid{font-family:var(--mono);font-size:.9rem;white-space:nowrap}
+.ttl a{color:var(--ink)}.ttl a:hover{color:var(--accent)}
+pre{font:.9rem/1.6 var(--mono);background:#1b1a22;color:#e9e6df;padding:16px 18px;
+  border-radius:var(--rc);overflow-x:auto;white-space:pre-wrap}
+.copy-btn{font:600 .85rem var(--sans);background:transparent;color:var(--accent);
+  border:1px solid var(--line);border-radius:var(--rc);padding:6px 14px;margin-bottom:12px}
+.copy-btn:hover{background:var(--accent-soft);filter:none}
+a{color:var(--accent)}
+.pm-foot{display:flex;flex-wrap:wrap;align-items:center;color:var(--soft);font-size:.85rem;
+  border-top:1px solid var(--line);margin-top:42px;padding-top:18px}
+.pm-foot>*+*{margin-left:18px;padding-left:18px;border-left:1px solid var(--line)}
+.pm-foot .m{font-weight:600;color:var(--ink)}
+@media(prefers-reduced-motion:reduce){*{transition:none!important}}
+@media(max-width:600px){.pm-wrap{padding:0 16px 64px}.pm-mast{padding:30px 0 14px}.panel{padding:22px}}
+"""
 
 
-def _page(active: str, body: str) -> str:
+def _active_model_label() -> str:
+    from papermind.config import load_config
+
+    m = load_config().default_model
+    return _MODEL_LABELS.get(m, m)
+
+
+def _page(active: str, body: str, live: bool) -> str:
     nav = "".join(
         f"<a href='{href}' class='{'on' if href == active else ''}'>{label}</a>" for href, label in _TABS
     )
+    mode = "实时分析 · 用本机 key（有成本）" if live else "演示模式 · 仅已缓存论文"
     return (
         "<!DOCTYPE html><html lang='zh'><head><meta charset='utf-8'>"
         "<meta name='viewport' content='width=device-width, initial-scale=1'>"
-        f"<title>PaperMind</title><style>{_CSS}</style></head><body>"
-        "<h1>📄 PaperMind</h1><p class='sub'>读懂一篇 arXiv 论文：分析 · 问答 · 复现</p>"
-        f"<nav class='nav'>{nav}</nav>{body}"
-        "<script>document.addEventListener('submit',function(e){var b=e.target.querySelector('button');"
-        "if(b){b.disabled=true;b.dataset.t=b.textContent;"
-        "b.textContent='⏳ 处理中…（首次分析新论文约 20–40 秒，请勿重复点击）';}});</script>"
+        f"<title>PaperMind</title><style>{_CSS}</style></head><body><div class='pm-wrap'>"
+        "<header class='pm-mast'><span class='pm-logo'>PaperMind</span>"
+        "<span class='pm-tag'>读懂一篇 arXiv 论文 · 结构化分析 · 带原文依据的问答 · 复现指南</span></header>"
+        f"<nav class='pm-nav'>{nav}</nav><main>{body}</main>"
+        "<footer class='pm-foot'>"
+        f"<span>当前模型 <span class='m'>{_e(_active_model_label())}</span></span>"
+        f"<span>{mode}</span><a href='/demo'>离线示例</a></footer>"
+        "</div><script>document.addEventListener('submit',function(e){var b=e.target.querySelector('button');"
+        "if(b&&!b.dataset.t){b.dataset.t=b.textContent;b.disabled=true;b.textContent='处理中…';}});</script>"
         "</body></html>"
     )
 
 
-def _models_select() -> str:
-    opts = "".join(f"<option value='{_e(v)}'>{_e(t)}</option>" for v, t in WEB_MODELS)
-    return f"<label>模型</label><select name='model'>{opts}</select>"
-
-
-def _mode_note(live: bool, error: str) -> str:
-    out = f"<p class='err'>{_e(error)}</p>" if error else ""
-    out += f"<p class='note'>当前：{'LIVE（调用模型，有成本）' if live else '演示模式（仅已缓存论文）'} · <a href='/demo'>看离线示例 →</a></p>"
-    return out
+def _err(error: str) -> str:
+    return f"<p class='err'>{_e(error)}</p>" if error else ""
 
 
 def _analyze_form(live: bool, error: str = "") -> str:
+    note = "" if live else "<p class='lead'>演示模式：仅展示已缓存论文。分析新论文请用 CLI，或以 <code>--live</code> 启动。</p>"
     return (
-        "<div class='card'><form method='post' action='/analyze'>"
-        f"{_mode_note(live, error)}"
-        "<label>论文（arXiv id / URL）</label>"
-        "<input name='source' placeholder='2307.08691 或 https://arxiv.org/abs/2307.08691' autofocus>"
-        f"{_models_select()}<button>分析</button></form></div>"
+        "<section class='panel'><h2>分析一篇论文</h2>"
+        "<p class='lead'>四模块结构化解读：核心贡献 · 方法与图示 · 关联工作 · 复现要点。</p>"
+        f"{note}{_err(error)}"
+        "<form method='post' action='/analyze'>"
+        "<label>论文 <span class='hint'>arXiv id / URL</span></label>"
+        "<input name='source' placeholder='2307.08691  或  https://arxiv.org/abs/2307.08691' autofocus>"
+        "<button>分析</button></form></section>"
     )
 
 
 def _ask_form(live: bool, error: str = "") -> str:
     return (
-        "<div class='card'><form method='post' action='/ask'>"
-        f"{_mode_note(live, error)}"
-        "<label>论文</label><input name='source' placeholder='2307.08691'>"
+        "<section class='panel'><h2>问答</h2>"
+        "<p class='lead'>基于原文回答，分层标注：论文事实 · 基于论文的推理 · 超出论文范围，并附原文依据。</p>"
+        f"{_err(error)}"
+        "<form method='post' action='/ask'>"
+        "<label>论文 <span class='hint'>arXiv id / URL</span></label><input name='source' placeholder='2307.08691'>"
         "<label>问题</label><input name='question' placeholder='为什么要除以 √d_k？'>"
-        f"{_models_select()}"
-        "<label>模式</label><select name='mode'><option value='balanced'>balanced</option>"
+        "<label>模式 <span class='hint'>strict 更保守 · explore 更发散</span></label>"
+        "<select name='mode'><option value='balanced'>balanced</option>"
         "<option value='strict'>strict</option><option value='explore'>explore</option></select>"
-        "<button>提问</button></form></div>"
+        "<button>提问</button></form></section>"
     )
 
 
-def _simple_form(action: str, label: str, live: bool, error: str = "") -> str:
+def _summary_form(live: bool, error: str = "") -> str:
     return (
-        f"<div class='card'><form method='post' action='{action}'>"
-        f"{_mode_note(live, error)}<label>{_e(label)} · 论文</label>"
-        "<input name='source' placeholder='2307.08691'>"
-        f"{_models_select()}<button>运行</button></form></div>"
+        "<section class='panel'><h2>速读</h2>"
+        "<p class='lead'>一句话 TL;DR + 几条要点（单次调用，比完整分析更快）。</p>"
+        f"{_err(error)}"
+        "<form method='post' action='/summary'>"
+        "<label>论文 <span class='hint'>arXiv id / URL</span></label><input name='source' placeholder='2307.08691'>"
+        "<button>速读</button></form></section>"
     )
 
 
 def _compare_form(live: bool, error: str = "") -> str:
     return (
-        "<div class='card'><form method='post' action='/compare'>"
-        f"{_mode_note(live, error)}"
-        "<label>论文（每行一个，2–4 篇）</label>"
+        "<section class='panel'><h2>多篇对比</h2>"
+        "<p class='lead'>2–4 篇论文的问题 · 方法 · 结果横向对照。</p>"
+        f"{_err(error)}"
+        "<form method='post' action='/compare'>"
+        "<label>论文 <span class='hint'>每行一个，2–4 篇</span></label>"
         "<textarea name='sources' placeholder='2307.08691&#10;1706.03762'></textarea>"
-        f"{_models_select()}<button>对比</button></form></div>"
+        "<button>对比</button></form></section>"
+    )
+
+
+def _reproduce_form(live: bool, error: str = "") -> str:
+    return (
+        "<section class='panel'><h2>复现指南</h2>"
+        "<p class='lead'>导出可一键运行的环境与步骤脚本（setup.sh）。</p>"
+        f"{_err(error)}"
+        "<form method='post' action='/reproduce'>"
+        "<label>论文 <span class='hint'>arXiv id / URL</span></label><input name='source' placeholder='2307.08691'>"
+        "<button>导出</button></form></section>"
     )
 
 
 def _search_form(error: str = "") -> str:
-    err = f"<p class='err'>{_e(error)}</p>" if error else ""
     return (
-        "<div class='card'><form method='post' action='/search'>"
-        f"{err}<label>搜索 arXiv（不调用模型）</label>"
-        "<input name='query' placeholder='flash attention' autofocus>"
-        "<button>搜索</button></form></div>"
+        "<section class='panel'><h2>搜索 arXiv</h2>"
+        "<p class='lead'>关键词检索，不调用模型。点结果中的 arXiv id 即可分析 / 问答。</p>"
+        f"{_err(error)}"
+        "<form method='post' action='/search'>"
+        "<label>关键词</label><input name='query' placeholder='flash attention' autofocus>"
+        "<button>搜索</button></form></section>"
     )
 
 
@@ -328,19 +422,21 @@ def _answer_html(answer) -> str:
     kind = {"fact": ("论文事实", "fact"), "inference": ("基于论文的推理", "inf"), "out_of_scope": ("超出论文范围", "oos")}
     segs = []
     for s in answer.segments:
-        label, cls = kind.get(s.kind, (s.kind, "seg"))
-        head = f"<span class='tag'>【{label}】</span>"
+        label, cls = kind.get(s.kind, (s.kind, ""))
+        tag = label
         if s.kind == "inference" and s.confidence:
-            head += f" 置信度: {_e(s.confidence)}"
-        reason = f"<br><small>推理依据: {_e(s.reasoning)}</small>" if s.reasoning else ""
-        segs.append(f"<div class='seg {cls}'>{head}<br>{_e(s.text)}{reason}</div>")
-    ev_rows = ""
-    for e in answer.evidence:
-        loc = (e.section or "") + (f" p.{e.page}" if e.page else "")
-        mark = "" if e.verified else "<span class='note'>⚠ 未核实 </span>"
-        ev_rows += f"<tr><td>{_e(loc) or '-'}</td><td>{mark}{_e(e.text)}</td></tr>"
-    ev = f"<h3>原文依据</h3><table><tbody>{ev_rows}</tbody></table>" if ev_rows else ""
-    return f"<div class='card'>{''.join(segs)}{ev}</div>"
+            tag += f" · 置信度 {_e(s.confidence)}"
+        reason = f"<small>推理依据：{_e(s.reasoning)}</small>" if s.reasoning else ""
+        segs.append(f"<div class='seg {cls}'><span class='tag'>{tag}</span><div>{_e(s.text)}</div>{reason}</div>")
+    ev = ""
+    if answer.evidence:
+        rows = ""
+        for e in answer.evidence:
+            loc = (e.section or "") + (f" p.{e.page}" if e.page else "")
+            mark = "" if e.verified else "<span class='hint'>未核实 · </span>"
+            rows += f"<tr><td class='aid'>{_e(loc) or '—'}</td><td>{mark}{_e(e.text)}</td></tr>"
+        ev = f"<h3>原文依据</h3><table><tbody>{rows}</tbody></table>"
+    return f"<section class='panel'>{''.join(segs)}{ev}</section>"
 
 
 def _e(text) -> str:

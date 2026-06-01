@@ -10,7 +10,7 @@ from fastapi.testclient import TestClient  # noqa: E402
 
 import papermind.parser.arxiv as arxiv_mod  # noqa: E402
 from papermind.parser.arxiv import ResolvedSource  # noqa: E402
-from papermind.web import WEB_MODELS, create_app  # noqa: E402
+from papermind.web import create_app  # noqa: E402
 
 
 def test_healthz_reports_mode():
@@ -20,14 +20,14 @@ def test_healthz_reports_mode():
     assert TestClient(create_app(live=True)).get("/healthz").json()["live"] is True
 
 
-def test_index_has_form_and_models():
+def test_index_has_form_and_active_model():
     client = TestClient(create_app())
     r = client.get("/")
     assert r.status_code == 200
     assert "PaperMind" in r.text and "<form" in r.text
-    # model dropdown is populated from WEB_MODELS
-    assert "deepseek/deepseek-v4-pro" in r.text
-    assert any(label in r.text for _, label in WEB_MODELS)
+    # No model picker — the active model is shown subtly in the footer instead.
+    assert "<select name='model'" not in r.text
+    assert "当前模型" in r.text
 
 
 def test_demo_route_renders_offline_report():

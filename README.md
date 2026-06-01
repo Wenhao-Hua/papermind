@@ -84,16 +84,16 @@ papermind analyze https://arxiv.org/abs/2307.08691 --format all --output ./repor
 
 ## 🖥️ 图形界面（Web GUI）
 
-不想用命令行？一个 [Streamlit](https://streamlit.io) 图形界面，把全部能力搬进浏览器：
+不想用命令行？一个极简学术风格的网页界面，把全部能力搬进浏览器：
 
 ```bash
 pip install "paper-mind[ui]"
-papermind ui                 # 打开 http://localhost:8501
+papermind ui                 # 本地全功能，打开 http://localhost:8501
 ```
 
-**侧栏**常驻 💬 多轮问答 + 当前模型；**主区标签**：🎯 分析 · 📄 速读 · 📊 对比 · 🛠️ 复现 · 🔎 搜索。在侧栏粘贴 arXiv id/URL 或**上传 PDF**，即可分析（自动含图示）/问答；报告内嵌渲染（公式、可折叠、深色模式）。模型用你配置的默认值（`papermind config set model ...` 切换）。
+标签页：**分析 · 问答 · 速读 · 对比 · 复现 · 搜索**。粘贴 arXiv id/URL 即可分析 / 问答；分层标注（论文事实 · 推理 · 超出范围）并附原文依据；报告渲染公式与图示，支持深色模式。模型用你配置的默认值（页脚小字显示，`papermind config set model ...` 切换）。
 
-> 另有轻量 API/隧道端：`papermind serve`（FastAPI，默认只读缓存，适合公开演示）。
+> 公开演示 / 隧道端用 `papermind serve`（同一界面，默认只读缓存、不烧 key；`--live` 才实时分析）。
 
 ## 为什么用 PaperMind
 

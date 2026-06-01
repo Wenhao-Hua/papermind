@@ -115,29 +115,22 @@ def demo(
 def ui(
     host: str = typer.Option("localhost", "--host", help="Bind host."),
     port: int = typer.Option(8501, "--port", "-p", help="Bind port."),
+    no_browser: bool = typer.Option(False, "--no-browser", help="Don't open a browser window."),
 ) -> None:
-    """Launch the Streamlit GUI (requires the optional 'ui' dependencies)."""
-    import importlib.util
-    import subprocess
-    import sys
-    from pathlib import Path
+    """Launch the local web app — full features, uses your configured keys."""
+    import threading
+    import webbrowser
 
-    if importlib.util.find_spec("streamlit") is None:
-        raise _fail("GUI 需要 Streamlit。安装：pip install 'paper-mind[ui]'")
-    ui_path = Path(__file__).parent / "ui.py"
-    console.print(f"[bold cyan]PaperMind GUI[/bold cyan]  →  http://{host}:{port}  ·  Ctrl-C 停止")
-    subprocess.run(
-        [sys.executable, "-m", "streamlit", "run", str(ui_path),
-         "--server.address", host, "--server.port", str(port),
-         "--server.headless", "true", "--browser.gatherUsageStats", "false",
-         "--client.toolbarMode", "minimal",
-         "--theme.base", "light",
-         "--theme.primaryColor", "#5b5bd6",
-         "--theme.backgroundColor", "#ffffff",
-         "--theme.secondaryBackgroundColor", "#f5f6fb",
-         "--theme.textColor", "#1f2333",
-         "--theme.font", "sans serif"]
-    )
+    from papermind.web import serve as run_serve
+
+    url = f"http://{host}:{port}"
+    console.print(f"[bold cyan]PaperMind[/bold cyan]  →  {url}  ·  Ctrl-C 停止")
+    if not no_browser:
+        threading.Timer(1.2, lambda: webbrowser.open(url)).start()
+    try:
+        run_serve(host=host, port=port, live=True)
+    except PaperMindError as exc:
+        raise _fail(str(exc))
 
 
 @app.command()
