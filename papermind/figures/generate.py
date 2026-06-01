@@ -6,6 +6,7 @@ extracted figures.
 from __future__ import annotations
 
 import re
+from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
 from typing import List
 
@@ -14,6 +15,16 @@ from papermind.llm.base import LLMClient
 from papermind.llm.prompts import MERMAID_SYSTEM, image_diagram_prompt, mermaid_user
 from papermind.output.schema import Figure, TechnicalPoint
 
+_MAX_WORKERS = 4
+
+
+def _parallel_map(fn, items):
+    """Map fn over items concurrently, preserving order. Serial if 0/1 item."""
+    if len(items) <= 1:
+        return [fn(x) for x in items]
+    with ThreadPoolExecutor(max_workers=min(_MAX_WORKERS, len(items))) as pool:
+        return list(pool.map(fn, items))
+
 
 def generate_image_diagrams(
     points: List[TechnicalPoint], client: LLMClient, cache_dir: Path, model: str, on_notice=None
@@ -21,17 +32,25 @@ def generate_image_diagrams(
     """Generate an actual image (via an image model) for points lacking a figure.
 
     Best-effort: any failure (no key, model error) leaves the point figure-less
-    so the caller can still fall back to Mermaid.
+    so the caller can still fall back to Mermaid. Network calls run in parallel;
+    file writes happen serially on the main thread.
     """
-    fig_dir = cache_dir / "figures"
-    for i, point in enumerate(points):
-        if point.figure is not None:
-            continue
+    todo = [(i, p) for i, p in enumerate(points) if p.figure is None]
+    if not todo:
+        return
+
+    def _fetch(item):
+        i, point = item
         try:
-            data = client.image(image_diagram_prompt(point.name, point.explanation), model)
+            return (i, point, client.image(image_diagram_prompt(point.name, point.explanation), model), None)
         except LLMError as exc:
-            if on_notice:
-                on_notice(f"图像生成失败（{model}）：{exc}")
+            return (i, point, None, str(exc))
+
+    fig_dir = cache_dir / "figures"
+    for i, point, data, err in _parallel_map(_fetch, todo):
+        if data is None:
+            if err and on_notice:
+                on_notice(f"图像生成失败（{model}）：{err}")
                 on_notice = None  # only warn once
             continue
         fig_dir.mkdir(parents=True, exist_ok=True)
@@ -44,20 +63,25 @@ def generate_image_diagrams(
 
 
 def generate_diagrams(points: List[TechnicalPoint], client: LLMClient) -> None:
-    for point in points:
-        if point.figure is not None:
-            continue  # already has an original figure
+    todo = [p for p in points if p.figure is None]
+    if not todo:
+        return
+
+    def _gen(point):
         try:
             data = client.complete_json(MERMAID_SYSTEM, mermaid_user(point.name, point.explanation))
         except LLMError:
-            continue
+            return None
         if not isinstance(data, dict):
-            continue
+            return None
         mermaid = _clean_mermaid(data.get("mermaid"))
         if not mermaid:
-            continue
-        caption = data.get("caption") or "AI 生成示意图"
-        point.figure = Figure(type="ai_generated", mermaid=mermaid, caption=str(caption))
+            return None
+        return Figure(type="ai_generated", mermaid=mermaid, caption=str(data.get("caption") or "AI 生成示意图"))
+
+    for point, fig in zip(todo, _parallel_map(_gen, todo)):
+        if fig is not None:
+            point.figure = fig
 
 
 def _clean_mermaid(value) -> str:

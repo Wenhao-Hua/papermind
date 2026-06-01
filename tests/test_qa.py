@@ -116,6 +116,37 @@ def test_clean_mermaid_strips_fences():
     assert generate._clean_mermaid(None) == ""
 
 
+def test_generate_diagrams_parallel_assigns_each_point():
+    points = [TechnicalPoint(name=f"P{i}", explanation="e") for i in range(5)]
+    client = FakeClient({"mermaid": "flowchart TD\n A-->B", "caption": "图"})
+    generate.generate_diagrams(points, client)
+    assert all(p.figure is not None and p.figure.mermaid.startswith("flowchart") for p in points)
+
+
+def test_usage_accumulation_thread_safe():
+    import threading
+
+    from papermind.config import Config
+    from papermind.llm.base import LLMClient
+
+    client = LLMClient(model="gpt-4o-mini", config=Config(openai_key="sk-x"))
+
+    n_threads, per = 6, 100
+
+    def hammer():
+        for _ in range(per):
+            client._record_usage("gpt-4o-mini", 10, 5)
+
+    threads = [threading.Thread(target=hammer) for _ in range(n_threads)]
+    for t in threads:
+        t.start()
+    for t in threads:
+        t.join()
+    assert client.usage.calls == n_threads * per
+    assert client.usage.prompt_tokens == n_threads * per * 10
+    assert client.usage.completion_tokens == n_threads * per * 5
+
+
 class _ImageClient:
     def __init__(self, data=b"\x89PNG\r\nfake"):
         self.data = data

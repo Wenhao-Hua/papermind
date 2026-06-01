@@ -73,18 +73,24 @@ def analyze(
         context = _build_context(parsed)
         report = Report(paper=parsed.meta)
 
-        if "contributions" in modules:
-            report.contributions = m_contributions.run(parsed, client, context)
-            advance("contributions")
-        if "technical" in modules:
-            report.technical = m_technical.run(parsed, client, context)
-            advance("technical")
-        if "connections" in modules:
-            report.connections = m_connections.run(parsed, client, context)
-            advance("connections")
-        if "reproduction" in modules:
-            report.reproduction = m_reproduction.run(parsed, client, context)
-            advance("reproduction")
+        # The four modules are independent -> run them concurrently (network-bound).
+        runners = {
+            "contributions": lambda: m_contributions.run(parsed, client, context),
+            "technical": lambda: m_technical.run(parsed, client, context),
+            "connections": lambda: m_connections.run(parsed, client, context),
+            "reproduction": lambda: m_reproduction.run(parsed, client, context),
+        }
+        selected = [m for m in ALL_MODULES if m in modules]
+        results = _run_modules(selected, runners, advance)
+
+        if "contributions" in results:
+            report.contributions = results["contributions"]
+        if "technical" in results:
+            report.technical = results["technical"]
+        if "connections" in results:
+            report.connections = results["connections"]
+        if "reproduction" in results:
+            report.reproduction = results["reproduction"]
 
         if with_figures and "technical" in modules and report.technical.details:
             from papermind.figures.extract import match_original_figures
@@ -102,6 +108,26 @@ def analyze(
     report.usage = client.usage
     save_report(report, cache_path)
     return report
+
+
+def _run_modules(selected: List[str], runners: dict, advance) -> dict:
+    """Run the selected analysis modules concurrently (or serially if just one)."""
+    results: dict = {}
+    if len(selected) <= 1:
+        for name in selected:
+            results[name] = runners[name]()
+            advance(name)
+        return results
+
+    from concurrent.futures import ThreadPoolExecutor, as_completed
+
+    with ThreadPoolExecutor(max_workers=len(selected)) as pool:
+        futures = {pool.submit(runners[name]): name for name in selected}
+        for future in as_completed(futures):  # iterated on the main thread
+            name = futures[future]
+            results[name] = future.result()  # propagates module errors as in serial mode
+            advance(name)
+    return results
 
 
 def _build_context(parsed: ParsedPaper, budget: int = _BODY_BUDGET) -> str:

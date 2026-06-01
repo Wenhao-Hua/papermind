@@ -11,6 +11,7 @@ from __future__ import annotations
 import json
 import os
 import re
+import threading
 from typing import TYPE_CHECKING, Callable, List, Optional
 
 from papermind.config import Config, load_config
@@ -43,6 +44,7 @@ class LLMClient:
         self.config = config or load_config()
         self.temperature = temperature
         self.usage = Usage()  # accumulated across all calls on this client
+        self._usage_lock = threading.Lock()  # usage is updated from parallel workers
 
         # Free local path: with no API key but Ollama running, default to a local model.
         if model is None:
@@ -282,7 +284,8 @@ class LLMClient:
             cost = float(prompt_cost) + float(completion_cost)
         except Exception:  # noqa: BLE001 - cost is best-effort; many models lack pricing
             cost = 0.0
-        self.usage.record(prompt_tokens, completion_tokens, cost)
+        with self._usage_lock:
+            self.usage.record(prompt_tokens, completion_tokens, cost)
 
 
 # --------------------------------------------------------------------------- #
