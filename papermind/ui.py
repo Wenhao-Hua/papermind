@@ -19,7 +19,7 @@ import streamlit.components.v1 as components
 from papermind.errors import PaperMindError
 
 _MODEL_LABELS = {
-    "deepseek/deepseek-v4-pro": "DeepSeek-V4 Pro（思考）",
+    "deepseek/deepseek-v4-pro": "DeepSeek-V4 Pro",
     "deepseek/deepseek-v4-flash": "DeepSeek-V4 Flash",
     "deepseek/deepseek-reasoner": "DeepSeek Reasoner",
     "deepseek/deepseek-chat": "DeepSeek Chat",
