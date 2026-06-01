@@ -1,0 +1,54 @@
+"""Web demo tests (skipped if FastAPI isn't installed)."""
+
+from __future__ import annotations
+
+import pytest
+
+pytest.importorskip("fastapi")
+
+from fastapi.testclient import TestClient  # noqa: E402
+
+import papermind.parser.arxiv as arxiv_mod  # noqa: E402
+from papermind.parser.arxiv import ResolvedSource  # noqa: E402
+from papermind.web import WEB_MODELS, create_app  # noqa: E402
+
+
+def test_healthz_reports_mode():
+    client = TestClient(create_app(live=False))
+    body = client.get("/healthz").json()
+    assert body["ok"] is True and body["live"] is False
+    assert TestClient(create_app(live=True)).get("/healthz").json()["live"] is True
+
+
+def test_index_has_form_and_models():
+    client = TestClient(create_app())
+    r = client.get("/")
+    assert r.status_code == 200
+    assert "PaperMind" in r.text and "<form" in r.text
+    # model dropdown is populated from WEB_MODELS
+    assert "deepseek/deepseek-chat" in r.text
+    assert any(label in r.text for _, label in WEB_MODELS)
+
+
+def test_demo_route_renders_offline_report():
+    r = TestClient(create_app()).get("/demo")
+    assert r.status_code == 200
+    assert "Attention Is All You Need" in r.text  # the bundled demo paper
+    assert "MathJax" in r.text                      # full report rendering
+
+
+def test_analyze_demo_mode_does_not_run_when_uncached(monkeypatch, tmp_path):
+    from papermind.output.schema import PaperMeta
+
+    resolved = ResolvedSource(
+        meta=PaperMeta(title="Uncached", arxiv_id="9999.99999"),
+        pdf_path=tmp_path / "p.pdf",
+        cache_key="9999.99999",
+        cache_dir=tmp_path,  # empty -> no cached report
+    )
+    monkeypatch.setattr(arxiv_mod, "resolve", lambda source, config: resolved)
+
+    client = TestClient(create_app(live=False))
+    r = client.post("/analyze", data={"source": "9999.99999", "model": ""})
+    assert r.status_code == 200
+    assert "演示模式" in r.text  # falls back to the safe note, no analysis run

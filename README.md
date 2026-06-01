@@ -182,7 +182,13 @@ papermind cache list        # 查看缓存（PDF/索引/报告）
 papermind cache clear <key> # 或 --all
 papermind open <source>     # 浏览器打开缓存的报告（--pdf 打开 PDF）
 papermind config show
+
+# Web 演示（需 pip install "paperis[web]"）
+papermind serve --port 8080          # 默认演示模式：只展示已缓存的论文（公网暴露也不会烧 key）
+papermind serve --port 8080 --live   # 实时分析：用本机配置的 key（有成本）
 ```
+
+浏览器里粘贴 arXiv id、下拉选模型（GPT / Claude / DeepSeek / Gemini / 本地 Ollama）即可出 HTML 报告。适合挂到反向代理 / Cloudflare 隧道做公开演示——默认 demo 模式只读缓存，不会被陌生人刷爆你的 API key。
 
 `<source>` 三种写法等价：`https://arxiv.org/abs/2307.08691`、`arxiv:2307.08691`、`2307.08691`，也可以是本地 `./paper.pdf`。
 

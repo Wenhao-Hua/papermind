@@ -112,6 +112,25 @@ def demo(
 
 
 @app.command()
+def serve(
+    host: str = typer.Option("0.0.0.0", "--host", help="Bind host."),
+    port: int = typer.Option(8080, "--port", "-p", help="Bind port."),
+    live: bool = typer.Option(
+        False, "--live", help="Allow live analysis using the server's keys (has cost). Default: cached-only."
+    ),
+) -> None:
+    """Run the web demo. Default is demo mode (serves cached reports only, key-safe)."""
+    from papermind.web import serve as run_serve
+
+    mode = "[yellow]LIVE — 实时分析会用本机 key（有成本）[/yellow]" if live else "演示模式（仅展示已缓存论文，安全）"
+    console.print(f"[bold cyan]PaperMind web[/bold cyan]  →  http://{host}:{port}\n[dim]{mode}  ·  Ctrl-C 停止[/dim]")
+    try:
+        run_serve(host=host, port=port, live=live)
+    except PaperMindError as exc:
+        raise _fail(str(exc))
+
+
+@app.command()
 def analyze(
     source: str = typer.Argument(..., help="arXiv URL, 'arxiv:ID', bare ID, or local PDF path."),
     model: Optional[str] = typer.Option(None, "--model", "-m", help="LLM (litellm format). Default: gpt-4o-mini."),
