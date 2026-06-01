@@ -210,7 +210,9 @@ def _report_for(source: str, model: str, live: bool, need: Optional[str] = None)
     if not live:
         return None, "演示模式仅展示已缓存的论文。新论文请用 CLI 分析，或以 --live 启动服务。"
     try:
-        return run_analyze(source, model=(model or None), config=config), None
+        # Web stays snappy: skip figure generation (the extra per-point model calls);
+        # the report still has all four modules + formulas. Use CLI for figures.
+        return run_analyze(source, model=(model or None), config=config, with_figures=False), None
     except PaperMindError as exc:
         return None, str(exc)
 
@@ -251,7 +253,11 @@ def _page(active: str, body: str) -> str:
         "<meta name='viewport' content='width=device-width, initial-scale=1'>"
         f"<title>PaperMind</title><style>{_CSS}</style></head><body>"
         "<h1>📄 PaperMind</h1><p class='sub'>读懂一篇 arXiv 论文：分析 · 问答 · 复现</p>"
-        f"<nav class='nav'>{nav}</nav>{body}</body></html>"
+        f"<nav class='nav'>{nav}</nav>{body}"
+        "<script>document.addEventListener('submit',function(e){var b=e.target.querySelector('button');"
+        "if(b){b.disabled=true;b.dataset.t=b.textContent;"
+        "b.textContent='⏳ 处理中…（首次分析新论文约 20–40 秒，请勿重复点击）';}});</script>"
+        "</body></html>"
     )
 
 
