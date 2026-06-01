@@ -29,6 +29,29 @@ _MODEL_LABELS = {
 
 st.set_page_config(page_title="PaperMind", page_icon="📄", layout="wide")
 
+_CSS = """
+<style>
+#MainMenu, footer {visibility: hidden;}
+[data-testid="stToolbar"] {visibility: hidden; height: 0;}
+header[data-testid="stHeader"] {background: transparent;}
+.block-container {padding-top: 2.2rem; padding-bottom: 3rem; max-width: 1080px;}
+[data-testid="stSidebar"] {background: #f5f6fb;}
+.stButton > button {border-radius: 10px; font-weight: 600; padding: 0.5rem 1.1rem;}
+.stTabs [data-baseweb="tab-list"] {gap: 4px;}
+.stTabs [data-baseweb="tab"] {border-radius: 8px 8px 0 0;}
+h1, h2, h3 {letter-spacing: -0.01em;}
+.pm-hero {background: linear-gradient(120deg, #eef0ff, #f7f8ff); border: 1px solid #e6e8f5;
+  border-radius: 14px; padding: 16px 22px; margin-bottom: 16px;}
+.pm-hero h2 {margin: 0; font-size: 1.35rem;}
+.pm-hero p {margin: 4px 0 0; color: #6b7280; font-size: 0.92rem;}
+</style>
+"""
+
+_HERO = (
+    '<div class="pm-hero"><h2>📄 PaperMind</h2>'
+    "<p>读懂一篇 arXiv 论文：结构化分析 · 带原文依据的问答 · 复现指南</p></div>"
+)
+
 
 def _model_label() -> str:
     from papermind.config import load_config
@@ -259,7 +282,9 @@ def _tab_search():
 
 
 def main():
+    st.markdown(_CSS, unsafe_allow_html=True)
     paper = _sidebar()
+    st.markdown(_HERO, unsafe_allow_html=True)
     tabs = st.tabs(["🎯 分析", "📄 速读", "📊 对比", "🛠️ 复现", "🔎 搜索"])
     with tabs[0]:
         _tab_analyze(paper)

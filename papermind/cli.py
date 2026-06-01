@@ -129,7 +129,14 @@ def ui(
     subprocess.run(
         [sys.executable, "-m", "streamlit", "run", str(ui_path),
          "--server.address", host, "--server.port", str(port),
-         "--server.headless", "true", "--browser.gatherUsageStats", "false"]
+         "--server.headless", "true", "--browser.gatherUsageStats", "false",
+         "--client.toolbarMode", "minimal",
+         "--theme.base", "light",
+         "--theme.primaryColor", "#5b5bd6",
+         "--theme.backgroundColor", "#ffffff",
+         "--theme.secondaryBackgroundColor", "#f5f6fb",
+         "--theme.textColor", "#1f2333",
+         "--theme.font", "sans serif"]
     )
 
 
