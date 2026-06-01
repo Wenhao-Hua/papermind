@@ -37,6 +37,30 @@ def test_demo_route_renders_offline_report():
     assert "MathJax" in r.text                      # full report rendering
 
 
+def test_all_feature_tabs_present():
+    html = TestClient(create_app()).get("/").text
+    for href in ("/ask", "/summary", "/compare", "/reproduce", "/search"):
+        assert f"href='{href}'" in html
+
+
+def test_ask_blocked_in_demo_mode():
+    client = TestClient(create_app(live=False))
+    r = client.post("/ask", data={"source": "1706.03762", "question": "why?", "model": "", "mode": "balanced"})
+    assert r.status_code == 200 and "演示模式不支持问答" in r.text
+
+
+def test_search_works_without_model(monkeypatch):
+    import papermind.parser.arxiv as arxiv_mod
+    from papermind.output.schema import PaperMeta
+
+    monkeypatch.setattr(arxiv_mod, "search_arxiv", lambda q, max_results=12: [
+        PaperMeta(title="FlashAttention-2", arxiv_id="2307.08691", year=2023)
+    ])
+    r = TestClient(create_app(live=False)).post("/search", data={"query": "attention"})
+    assert r.status_code == 200
+    assert "2307.08691" in r.text and "/analyze?source=2307.08691" in r.text  # links to analyze
+
+
 def test_analyze_demo_mode_does_not_run_when_uncached(monkeypatch, tmp_path):
     from papermind.output.schema import PaperMeta
 
