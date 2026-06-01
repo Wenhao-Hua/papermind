@@ -82,6 +82,19 @@ papermind analyze https://arxiv.org/abs/2307.08691 --format all --output ./repor
 
 ---
 
+## 🖥️ 图形界面（Web GUI）
+
+不想用命令行？一个 [Streamlit](https://streamlit.io) 图形界面，把全部能力搬进浏览器：
+
+```bash
+pip install "paperis[ui]"
+papermind ui                 # 打开 http://localhost:8501
+```
+
+侧栏选模型/模式，标签页：**🎯 分析 · 💬 问答（多轮）· 📄 摘要 · 📊 对比 · 🛠️ 复现 · 🔎 搜索**；可粘贴 arXiv id/URL 或**上传 PDF**，报告内嵌渲染（公式、可折叠、深色模式）。
+
+> 另有轻量 API/隧道端：`papermind serve`（FastAPI，默认只读缓存，适合公开演示）。
+
 ## 为什么用 PaperMind
 
 | 痛点 | PaperMind 怎么解决 |

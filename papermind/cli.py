@@ -112,6 +112,28 @@ def demo(
 
 
 @app.command()
+def ui(
+    host: str = typer.Option("localhost", "--host", help="Bind host."),
+    port: int = typer.Option(8501, "--port", "-p", help="Bind port."),
+) -> None:
+    """Launch the Streamlit GUI (requires the optional 'ui' dependencies)."""
+    import importlib.util
+    import subprocess
+    import sys
+    from pathlib import Path
+
+    if importlib.util.find_spec("streamlit") is None:
+        raise _fail("GUI 需要 Streamlit。安装：pip install 'paperis[ui]'")
+    ui_path = Path(__file__).parent / "ui.py"
+    console.print(f"[bold cyan]PaperMind GUI[/bold cyan]  →  http://{host}:{port}  ·  Ctrl-C 停止")
+    subprocess.run(
+        [sys.executable, "-m", "streamlit", "run", str(ui_path),
+         "--server.address", host, "--server.port", str(port),
+         "--server.headless", "true", "--browser.gatherUsageStats", "false"]
+    )
+
+
+@app.command()
 def serve(
     host: str = typer.Option("0.0.0.0", "--host", help="Bind host."),
     port: int = typer.Option(8080, "--port", "-p", help="Bind port."),
