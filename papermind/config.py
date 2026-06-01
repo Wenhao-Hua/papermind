@@ -18,7 +18,9 @@ from papermind.errors import ConfigError
 
 DEFAULT_MODEL = "gpt-4o-mini"
 DEFAULT_EMBEDDING_MODEL_OPENAI = "text-embedding-3-small"
-DEFAULT_EMBEDDING_MODEL_LOCAL = "BAAI/bge-small-en-v1.5"
+# Multilingual by default: PaperMind's analysis/questions are often Chinese while
+# papers are English, so cross-lingual retrieval matters more than raw English score.
+DEFAULT_EMBEDDING_MODEL_LOCAL = "paraphrase-multilingual-MiniLM-L12-v2"
 
 # Map CLI-friendly keys (``config set openai-key``) to internal field names.
 _CLI_KEY_ALIASES: Dict[str, str] = {
