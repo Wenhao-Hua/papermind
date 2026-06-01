@@ -1,0 +1,58 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "papermind"
+version = "0.1.0"
+description = "Read arXiv papers for real: structured analysis, grounded RAG Q&A, and reproduction tutoring from the command line."
+readme = "README.md"
+license = { text = "MIT" }
+requires-python = ">=3.9"
+authors = [{ name = "PaperMind contributors" }]
+keywords = ["arxiv", "llm", "rag", "research", "paper", "reproduction", "cli"]
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "Environment :: Console",
+    "Intended Audience :: Science/Research",
+    "License :: OSI Approved :: MIT License",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.9",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Topic :: Scientific/Engineering :: Artificial Intelligence",
+]
+
+dependencies = [
+    "typer>=0.9.0",
+    "rich>=13.0.0",
+    "pydantic>=2.0.0",
+    "pymupdf>=1.23.0",
+    "litellm>=1.40.0",
+    "faiss-cpu>=1.7.4",
+    "numpy>=1.24.0",
+    "httpx>=0.24.0",
+]
+
+[project.optional-dependencies]
+local-embeddings = ["sentence-transformers>=2.2.0"]
+dev = [
+    "pytest>=7.0.0",
+    "pytest-mock>=3.10.0",
+]
+
+[project.urls]
+Homepage = "https://github.com/uawh-JLU/papermind"
+Repository = "https://github.com/uawh-JLU/papermind"
+Issues = "https://github.com/uawh-JLU/papermind/issues"
+
+[project.scripts]
+papermind = "papermind.cli:app"
+
+[tool.hatch.build.targets.wheel]
+packages = ["papermind"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "-q"

@@ -1,0 +1,28 @@
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+*.egg
+build/
+dist/
+.eggs/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+
+# Virtual envs
+.venv/
+venv/
+env/
+
+# PaperMind runtime
+.papermind/
+*.faiss
+report/
+*.report.json
+
+# IDE / OS
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
