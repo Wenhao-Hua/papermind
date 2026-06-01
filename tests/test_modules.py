@@ -136,6 +136,30 @@ def test_page_link():
     assert PaperMeta(title="t").page_link(5) is None
 
 
+def test_html_has_copy_bibtex_and_collapsible_points():
+    report = Report(
+        paper=PaperMeta(title="Attention", arxiv_id="1706.03762", authors=["A. Vaswani"], year=2017),
+        contributions=Contributions(main_contribution="c"),
+        technical=TechnicalSection(details=[TechnicalPoint(name="SDPA", explanation="e", difficulty="high")]),
+    )
+    html = report.to_html()
+    assert "复制 BibTeX" in html and 'id="pm-bibtex"' in html  # copy button + payload
+    assert "@article{vaswani2017attention" in html               # bibtex embedded
+    assert "<details class=\"tech\" open>" in html and "<summary>" in html  # collapsible
+
+
+def test_markdown_has_toc_with_anchors():
+    report = Report(
+        paper=PaperMeta(title="T"),
+        contributions=Contributions(main_contribution="c"),
+        technical=TechnicalSection(details=[TechnicalPoint(name="N", explanation="e")]),
+    )
+    md = report.to_markdown()
+    assert "- [🎯 贡献与创新点](#contributions)" in md
+    assert "- [🔬 技术细节解释](#technical)" in md
+    assert '<a id="contributions"></a>' in md and '<a id="technical"></a>' in md
+
+
 def test_html_export_self_contained(tmp_path):
     from papermind.output.schema import Figure
 

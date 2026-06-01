@@ -12,6 +12,7 @@ import mimetypes
 from pathlib import Path
 from typing import List, Optional
 
+from papermind.output.cite import to_bibtex
 from papermind.output.schema import Connection, Reproduction, Report, Source, TechnicalPoint
 
 _DIFFICULTY = {"high": ("high", "#e5484d"), "mid": ("mid", "#f5a623"), "low": ("low", "#30a46c")}
@@ -51,6 +52,15 @@ pre.mermaid svg { max-width:100%; height:auto; }
 img.figure { max-width:100%; border:1px solid var(--border); border-radius:8px; display:block; margin:8px 0; }
 figcaption { color:var(--muted); font-size:.85rem; margin-bottom:1em; }
 .ai-tag { color:var(--accent); }
+.copy-btn { font:inherit; font-size:.86rem; cursor:pointer; background:var(--soft); color:var(--fg);
+  border:1px solid var(--border); border-radius:8px; padding:5px 12px; margin:4px 0 10px; }
+.copy-btn:hover { border-color:var(--accent); color:var(--accent); }
+details.tech { background:var(--card); border:1px solid var(--border); border-radius:12px; padding:6px 22px; margin:14px 0; }
+details.tech > summary { cursor:pointer; list-style:none; font-size:1.12rem; font-weight:600; padding:12px 0; }
+details.tech > summary::-webkit-details-marker { display:none; }
+details.tech > summary::before { content:'▸'; color:var(--muted); margin-right:8px; font-size:.8em; }
+details.tech[open] > summary::before { content:'▾'; }
+details.tech[open] > summary { border-bottom:1px solid var(--border); margin-bottom:10px; }
 footer { color:var(--muted); font-size:.85rem; margin-top:48px; text-align:center; }
 """
 
@@ -94,6 +104,7 @@ def _render(report: Report) -> List[str]:
         '</head><body><div class="wrap">',
         f"<h1>{esc(paper.title)}</h1>",
         f'<div class="meta">{_meta(report)}</div>',
+        _bibtex_block(report),
         _toc(report),
     ]
     if report.contributions:
@@ -115,6 +126,17 @@ def _render(report: Report) -> List[str]:
 
 def esc(text) -> str:
     return html.escape(str(text)) if text is not None else ""
+
+
+def _bibtex_block(report: Report) -> str:
+    bib = esc(to_bibtex(report.paper))
+    return (
+        '<button class="copy-btn" onclick="pmCopyBib(this)">📋 复制 BibTeX</button>'
+        f'<pre id="pm-bibtex" hidden>{bib}</pre>'
+        "<script>function pmCopyBib(b){var t=document.getElementById('pm-bibtex').textContent;"
+        "navigator.clipboard.writeText(t).then(function(){var o=b.textContent;"
+        "b.textContent='\\u2713 \\u5df2\\u590d\\u5236';setTimeout(function(){b.textContent=o},1500);});}</script>"
+    )
 
 
 def _toc(report: Report) -> str:
@@ -182,8 +204,8 @@ def _contributions(report: Report) -> List[str]:
 def _technical_point(report: Report, idx: int, p: TechnicalPoint) -> List[str]:
     label, color = _DIFFICULTY.get(p.difficulty, (p.difficulty, "#888"))
     out = [
-        '<div class="card">',
-        f'<h3>{idx}. {esc(p.name)}<span class="pill" style="background:{color}">{label}</span></h3>',
+        '<details class="tech" open>',
+        f'<summary>{idx}. {esc(p.name)}<span class="pill" style="background:{color}">{label}</span></summary>',
         f"<p>{esc(p.explanation)}</p>",
     ]
     if p.formula:
@@ -194,7 +216,7 @@ def _technical_point(report: Report, idx: int, p: TechnicalPoint) -> List[str]:
         out.append(f'<p class="src">📍 出处：{_src_link(report, p.source_section, p.page)}</p>')
     if p.figure:
         out += _figure(p)
-    out.append("</div>")
+    out.append("</details>")
     return out
 
 
