@@ -36,6 +36,15 @@ def render_report(report: Report, console: Console) -> None:
             border_style="cyan",
         )
     )
+    stats = []
+    if report.technical.details:
+        stats.append(f"{len(report.technical.details)} 个技术点")
+    if report.connections.related_works:
+        stats.append(f"{len(report.connections.related_works)} 条知识关联")
+    if report.reproduction:
+        stats.append("复现指南")
+    if stats:
+        console.print(f"[dim]📊 {' · '.join(stats)}[/dim]")
 
     if report.contributions:
         _render_contributions(report, console)
@@ -60,7 +69,9 @@ def _render_contributions(report: Report, console: Console) -> None:
 
 
 def _render_technical(report: Report, console: Console) -> None:
-    console.print("\n[bold blue]🔬 技术细节解释[/bold blue]")
+    console.print()
+    console.rule("[bold blue]🔬 技术细节解释[/bold blue]", style="blue")
+    console.print("[dim]难度:[/dim] [bold red]high[/] · [yellow]mid[/] · [green]low[/]")
     for i, point in enumerate(report.technical.details, start=1):
         style = _DIFFICULTY_STYLE.get(point.difficulty, "white")
         header = Text()

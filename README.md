@@ -16,6 +16,21 @@ PaperMind 不是又一个「论文摘要器」。给它一篇 arXiv 论文，它
 <p align="center"><img src="docs/demo.gif" alt="PaperMind demo" width="760"></p>
 -->
 
+## ✨ 能做什么
+
+| 命令 | 作用 |
+| --- | --- |
+| `analyze` | 四模块报告：🎯 贡献 · 🔬 技术点（**含公式 + 原图/AI 示意图**）· 🔗 知识关联 · 🛠️ 复现指南 |
+| `summary` | 一句话 TL;DR + 要点（一次调用，便宜） |
+| `ask` / `chat` | **带原文依据的分层问答**：论文事实 / 基于论文的推理(+置信度) / 超出论文范围 + 可跳转页码 |
+| `tutor` / `debug` | 复现辅导；贴报错直接给可运行的修复 |
+| `compare` | 2–4 篇论文**并排对比表** + 对比小结 |
+| `reproduce` | 复现指南导出为可运行 `setup.sh` / Jupyter notebook |
+| `search` / `batch` / `list` | 搜 arXiv · 批量分析整目录 · 本地论文库 |
+| `cite` | 一键 BibTeX（不调模型） |
+
+> 模型走 [litellm](https://github.com/BerriAI/litellm)：OpenAI / Anthropic / **DeepSeek** / 本地 **Ollama** 任选；分析结果与索引本地缓存，二次运行秒出。
+
 ## 30 秒上手
 
 **零配置先看一眼**（内置离线回放，无需 key、无需联网）：

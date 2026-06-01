@@ -17,7 +17,11 @@ from papermind.output.schema import Connection, Reproduction, Report, Source, Te
 _DIFFICULTY = {"high": ("high", "#e5484d"), "mid": ("mid", "#f5a623"), "low": ("low", "#30a46c")}
 
 _CSS = """
-:root { --fg:#1a1a2e; --muted:#6b7280; --accent:#5b5bd6; --border:#e5e7eb; --bg:#fbfbfd; --card:#fff; }
+:root { --fg:#1a1a2e; --muted:#6b7280; --accent:#5b5bd6; --border:#e5e7eb; --bg:#fbfbfd; --card:#fff; --soft:#f3f4f6; }
+@media (prefers-color-scheme: dark) {
+  :root { --fg:#e6e6f0; --muted:#9aa3b2; --accent:#a5b4fc; --border:#2a2a3c; --bg:#0f0f17; --card:#16161f; --soft:#1e1e2b; }
+}
+html { scroll-behavior:smooth; }
 * { box-sizing:border-box; }
 body { margin:0; background:var(--bg); color:var(--fg); font:16px/1.65 -apple-system,Segoe UI,Roboto,Helvetica,Arial,"PingFang SC","Microsoft YaHei",sans-serif; }
 .wrap { max-width:860px; margin:0 auto; padding:48px 24px 96px; }
@@ -27,16 +31,19 @@ h3 { font-size:1.12rem; margin:1.6em 0 .5em; }
 a { color:var(--accent); text-decoration:none; } a:hover { text-decoration:underline; }
 .meta { color:var(--muted); font-size:.92rem; margin-bottom:1em; }
 .meta a { color:var(--muted); }
+.toc { display:flex; flex-wrap:wrap; gap:8px; margin:18px 0 8px; padding-bottom:18px; border-bottom:1px solid var(--border); }
+.toc a { font-size:.86rem; background:var(--soft); border:1px solid var(--border); border-radius:999px; padding:5px 14px; color:var(--fg); }
+.toc a:hover { border-color:var(--accent); color:var(--accent); text-decoration:none; }
 .card { background:var(--card); border:1px solid var(--border); border-radius:12px; padding:18px 22px; margin:14px 0; }
 .pill { display:inline-block; font-size:.72rem; font-weight:700; color:#fff; padding:2px 9px; border-radius:999px; vertical-align:middle; margin-left:8px; }
-.analogy { background:#f4f4ff; border-left:4px solid var(--accent); padding:10px 16px; border-radius:0 8px 8px 0; margin:12px 0; }
+.analogy { background:var(--soft); border-left:4px solid var(--accent); padding:10px 16px; border-radius:0 8px 8px 0; margin:12px 0; }
 .formula { overflow-x:auto; padding:6px 0; margin:10px 0; }
 .src { color:var(--muted); font-size:.86rem; }
 blockquote { margin:12px 0; padding:8px 16px; border-left:3px solid var(--border); color:var(--muted); }
 table { border-collapse:collapse; width:100%; margin:12px 0; font-size:.95rem; }
 th,td { border:1px solid var(--border); padding:8px 12px; text-align:left; vertical-align:top; }
-th { background:#f3f4f6; }
-code { background:#f1f1f4; padding:1px 6px; border-radius:6px; font-size:.88em; }
+th { background:var(--soft); }
+code { background:var(--soft); padding:1px 6px; border-radius:6px; font-size:.88em; }
 pre { background:#1e1e2e; color:#e6e6f0; padding:14px 16px; border-radius:10px; overflow-x:auto; }
 pre code { background:none; color:inherit; padding:0; }
 pre.mermaid { background:#fafaff; border:1px solid var(--border); border-radius:10px; text-align:center; padding:18px; }
@@ -87,11 +94,12 @@ def _render(report: Report) -> List[str]:
         '</head><body><div class="wrap">',
         f"<h1>{esc(paper.title)}</h1>",
         f'<div class="meta">{_meta(report)}</div>',
+        _toc(report),
     ]
     if report.contributions:
         parts += _contributions(report)
     if report.technical.details:
-        parts.append("<h2>🔬 技术细节解释</h2>")
+        parts.append('<h2 id="technical">🔬 技术细节解释</h2>')
         for i, p in enumerate(report.technical.details, 1):
             parts += _technical_point(report, i, p)
     if report.connections.related_works:
@@ -107,6 +115,22 @@ def _render(report: Report) -> List[str]:
 
 def esc(text) -> str:
     return html.escape(str(text)) if text is not None else ""
+
+
+def _toc(report: Report) -> str:
+    items = []
+    if report.contributions:
+        items.append(("contributions", "🎯 贡献"))
+    if report.technical.details:
+        items.append(("technical", "🔬 技术细节"))
+    if report.connections.related_works:
+        items.append(("connections", "🔗 知识关联"))
+    if report.reproduction:
+        items.append(("reproduction", "🛠️ 复现指南"))
+    if len(items) < 2:
+        return ""
+    links = "".join(f'<a href="#{anchor}">{label}</a>' for anchor, label in items)
+    return f'<nav class="toc">{links}</nav>'
 
 
 def _meta(report: Report) -> str:
@@ -145,7 +169,7 @@ def _sources(report: Report, sources: List[Source]) -> str:
 def _contributions(report: Report) -> List[str]:
     c = report.contributions
     return [
-        "<h2>🎯 贡献与创新点</h2>",
+        '<h2 id="contributions">🎯 贡献与创新点</h2>',
         '<div class="card">',
         f"<p><b>核心贡献：</b>{esc(c.main_contribution)}</p>",
         f"<p><b>新颖之处：</b>{esc(c.novelty)}</p>",
@@ -195,7 +219,7 @@ def _connections(works: List[Connection]) -> List[str]:
         paper = f'<a href="{esc(w.arxiv_link)}">{esc(w.paper)}</a>' if w.arxiv_link else esc(w.paper)
         rows.append(f"<tr><td>{esc(w.concept)}</td><td>{paper}</td><td>{esc(w.relationship)}</td></tr>")
     return [
-        "<h2>🔗 知识关联</h2>",
+        '<h2 id="connections">🔗 知识关联</h2>',
         "<table><thead><tr><th>概念</th><th>相关论文</th><th>关系</th></tr></thead><tbody>",
         *rows,
         "</tbody></table>",
@@ -203,7 +227,7 @@ def _connections(works: List[Connection]) -> List[str]:
 
 
 def _reproduction(r: Reproduction) -> List[str]:
-    out = ["<h2>🛠️ 复现指南</h2>", '<div class="card"><ul>']
+    out = ['<h2 id="reproduction">🛠️ 复现指南</h2>', '<div class="card"><ul>']
     if r.official_code:
         tag = f" (<code>{esc(r.version_tag)}</code>)" if r.version_tag else ""
         out.append(f'<li><b>官方代码：</b><a href="{esc(r.official_code)}">{esc(r.official_code)}</a>{tag}</li>')
