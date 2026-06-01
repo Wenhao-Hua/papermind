@@ -77,10 +77,12 @@ def _render_technical(report: Report, console: Console) -> None:
                 loc = f"{loc} (p.{point.page})".strip()
             body.append(f"\n📍 出处: {loc}", style="dim")
         if point.figure:
-            if point.figure.type == "original" and point.figure.image_path:
-                body.append(f"\n🖼  原图: {point.figure.caption or point.figure.image_path}", style="dim cyan")
-            elif point.figure.type == "ai_generated" and point.figure.mermaid:
-                body.append("\n📊 AI 生成示意图 (Mermaid，见 Markdown 报告)", style="dim cyan")
+            fig = point.figure
+            if fig.image_path:
+                origin = "原图" if fig.type == "original" else "AI 生成示意图(图片)"
+                body.append(f"\n🖼  {origin}: {fig.caption or fig.image_path}", style="dim cyan")
+            elif fig.type == "ai_generated" and fig.mermaid:
+                body.append("\n📊 AI 生成示意图 (Mermaid，见 Markdown/HTML 报告)", style="dim cyan")
         console.print(Panel(body, title=header, border_style=style, title_align="left"))
 
 

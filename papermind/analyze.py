@@ -34,6 +34,7 @@ def analyze(
     config: Optional[Config] = None,
     console=None,
     refresh: bool = False,
+    image_figures: bool = False,
 ) -> Report:
     """Analyze a paper and return a structured :class:`Report`.
 
@@ -52,7 +53,8 @@ def analyze(
     client = LLMClient(model=model, config=config, on_notice=notice)
 
     resolved = resolve(source, config)
-    cache_path = report_cache_path(resolved.cache_dir, client.model, modules, with_figures)
+    fig_mode = ("image" if image_figures else "mermaid") if with_figures else "off"
+    cache_path = report_cache_path(resolved.cache_dir, client.model, modules, fig_mode)
     if not refresh:
         cached = load_cached_report(cache_path)
         if cached is not None:
@@ -86,9 +88,14 @@ def analyze(
 
         if with_figures and "technical" in modules and report.technical.details:
             from papermind.figures.extract import match_original_figures
-            from papermind.figures.generate import generate_diagrams
+            from papermind.figures.generate import generate_diagrams, generate_image_diagrams
 
             match_original_figures(report.technical.details, parsed, client)
+            if image_figures and config.image_model:
+                generate_image_diagrams(
+                    report.technical.details, client, parsed.cache_dir, config.image_model, on_notice=notice
+                )
+            # Mermaid fills any point still without a figure (image-gen failures included).
             generate_diagrams(report.technical.details, client)
             advance("figures")
 

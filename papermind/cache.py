@@ -20,8 +20,9 @@ from papermind.config import Config, load_config
 from papermind.output.schema import Report
 
 
-def report_cache_path(cache_dir: Path, model: str, modules: List[str], with_figures: bool) -> Path:
-    key = f"{model}|{','.join(sorted(modules))}|fig={with_figures}"
+def report_cache_path(cache_dir: Path, model: str, modules: List[str], figures) -> Path:
+    """Cache path keyed by model + modules + figure mode (bool or 'off'/'mermaid'/'image')."""
+    key = f"{model}|{','.join(sorted(modules))}|fig={figures}"
     digest = hashlib.sha1(key.encode("utf-8")).hexdigest()[:10]
     return cache_dir / f"report-{digest}.json"
 

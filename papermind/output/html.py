@@ -38,7 +38,8 @@ th { background:#f3f4f6; }
 code { background:#f1f1f4; padding:1px 6px; border-radius:6px; font-size:.88em; }
 pre { background:#1e1e2e; color:#e6e6f0; padding:14px 16px; border-radius:10px; overflow-x:auto; }
 pre code { background:none; color:inherit; padding:0; }
-pre.mermaid { background:var(--card); border:1px solid var(--border); text-align:center; }
+pre.mermaid { background:#fafaff; border:1px solid var(--border); border-radius:10px; text-align:center; padding:18px; }
+pre.mermaid svg { max-width:100%; height:auto; }
 img.figure { max-width:100%; border:1px solid var(--border); border-radius:8px; display:block; margin:8px 0; }
 figcaption { color:var(--muted); font-size:.85rem; margin-bottom:1em; }
 .ai-tag { color:var(--accent); }
@@ -48,7 +49,10 @@ footer { color:var(--muted); font-size:.85rem; margin-top:48px; text-align:cente
 _MERMAID = (
     '<script type="module">'
     "import mermaid from 'https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.esm.min.mjs';"
-    "mermaid.initialize({startOnLoad:true,theme:'neutral'});"
+    "mermaid.initialize({startOnLoad:true, theme:'base', themeVariables:{"
+    "fontFamily:'-apple-system,Segoe UI,Microsoft YaHei,sans-serif', fontSize:'15px',"
+    "primaryColor:'#eef2ff', primaryBorderColor:'#5b5bd6', primaryTextColor:'#1e1b4b',"
+    "lineColor:'#94a3b8'}});"
     "</script>"
 )
 
@@ -162,11 +166,13 @@ def _technical_point(report: Report, idx: int, p: TechnicalPoint) -> List[str]:
 
 def _figure(p: TechnicalPoint) -> List[str]:
     fig = p.figure
-    if fig.type == "original" and fig.image_path:
+    if fig.image_path:  # original figure, or an AI-generated image
         uri = _data_uri(fig.image_path)
         if uri:
-            cap = esc(fig.caption or "论文原图")
-            return [f'<figure><img class="figure" src="{uri}" alt="{cap}"><figcaption>{cap}（论文原图）</figcaption></figure>']
+            origin = "论文原图" if fig.type == "original" else "AI 生成示意图"
+            cap = esc(fig.caption or origin)
+            tag = "" if fig.type == "original" else ' class="ai-tag"'
+            return [f'<figure><img class="figure" src="{uri}" alt="{cap}"><figcaption{tag}>{cap}（{origin}）</figcaption></figure>']
     if fig.type == "ai_generated" and fig.mermaid:
         cap = esc(fig.caption or "AI 生成示意图")
         return [f'<pre class="mermaid">{fig.mermaid}</pre>', f'<figcaption class="ai-tag">{cap}</figcaption>']

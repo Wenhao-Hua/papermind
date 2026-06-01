@@ -114,3 +114,50 @@ def test_generate_diagrams_only_when_missing():
 def test_clean_mermaid_strips_fences():
     assert generate._clean_mermaid("```mermaid\ngraph TD\nA-->B\n```") == "graph TD\nA-->B"
     assert generate._clean_mermaid(None) == ""
+
+
+class _ImageClient:
+    def __init__(self, data=b"\x89PNG\r\nfake"):
+        self.data = data
+        self.calls = 0
+
+    def image(self, prompt, model, size="1024x1024"):
+        self.calls += 1
+        return self.data
+
+
+def test_generate_image_diagrams_writes_png(tmp_path):
+    points = [TechnicalPoint(name="Tiling", explanation="e")]
+    client = _ImageClient()
+    generate.generate_image_diagrams(points, client, tmp_path, "gpt-image-1")
+    fig = points[0].figure
+    assert fig is not None and fig.type == "ai_generated"
+    assert fig.image_path.endswith(".png") and Path(fig.image_path).exists()
+    assert fig.mermaid is None  # it's an image, not mermaid
+
+
+def test_image_client_skipped_when_point_has_figure(tmp_path):
+    from papermind.output.schema import Figure
+
+    points = [TechnicalPoint(name="X", explanation="e", figure=Figure(type="original", image_path="/p.png"))]
+    client = _ImageClient()
+    generate.generate_image_diagrams(points, client, tmp_path, "gpt-image-1")
+    assert client.calls == 0  # already had a figure -> no image generated
+
+
+def test_renderers_handle_ai_generated_image(tmp_path):
+    from papermind.output.html import to_html
+    from papermind.output.markdown import to_markdown
+    from papermind.output.schema import Figure, PaperMeta, Report, TechnicalPoint as TP, TechnicalSection
+
+    img = tmp_path / "ai.png"
+    img.write_bytes(b"\x89PNG\r\nfake")
+    report = Report(
+        paper=PaperMeta(title="T"),
+        technical=TechnicalSection(details=[TP(name="N", explanation="e",
+                                               figure=Figure(type="ai_generated", image_path=str(img), caption="AI 生成示意图：N"))]),
+    )
+    md = to_markdown(report)
+    assert "(AI 生成示意图)" in md and str(img) in md
+    html = to_html(report)
+    assert "data:image/png;base64," in html and "AI 生成示意图" in html

@@ -33,6 +33,7 @@ _CLI_KEY_ALIASES: Dict[str, str] = {
     "embedding-provider": "embedding_provider",
     "embedding-model": "embedding_model",
     "local-model": "local_model",
+    "image-model": "image_model",
     "cache-dir": "cache_dir",
 }
 
@@ -67,6 +68,7 @@ class Config:
     embedding_provider: str = "openai"  # "openai" | "local"
     embedding_model: Optional[str] = None
     local_model: Optional[str] = None  # model used by --local (default: ollama/llama3.1)
+    image_model: Optional[str] = None  # image-gen model for --image-figures (e.g. gpt-image-1)
     cache_dir: Optional[str] = None
 
     # -- derived ----------------------------------------------------------- #
@@ -118,6 +120,7 @@ def load_config() -> Config:
         embedding_provider=data.get("embedding_provider", "openai"),
         embedding_model=data.get("embedding_model"),
         local_model=data.get("local_model"),
+        image_model=data.get("image_model"),
         cache_dir=data.get("cache_dir"),
     )
     # Environment overrides win.

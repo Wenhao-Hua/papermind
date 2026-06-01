@@ -185,19 +185,31 @@ def figure_match_user(point_names: List[str], figures_digest: str) -> str:
 
 
 MERMAID_SYSTEM = (
-    "你是把算法/模型结构画成示意图的专家。请为给定技术点生成一个 Mermaid 图"
-    "（flowchart 或 graph，用于表达数据流/模块结构/训练流程）。"
-    "节点文字简洁，使用合法的 Mermaid 语法。严格输出 JSON，不要额外文字。"
+    "你是把算法/模型结构画成清晰、好看的示意图的专家。为给定技术点生成一个 Mermaid flowchart："
+    "结构清晰，箭头表达数据流/依赖；每个节点文字简洁（≤8 字，可含简短公式）；"
+    "用 classDef 给不同角色的节点配色（输入、处理、输出各一色），让图美观且层次分明；"
+    "节点 id 用字母数字，语法必须合法可渲染。严格输出 JSON，不要额外文字或代码围栏。"
 )
 
 
 def mermaid_user(name: str, explanation: str) -> str:
     return (
         f"技术点：{name}\n解释：{explanation}\n\n"
-        "请输出如下 JSON：\n"
-        '{"mermaid": "flowchart TD\\n  A[输入] --> B[处理]\\n  B --> C[输出]", '
-        '"caption": "AI 生成示意图：……"}\n'
-        "mermaid 字段是合法的 Mermaid 源码（用 \\n 表示换行）。"
+        "请输出如下 JSON（mermaid 字段用 \\n 表示换行，务必带 classDef 配色）：\n"
+        '{"mermaid": "flowchart LR\\n  A[输入]:::in --> B[处理]\\n  B --> C[输出]:::out\\n'
+        "  classDef in fill:#dbeafe,stroke:#3b82f6,color:#1e3a8a;\\n"
+        '  classDef out fill:#dcfce7,stroke:#22c55e,color:#14532d;", '
+        '"caption": "AI 生成示意图：……"}'
+    )
+
+
+def image_diagram_prompt(name: str, explanation: str) -> str:
+    """Prompt for a diffusion/image model (best-effort technical schematic)."""
+    return (
+        f"A clean, minimalist technical schematic diagram illustrating the concept "
+        f"'{name}' from a machine-learning paper. {explanation} "
+        f"Flat infographic style: labeled boxes connected by arrows showing the data flow, "
+        f"soft color palette, white background, high contrast, crisp vector look, no photorealism."
     )
 
 

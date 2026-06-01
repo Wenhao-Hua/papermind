@@ -128,6 +128,36 @@ class LLMClient:
             )
         return parsed
 
+    # -- image generation --------------------------------------------------- #
+    def image(self, prompt: str, model: str, size: str = "1024x1024") -> bytes:
+        """Generate an image via litellm and return raw PNG/JPEG bytes."""
+        import base64
+
+        litellm = _import_litellm()
+        try:
+            resp = litellm.image_generation(model=model, prompt=prompt, size=size)
+        except Exception as exc:  # noqa: BLE001
+            raise _wrap_llm_error(exc, model) from exc
+        try:
+            item = resp["data"][0]
+        except (KeyError, IndexError, TypeError) as exc:
+            raise LLMError(f"Unexpected image response from {model!r}: {exc}") from exc
+
+        b64 = item.get("b64_json") if isinstance(item, dict) else getattr(item, "b64_json", None)
+        if b64:
+            return base64.b64decode(b64)
+        url = item.get("url") if isinstance(item, dict) else getattr(item, "url", None)
+        if url:
+            import httpx
+
+            try:
+                r = httpx.get(url, timeout=60.0, follow_redirects=True)
+                r.raise_for_status()
+                return r.content
+            except httpx.HTTPError as exc:
+                raise LLMError(f"Failed to download generated image: {exc}") from exc
+        raise LLMError(f"Image response from {model!r} had neither b64_json nor url.")
+
     # -- embeddings --------------------------------------------------------- #
     def embed(self, texts: List[str]) -> "np.ndarray":
         import numpy as np

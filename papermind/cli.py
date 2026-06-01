@@ -122,12 +122,21 @@ def analyze(
     no_figures: bool = typer.Option(False, "--no-figures", help="Skip figure extraction/generation."),
     refresh: bool = typer.Option(False, "--refresh", help="Ignore cached result and re-analyze."),
     local: bool = typer.Option(False, "--local", help="Run fully local & free via Ollama (LLM + embeddings)."),
+    image_figures: bool = typer.Option(False, "--image-figures", help="Use an image model for AI figures instead of Mermaid (needs `config set image-model`)."),
     open_report: bool = typer.Option(False, "--open", help="Open the HTML report in a browser when done."),
     estimate: bool = typer.Option(False, "--estimate", help="Estimate token cost and exit (no model calls)."),
 ) -> None:
     """Analyze a paper and produce the four-module report."""
     if fmt not in ("md", "json", "html", "all"):
         raise _fail("--format must be one of: md, json, html, all")
+    if image_figures:
+        from papermind.config import load_config
+
+        if not load_config().image_model:
+            console.print(
+                "[yellow]提示：未配置图像模型，--image-figures 将退回 Mermaid。"
+                "配置示例：papermind config set image-model gpt-image-1（需对应 key）。[/yellow]"
+            )
     if quick:
         modules = ["contributions", "technical"]
         no_figures = True
@@ -144,7 +153,8 @@ def analyze(
 
     try:
         report = run_analyze(
-            source, model=model, modules=modules, with_figures=not no_figures, console=console, refresh=refresh
+            source, model=model, modules=modules, with_figures=not no_figures, console=console,
+            refresh=refresh, image_figures=image_figures,
         )
     except PaperMindError as exc:
         raise _fail(str(exc))

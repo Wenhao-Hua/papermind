@@ -79,9 +79,10 @@ def test_analyze_returns_cached_without_parsing(monkeypatch, tmp_path):
     monkeypatch.setattr(analyze_mod, "parse_pdf", _boom)
 
     cfg = Config(openai_key="sk-x", default_model="gpt-4o-mini")
+    # analyze() default: with_figures=True, image_figures=False -> fig mode "mermaid"
     save_report(
         _report("Cached Paper"),
-        report_cache_path(cache_dir, "gpt-4o-mini", analyze_mod.ALL_MODULES, True),
+        report_cache_path(cache_dir, "gpt-4o-mini", analyze_mod.ALL_MODULES, "mermaid"),
     )
 
     report = analyze_mod.analyze("arxiv:1234.5678", model="gpt-4o-mini", config=cfg)

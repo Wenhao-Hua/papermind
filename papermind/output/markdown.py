@@ -127,10 +127,11 @@ def _technical_point_md(report: Report, idx: int, point: TechnicalPoint) -> List
 def _figure_md(point: TechnicalPoint) -> List[str]:
     fig = point.figure
     out: List[str] = []
-    if fig.type == "original" and fig.image_path:
-        caption = fig.caption or fig.type
+    if fig.image_path:  # original figure, or an AI-generated image
+        origin = "论文原图" if fig.type == "original" else "AI 生成示意图"
+        caption = fig.caption or origin
         out.append(f"![{caption}]({fig.image_path})")
-        out.append(f"*{caption} (论文原图)*")
+        out.append(f"*{caption} ({origin})*")
         out.append("")
     elif fig.type == "ai_generated" and fig.mermaid:
         out.append("```mermaid")
