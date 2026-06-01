@@ -93,7 +93,8 @@ $$
 
 ## 🛠️ 复现指南
 
-- **官方代码:** [tensorflow/tensor2tensor](https://github.com/tensorflow/tensor2tensor)；现代实现可参考 [The Annotated Transformer](https://nlp.seas.harvard.edu/annotated-transformer/) 与 HuggingFace transformers
+- **官方代码（已核实 · 论文原文链接）:** [tensorflow/tensor2tensor](https://github.com/tensorflow/tensor2tensor)；现代实现可参考 [The Annotated Transformer](https://nlp.seas.harvard.edu/annotated-transformer/) 与 HuggingFace transformers
+- **安装 / 运行（取自仓库）:** `pip install tensor2tensor` · `t2t-trainer --problem=translate_ende_wmt32k --model=transformer --hparams_set=transformer_base`
 - **环境要求:** 原版基于 TF1 + tensor2tensor；推荐用 PyTorch >= 2.0 复现
 - **推荐硬件:** base 模型 1×GPU 可训；论文 base 用 8×P100 约 12 小时，big 约 3.5 天
 - **关键超参数:** `d_model=512`, `h=8`, `d_ff=2048`, `N=6` 层, `P_drop=0.1`, `warmup_steps=4000`, Adam(β1=0.9, β2=0.98)
