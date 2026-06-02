@@ -147,7 +147,7 @@ def create_app(live: bool = False, rate_per_ip: int = 8, rate_global: int = 300)
     def analyze_route(request: Request, source: str = Form(""), model: str = Form(""), file: Optional[UploadFile] = File(None)):
         src = _resolve_upload(source, file)
         if not src:
-            return _page("/", _analyze_form(live, "请填入 arXiv id / URL，或上传 PDF。"), live)
+            return _page("/", _analyze_form(live, "请填入论文 URL（arXiv 链接或 PDF 直链），或上传 PDF。"), live)
         report, err, _ran = _report_for(src, model, live, on_live=lambda: gate(request))
         if err:
             return _page("/", _analyze_form(live, err), live)
@@ -292,11 +292,13 @@ def create_app(live: bool = False, rate_per_ip: int = 8, rate_global: int = 300)
             return _page("/search", _search_form(str(exc)), live)
         rows = ""
         for r in results:
-            abs_url = f"https://arxiv.org/abs/{_e(r.arxiv_id)}"
+            from urllib.parse import quote
+
+            abs_url = f"https://arxiv.org/abs/{r.arxiv_id}"
             rows += (
-                f"<tr><td class='aid'><a href='/analyze?source={_e(r.arxiv_id)}'>{_e(r.arxiv_id)}</a></td>"
+                f"<tr><td class='aid'><a href='/analyze?source={quote(abs_url, safe='')}'>{_e(r.arxiv_id)}</a></td>"
                 f"<td>{r.year or '—'}</td>"
-                f"<td class='ttl'><a href='{abs_url}' target='_blank' rel='noopener'>{_e(r.title)}</a></td></tr>"
+                f"<td class='ttl'><a href='{_e(abs_url)}' target='_blank' rel='noopener'>{_e(r.title)}</a></td></tr>"
             )
         table = (
             "<table><thead><tr><th>arXiv</th><th>年份</th><th>标题（原文）</th></tr></thead>"
@@ -533,7 +535,7 @@ def _page(active: str, body: str, live: bool) -> str:
         "<meta name='viewport' content='width=device-width, initial-scale=1'>"
         f"<title>PaperMind</title><style>{_CSS}</style></head><body><div class='pm-wrap'>"
         "<header class='pm-mast'><span class='pm-logo'>PaperMind</span>"
-        "<span class='pm-tag'>读懂一篇 arXiv 论文 · 结构化分析 · 带原文依据的问答 · 复现指南</span></header>"
+        "<span class='pm-tag'>读懂一篇论文（arXiv 链接或 PDF 直链）· 结构化分析 · 带原文依据的问答 · 复现指南</span></header>"
         f"<nav class='pm-nav'>{nav}</nav><main>{body}</main>"
         "<footer class='pm-foot'>"
         f"<span>当前模型 <span class='m'>{_e(_active_model_label())}</span></span>"
@@ -551,7 +553,7 @@ def _err(error: str) -> str:
     return f"<p class='err'>{_e(error)}</p>" if error else ""
 
 
-_EXAMPLES = [("1706.03762", "Transformer"), ("2307.08691", "FlashAttention-2"), ("1810.04805", "BERT")]
+_EXAMPLES = [("https://arxiv.org/abs/1706.03762", "Transformer"), ("https://arxiv.org/abs/2307.08691", "FlashAttention-2"), ("https://arxiv.org/abs/1810.04805", "BERT")]
 
 
 def _examples_row() -> str:
@@ -567,7 +569,7 @@ def _analyze_form(live: bool, error: str = "") -> str:
         f"{note}{_err(error)}"
         "<form method='post' action='/analyze' enctype='multipart/form-data'>"
         "<label>论文 <span class='hint'>arXiv id / URL</span></label>"
-        "<input name='source' placeholder='2307.08691  或  https://arxiv.org/abs/2307.08691' autofocus>"
+        "<input name='source' placeholder='https://arxiv.org/abs/2307.08691 或 任意论文 PDF 直链' autofocus>"
         "<label>或上传 PDF <span class='hint'>本地论文</span></label>"
         "<input type='file' name='file' accept='application/pdf'>"
         "<button>分析</button></form>"
@@ -581,7 +583,7 @@ def _ask_form(live: bool, error: str = "") -> str:
         "<p class='lead'>基于原文回答，分层标注：论文事实 · 基于论文的推理 · 超出论文范围，并附原文依据。</p>"
         f"{_err(error)}"
         "<form method='post' action='/ask'>"
-        "<label>论文 <span class='hint'>arXiv id / URL</span></label><input name='source' placeholder='2307.08691'>"
+        "<label>论文 <span class='hint'>论文 URL（arXiv 链接或 PDF 直链）</span></label><input name='source' placeholder='https://arxiv.org/abs/2307.08691'>"
         "<label>问题</label><input name='question' placeholder='为什么要除以 √d_k？'>"
         "<label>模式 <span class='hint'>strict 更保守 · explore 更发散</span></label>"
         "<select name='mode'><option value='balanced'>balanced</option>"
@@ -596,7 +598,7 @@ def _summary_form(live: bool, error: str = "") -> str:
         "<p class='lead'>一句话 TL;DR + 几条要点（单次调用，比完整分析更快）。</p>"
         f"{_err(error)}"
         "<form method='post' action='/summary'>"
-        "<label>论文 <span class='hint'>arXiv id / URL</span></label><input name='source' placeholder='2307.08691'>"
+        "<label>论文 <span class='hint'>论文 URL（arXiv 链接或 PDF 直链）</span></label><input name='source' placeholder='https://arxiv.org/abs/2307.08691'>"
         "<button>速读</button></form></section>"
     )
 
@@ -608,7 +610,7 @@ def _compare_form(live: bool, error: str = "") -> str:
         f"{_err(error)}"
         "<form method='post' action='/compare'>"
         "<label>论文 <span class='hint'>每行一个，2–4 篇</span></label>"
-        "<textarea name='sources' placeholder='2307.08691&#10;1706.03762'></textarea>"
+        "<textarea name='sources' placeholder='https://arxiv.org/abs/2307.08691&#10;https://arxiv.org/abs/1706.03762'></textarea>"
         "<button>对比</button></form></section>"
     )
 
@@ -619,7 +621,7 @@ def _reproduce_form(live: bool, error: str = "") -> str:
         "<p class='lead'>导出可一键运行的环境与步骤脚本（setup.sh）。</p>"
         f"{_err(error)}"
         "<form method='post' action='/reproduce'>"
-        "<label>论文 <span class='hint'>arXiv id / URL</span></label><input name='source' placeholder='2307.08691'>"
+        "<label>论文 <span class='hint'>论文 URL（arXiv 链接或 PDF 直链）</span></label><input name='source' placeholder='https://arxiv.org/abs/2307.08691'>"
         "<button>导出</button></form></section>"
     )
 

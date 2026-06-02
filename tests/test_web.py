@@ -58,7 +58,7 @@ def test_search_works_without_model(monkeypatch):
     ])
     r = TestClient(create_app(live=False)).post("/search", data={"query": "attention"})
     assert r.status_code == 200
-    assert "2307.08691" in r.text and "/analyze?source=2307.08691" in r.text  # links to analyze
+    assert "2307.08691" in r.text and "/analyze?source=" in r.text  # links to analyze (via the paper URL)
 
 
 def test_analyze_demo_mode_does_not_run_when_uncached(monkeypatch, tmp_path):

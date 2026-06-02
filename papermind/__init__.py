@@ -3,8 +3,8 @@
 Public API::
 
     from papermind import analyze, PaperChat
-    report = analyze("arxiv:2307.08691", model="gpt-4o")
-    chat = PaperChat("arxiv:2307.08691", mode="balanced")
+    report = analyze("https://arxiv.org/abs/2307.08691", model="gpt-4o")
+    chat = PaperChat("https://arxiv.org/abs/2307.08691", mode="balanced")
 
 Heavy dependencies (litellm, faiss, pymupdf) are imported lazily so that
 ``import papermind`` and ``papermind --help`` stay fast and do not require a

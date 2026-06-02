@@ -97,27 +97,37 @@ def search_arxiv(query: str, max_results: int = 10):
 
 
 def parse_arxiv_id(source: str) -> Optional[str]:
-    """Extract a bare arXiv id from a URL / 'arxiv:ID' / raw id string, or None."""
-    source = source.strip()
-    url_match = _ABS_URL_RE.search(source)
-    if url_match:
-        return url_match.group(1)
-    # Avoid mistaking a local path for an id; ids never contain a backslash or '.pdf'.
-    if "\\" in source or source.lower().endswith(".pdf"):
-        return None
-    id_match = _ID_RE.fullmatch(source)
-    if id_match:
-        return id_match.group(1)
-    return None
+    """Extract an arXiv id from an arXiv URL, or None.
+
+    Bare ids and ``arxiv:ID`` are intentionally NOT accepted — paste a URL
+    (``https://arxiv.org/abs/...``). Inputs are unified on URLs.
+    """
+    match = _ABS_URL_RE.search((source or "").strip())
+    return match.group(1) if match else None
 
 
 def resolve(source: str, config: Optional[Config] = None) -> ResolvedSource:
-    """Resolve any supported source into a local PDF + best-effort metadata."""
+    """Resolve a source into a local PDF + best-effort metadata.
+
+    Accepts: an arXiv URL (rich metadata), any other PDF URL (downloaded), or a
+    local .pdf path. Bare arXiv ids are no longer accepted — give a URL.
+    """
     config = config or load_config()
+    source = (source or "").strip()
+    if not source:
+        raise SourceError("请提供论文 URL（arXiv 链接或 PDF 直链），或本地 PDF 路径。")
+
     arxiv_id = parse_arxiv_id(source)
     if arxiv_id:
         return _resolve_arxiv(arxiv_id, config)
-    return _resolve_local(source, config)
+    if re.match(r"https?://", source, re.IGNORECASE):
+        return _resolve_url(source, config)
+    if Path(source).expanduser().exists():
+        return _resolve_local(source, config)
+    raise SourceError(
+        f"无法识别来源 {source!r}。请粘贴论文 URL（arXiv 链接或 PDF 直链）或本地 PDF 路径。"
+        "已不再支持裸 arXiv id —— 例如用 https://arxiv.org/abs/2307.08691 代替 2307.08691。"
+    )
 
 
 # --------------------------------------------------------------------------- #
@@ -138,6 +148,50 @@ def _resolve_local(source: str, config: Config) -> ResolvedSource:
     cache_dir = config.paper_cache(cache_key)
     meta = PaperMeta(title=path.stem, pdf_url=path.resolve().as_uri())
     return ResolvedSource(meta=meta, pdf_path=path, cache_key=cache_key, cache_dir=cache_dir)
+
+
+# --------------------------------------------------------------------------- #
+# Any other paper, by URL (non-arXiv PDF link)
+# --------------------------------------------------------------------------- #
+def _resolve_url(url: str, config: Config) -> ResolvedSource:
+    digest = hashlib.sha1(url.encode("utf-8")).hexdigest()[:12]
+    cache_key = f"url-{digest}"
+    cache_dir = config.paper_cache(cache_key)
+    pdf_path = cache_dir / "paper.pdf"
+
+    if not pdf_path.exists() or pdf_path.stat().st_size == 0:
+        _download_pdf(url, pdf_path)
+    with open(pdf_path, "rb") as fh:
+        if not fh.read(5).startswith(b"%PDF"):
+            pdf_path.unlink(missing_ok=True)
+            raise SourceError(f"{url} 看起来不是 PDF（可能是网页）。请提供 PDF 直链或 arXiv 链接。")
+
+    meta = PaperMeta(title=_title_from_pdf(pdf_path, url), pdf_url=url)
+    return ResolvedSource(meta=meta, pdf_path=pdf_path, cache_key=cache_key, cache_dir=cache_dir)
+
+
+def _title_from_pdf(pdf_path: Path, url: str) -> str:
+    """Best-effort title: infer from the PDF's first page, else the URL filename."""
+    try:
+        import fitz
+
+        from papermind.parser.pdf import _infer_title
+
+        doc = fitz.open(pdf_path)
+        first = doc[0].get_text() if doc.page_count else ""
+        doc.close()
+        inferred = _infer_title([first])
+        if inferred:
+            return inferred
+    except Exception:  # noqa: BLE001 - title is best-effort
+        pass
+    from urllib.parse import unquote, urlparse
+
+    name = unquote(urlparse(url).path.rsplit("/", 1)[-1])
+    if name.lower().endswith(".pdf"):
+        name = name[:-4]
+    name = name.replace("_", " ").replace("-", " ").strip()
+    return name or urlparse(url).netloc or "Untitled paper"
 
 
 # --------------------------------------------------------------------------- #

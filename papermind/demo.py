@@ -148,7 +148,7 @@ def play(console, speed: float = 1.0) -> None:
     # Beat 1: analyze -> the structured report.
     if speed > 0:
         console.clear()
-    console.print(f"[bold green]$[/bold green] papermind analyze arxiv:{arxiv} --format all")
+    console.print(f"[bold green]$[/bold green] papermind analyze https://arxiv.org/abs/{arxiv} --format all")
     pause(0.4)
     status("分析中… 解析 PDF · 贡献 · 技术细节 · 知识关联 · 复现", 1.0)
     render_report(report, console)
@@ -157,7 +157,7 @@ def play(console, speed: float = 1.0) -> None:
     # Beat 2: ask -> the grounded, layered answer (the differentiator) on a clean screen.
     if speed > 0:
         console.clear()
-    console.print(f'[bold green]$[/bold green] papermind ask arxiv:{arxiv} "{answer.question}"')
+    console.print(f'[bold green]$[/bold green] papermind ask https://arxiv.org/abs/{arxiv} "{answer.question}"')
     pause(0.4)
     status("检索原文段落 · 生成分层回答", 0.8)
     _reveal_answer(answer, console, line_delay=0.8 if speed > 0 else 0.0, speed=speed)

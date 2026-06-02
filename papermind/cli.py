@@ -161,7 +161,7 @@ def serve(
 
 @app.command()
 def analyze(
-    source: str = typer.Argument(..., help="arXiv URL, 'arxiv:ID', bare ID, or local PDF path."),
+    source: str = typer.Argument(..., help="arXiv URL, any PDF URL, or local PDF path."),
     model: Optional[str] = typer.Option(None, "--model", "-m", help="LLM (litellm format). Default: gpt-4o-mini."),
     fmt: str = typer.Option("md", "--format", "-f", help="Output format: md | json | html | all."),
     output: Optional[str] = typer.Option(None, "--output", "-o", help="Output path/prefix. Prints to terminal if omitted."),
@@ -335,7 +335,7 @@ def _estimate_cost(source: str, model: Optional[str], modules: List[str], with_f
 # --------------------------------------------------------------------------- #
 @app.command()
 def chat(
-    source: str = typer.Argument(..., help="arXiv URL, 'arxiv:ID', bare ID, or local PDF path."),
+    source: str = typer.Argument(..., help="arXiv URL, any PDF URL, or local PDF path."),
     model: Optional[str] = typer.Option(None, "--model", "-m", help="LLM (litellm format)."),
     mode: str = typer.Option("balanced", "--mode", help="Reasoning mode: strict | balanced | explore."),
     local: bool = typer.Option(False, "--local", help="Run fully local & free via Ollama."),
@@ -402,7 +402,7 @@ def _run_answer(call, stream: bool):
 # --------------------------------------------------------------------------- #
 @app.command()
 def summary(
-    source: str = typer.Argument(..., help="arXiv URL, 'arxiv:ID', bare ID, or local PDF path."),
+    source: str = typer.Argument(..., help="arXiv URL, any PDF URL, or local PDF path."),
     model: Optional[str] = typer.Option(None, "--model", "-m"),
     local: bool = typer.Option(False, "--local", help="Run fully local & free via Ollama."),
 ) -> None:
@@ -421,7 +421,7 @@ def summary(
 
 @app.command()
 def ask(
-    source: str = typer.Argument(..., help="arXiv URL, 'arxiv:ID', bare ID, or local PDF path."),
+    source: str = typer.Argument(..., help="arXiv URL, any PDF URL, or local PDF path."),
     question: str = typer.Argument(..., help="Your question about the paper."),
     model: Optional[str] = typer.Option(None, "--model", "-m"),
     mode: str = typer.Option("balanced", "--mode"),
@@ -451,7 +451,7 @@ def ask(
 # --------------------------------------------------------------------------- #
 @app.command()
 def tutor(
-    source: str = typer.Argument(..., help="arXiv URL, 'arxiv:ID', bare ID, or local PDF path."),
+    source: str = typer.Argument(..., help="arXiv URL, any PDF URL, or local PDF path."),
     model: Optional[str] = typer.Option(None, "--model", "-m"),
     local: bool = typer.Option(False, "--local", help="Run fully local & free via Ollama."),
     no_stream: bool = typer.Option(False, "--no-stream", help="Disable live streaming output."),
@@ -496,7 +496,7 @@ def tutor(
 # --------------------------------------------------------------------------- #
 @app.command()
 def debug(
-    source: str = typer.Argument(..., help="arXiv URL, 'arxiv:ID', bare ID, or local PDF path."),
+    source: str = typer.Argument(..., help="arXiv URL, any PDF URL, or local PDF path."),
     error: str = typer.Option(..., "--error", "-e", help="The error message / traceback you hit."),
     model: Optional[str] = typer.Option(None, "--model", "-m"),
     local: bool = typer.Option(False, "--local", help="Run fully local & free via Ollama."),
@@ -521,7 +521,7 @@ def debug(
 # --------------------------------------------------------------------------- #
 @app.command()
 def reproduce(
-    source: str = typer.Argument(..., help="arXiv URL, 'arxiv:ID', bare ID, or local PDF path."),
+    source: str = typer.Argument(..., help="arXiv URL, any PDF URL, or local PDF path."),
     fmt: str = typer.Option("both", "--format", "-f", help="Output: sh | notebook | both."),
     output: Optional[str] = typer.Option(None, "--output", "-o", help="Output base path (default: ./repro)."),
     model: Optional[str] = typer.Option(None, "--model", "-m"),
@@ -739,7 +739,7 @@ def _write_comparison_outputs(comparison, fmt: str, output: str) -> None:
 
 @app.command()
 def cite(
-    source: str = typer.Argument(..., help="arXiv URL, 'arxiv:ID', bare ID, or local PDF path."),
+    source: str = typer.Argument(..., help="arXiv URL, any PDF URL, or local PDF path."),
     output: Optional[str] = typer.Option(None, "--output", "-o", help="Write BibTeX to a file."),
 ) -> None:
     """Print a BibTeX entry for the paper (metadata only — no model calls)."""
@@ -802,7 +802,7 @@ def config_show() -> None:
 # --------------------------------------------------------------------------- #
 @app.command("open")
 def open_(
-    source: str = typer.Argument(..., help="arXiv URL, 'arxiv:ID', bare ID, or local PDF path."),
+    source: str = typer.Argument(..., help="arXiv URL, any PDF URL, or local PDF path."),
     pdf: bool = typer.Option(False, "--pdf", help="Open the cached PDF instead of the report."),
 ) -> None:
     """Open the cached HTML report (or the PDF) in your browser."""

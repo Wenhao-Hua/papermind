@@ -1,7 +1,7 @@
 # PaperMind
 
-> **把一篇 arXiv 论文读懂、读到能复现 —— 每句话都有原文出处。**
-> *Understand any arXiv paper: structured analysis, grounded & cited Q&A, runnable reproduction.*
+> **把一篇论文读懂、读到能复现 —— 每句话都有原文出处。**（arXiv 链接或任意 PDF 直链）
+> *Understand any paper from its URL: structured analysis, grounded & cited Q&A, runnable reproduction.*
 
 [![CI](https://github.com/Wenhao-Hua/papermind/actions/workflows/ci.yml/badge.svg)](https://github.com/Wenhao-Hua/papermind/actions/workflows/ci.yml)
 [![PyPI](https://img.shields.io/pypi/v/paper-mind)](https://pypi.org/project/paper-mind/)
@@ -22,7 +22,7 @@
 | --- | --- | --- |
 | 🌐 **在线用** | 打开 **[papermind.try2026.cn](https://papermind.try2026.cn)**，零安装 | 想立刻试、不装东西 |
 | 🖥️ **图形界面** | `pip install "paper-mind[web]"` → `papermind ui` | 本地全功能、浏览器操作 |
-| ⌨️ **命令行 / API** | `pip install paper-mind` → `papermind analyze 2307.08691` | 脚本化、批量、集成 |
+| ⌨️ **命令行 / API** | `pip install paper-mind` → `papermind analyze https://arxiv.org/abs/2307.08691` | 脚本化、批量、集成 |
 
 > 🆓 不想花钱：`papermind demo` 离线看效果（无需 key）；任何命令加 `--local` 走本地 Ollama，全程零成本。
 

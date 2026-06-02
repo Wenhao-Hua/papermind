@@ -20,22 +20,29 @@ from papermind.parser.pdf import (
         ("https://arxiv.org/abs/2307.08691", "2307.08691"),
         ("https://arxiv.org/pdf/2307.08691.pdf", "2307.08691"),
         ("https://arxiv.org/abs/2307.08691v2", "2307.08691v2"),
-        ("arxiv:2307.08691", "2307.08691"),
-        ("2307.08691", "2307.08691"),
-        ("1706.03762", "1706.03762"),
-        ("hep-th/9901001", "hep-th/9901001"),
     ],
 )
-def test_parse_arxiv_id_matches(source, expected):
+def test_parse_arxiv_id_matches_urls(source, expected):
     assert parse_arxiv_id(source) == expected
 
 
 @pytest.mark.parametrize(
+    # Inputs are unified on URLs: bare ids / 'arxiv:ID' are no longer accepted.
     "source",
-    ["./paper.pdf", "C:\\docs\\paper.pdf", "/home/me/x.pdf", "not an id", "report.json"],
+    ["arxiv:2307.08691", "2307.08691", "1706.03762", "hep-th/9901001",
+     "./paper.pdf", "/home/me/x.pdf", "not an id", "report.json"],
 )
-def test_parse_arxiv_id_rejects_non_ids(source):
+def test_parse_arxiv_id_rejects_non_urls(source):
     assert parse_arxiv_id(source) is None
+
+
+def test_resolve_rejects_bare_id_requires_url():
+    from papermind.errors import SourceError
+    from papermind.parser.arxiv import resolve
+
+    for bad in ("2307.08691", "arxiv:2307.08691", "not a source"):
+        with pytest.raises(SourceError):
+            resolve(bad)  # bare ids no longer accepted; needs a URL or local PDF (no network hit)
 
 
 def test_detect_heading_numbered():
