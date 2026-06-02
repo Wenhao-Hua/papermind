@@ -44,7 +44,7 @@ ui = ["fastapi>=0.110.0", "uvicorn>=0.27.0", "python-multipart>=0.0.9"]
 # Research / training extras. torch is intentionally NOT pinned here — install the
 # CUDA build for your machine (on AutoDL/Colab it's usually preinstalled).
 # QASPER is downloaded as raw JSON via httpx (a core dep), so `datasets` isn't needed.
-train = ["sentence-transformers>=2.7.0"]
+train = ["sentence-transformers>=2.7.0", "rank-bm25>=0.2.2"]
 dev = [
     "pytest>=7.0.0",
     "pytest-mock>=3.10.0",
