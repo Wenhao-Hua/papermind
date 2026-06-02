@@ -31,6 +31,15 @@ def test_clean_svg_strips_external_refs():
     assert "href" not in out and "<rect" in out  # safe content survives
 
 
+def test_clean_svg_converts_html_sub_sup_to_tspan():
+    # HTML <sub>/<sup> are "breakout" tags: in an inline <svg> the browser's HTML parser
+    # closes the SVG early and the rest of the figure spills out as text. Convert to <tspan>.
+    out = _clean_svg('<svg viewBox="0 0 100 50"><text x="5" y="20">d<sub>model</sub> 10<sup>2</sup></text></svg>')
+    assert out and "<sub" not in out and "<sup" not in out
+    assert out.count('baseline-shift="sub"') == 1 and out.count('baseline-shift="super"') == 1
+    assert "model" in out  # inner text preserved
+
+
 def test_clean_svg_escapes_bare_ampersand():
     # "Add & Norm" (raw &) is invalid XML; we escape it rather than drop the whole figure
     # (this was the #1 reason SVGs silently fell back to Mermaid).

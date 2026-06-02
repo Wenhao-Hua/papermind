@@ -156,6 +156,16 @@ def _clean_svg(value) -> str:
     svg = re.sub(r"""\son\w+\s*=\s*(["']).*?\1""", "", svg, flags=re.IGNORECASE | re.DOTALL)
     # The teaching-SVG spec uses no href at all, so drop every href/xlink:href.
     svg = re.sub(r"""\s(?:xlink:)?href\s*=\s*(["']).*?\1""", "", svg, flags=re.IGNORECASE | re.DOTALL)
+    # HTML <sub>/<sup>/<br> are "breakout" tags: inside an INLINE <svg> the browser's
+    # HTML parser closes the SVG early and dumps the rest of the figure as flowing text
+    # (subscripts like d_model / PE_(pos) are extremely common, so this broke most figures).
+    # svglib's XML parser tolerated them, which is why offline previews looked fine. Convert
+    # to SVG-native <tspan> so it renders correctly in the browser.
+    svg = re.sub(r"<sub\b[^>]*>(.*?)</sub>", r'<tspan baseline-shift="sub" font-size="75%">\1</tspan>',
+                 svg, flags=re.DOTALL | re.IGNORECASE)
+    svg = re.sub(r"<sup\b[^>]*>(.*?)</sup>", r'<tspan baseline-shift="super" font-size="75%">\1</tspan>',
+                 svg, flags=re.DOTALL | re.IGNORECASE)
+    svg = re.sub(r"<br\s*/?>", "", svg, flags=re.IGNORECASE)
     # LLM-drawn SVGs routinely contain a raw "&" (e.g. "Add & Norm") which is invalid
     # XML and was silently sinking the whole figure to the Mermaid fallback. Escape any
     # "&" that isn't already a valid entity so well-formedness checks can pass.
