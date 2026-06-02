@@ -239,6 +239,26 @@ def svg_figure_user(name: str, explanation: str, formula: Optional[str], context
     )
 
 
+# A short "how to read this figure" walkthrough, generated alongside the SVG.
+FIGURE_EXPLAIN_SYSTEM = (
+    "你为一张论文配图写「读图讲解」，帮读者快速看懂这张图。只依据给定的技术点、公式与"
+    "图中真实出现的文字标签来讲，**绝不臆造图里没有的内容**。语言简洁专业、面向中文读者。"
+    "严格输出 JSON，不要额外文字或代码围栏。"
+)
+
+
+def figure_explain_user(name: str, explanation: str, formula: Optional[str], labels: str) -> str:
+    f = f"\n公式：{formula}" if formula else ""
+    return (
+        f"技术点：{name}\n解释：{explanation}{f}\n"
+        f"图中出现的文字标签（务必据此讲解、勿臆造）：\n{labels or '（无）'}\n\n"
+        "请输出如下 JSON：\n"
+        '{"gist": "一句话说明这张图在讲/定义什么（≤30字）", '
+        '"parts": ["逐条说明图中各关键部分/记号的含义，每条≤24字，给2-4条"], '
+        '"takeaway": "一句关键结论或“怎么读”的提示（≤30字）"}'
+    )
+
+
 # --------------------------------------------------------------------------- #
 # Q&A / reasoning / tutoring
 # --------------------------------------------------------------------------- #

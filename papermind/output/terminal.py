@@ -99,6 +99,13 @@ def _render_technical(report: Report, console: Console) -> None:
                 body.append("\n📊 AI 教学示意图 (SVG，见 Markdown/HTML 报告)", style="dim cyan")
             elif fig.mermaid:
                 body.append("\n📊 AI 生成示意图 (Mermaid，见 Markdown/HTML 报告)", style="dim cyan")
+            ex = fig.explain
+            if ex and ex.gist:
+                body.append(f"\n📖 读图：{ex.gist}", style="cyan")
+                for part in ex.parts:
+                    body.append(f"\n   · {part}", style="dim")
+                if ex.takeaway:
+                    body.append(f"\n   关键：{ex.takeaway}", style="dim cyan")
         console.print(Panel(body, title=header, border_style=style, title_align="left"))
 
 

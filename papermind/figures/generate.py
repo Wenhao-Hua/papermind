@@ -14,8 +14,16 @@ from typing import List, Optional
 
 from papermind.errors import LLMError
 from papermind.llm.base import LLMClient
-from papermind.llm.prompts import MERMAID_SYSTEM, SVG_FIGURE_SYSTEM, image_diagram_prompt, mermaid_user, svg_figure_user
-from papermind.output.schema import Figure, TechnicalPoint
+from papermind.llm.prompts import (
+    FIGURE_EXPLAIN_SYSTEM,
+    MERMAID_SYSTEM,
+    SVG_FIGURE_SYSTEM,
+    figure_explain_user,
+    image_diagram_prompt,
+    mermaid_user,
+    svg_figure_user,
+)
+from papermind.output.schema import Figure, FigureExplain, TechnicalPoint
 
 _MAX_WORKERS = 4
 
@@ -92,7 +100,11 @@ def generate_svg_diagrams(
         except LLMError:
             return None
         svg = _clean_svg(raw)
-        return Figure(type="ai_generated", svg=svg, caption=f"教学示意图：{point.name}") if svg else None
+        if not svg:
+            return None
+        fig = Figure(type="ai_generated", svg=svg, caption=f"教学示意图：{point.name}")
+        fig.explain = _explain_figure(point, svg, client, reasoning_effort)  # best-effort 读图讲解
+        return fig
 
     failed = False
     for point, fig in zip(todo, _parallel_map(_gen, todo)):
@@ -102,6 +114,43 @@ def generate_svg_diagrams(
             failed = True
     if failed and on_notice:
         on_notice("部分技术点的 SVG 讲解图生成失败，已跳过该图（不回退 Mermaid）。")
+
+
+def _svg_text_labels(svg: str, limit: int = 1200) -> str:
+    """Pull the visible <text>/<tspan> strings out of an SVG so the walkthrough can be
+    grounded in what the figure actually shows (rather than inventing parts)."""
+    out, seen = [], set()
+    for raw in re.findall(r"<(?:text|tspan)\b[^>]*>(.*?)</(?:text|tspan)>", svg, flags=re.DOTALL | re.IGNORECASE):
+        t = re.sub(r"<[^>]+>", "", raw)
+        t = re.sub(r"&#x([0-9a-fA-F]+);", lambda m: chr(int(m.group(1), 16)), t)
+        t = re.sub(r"&#(\d+);", lambda m: chr(int(m.group(1))), t)
+        t = t.replace("&amp;", "&").replace("&lt;", "<").replace("&gt;", ">")
+        t = re.sub(r"\s+", " ", t).strip()
+        if t and t not in seen:
+            seen.add(t)
+            out.append(t)
+    return " | ".join(out)[:limit]
+
+
+def _explain_figure(point: TechnicalPoint, svg: str, client: LLMClient, reasoning_effort) -> "FigureExplain | None":
+    """Best-effort structured "how to read this figure" walkthrough, grounded in the
+    figure's own labels. Returns None on any failure (the figure is still shown)."""
+    try:
+        data = client.complete_json(
+            FIGURE_EXPLAIN_SYSTEM,
+            figure_explain_user(point.name, point.explanation, point.formula, _svg_text_labels(svg)),
+            max_tokens=2500,
+            reasoning_effort=reasoning_effort,
+        )
+    except LLMError:
+        return None
+    if not isinstance(data, dict):
+        return None
+    gist = str(data.get("gist") or "").strip()
+    if not gist:
+        return None
+    parts = [str(x).strip() for x in (data.get("parts") or []) if str(x).strip()][:4]
+    return FigureExplain(gist=gist, parts=parts, takeaway=str(data.get("takeaway") or "").strip())
 
 
 def generate_diagrams(points: List[TechnicalPoint], client: LLMClient) -> None:
