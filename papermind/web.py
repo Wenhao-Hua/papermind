@@ -113,6 +113,79 @@ def _quota_msg(scope: str, limiter: "RateLimiter") -> str:
     return f"今日额度已用完（每人 {limiter.per_ip} 次/天）。请明天再来，或本地零成本运行：pip install paper-mind 后 papermind analyze。"
 
 
+# --------------------------------------------------------------------------- #
+# Async analysis jobs — a long analysis runs in a background thread so the HTTP
+# request returns immediately (no Cloudflare 100s origin timeout / 524). The
+# page polls /job/{id} for real progress, then loads /result/{id}.
+# --------------------------------------------------------------------------- #
+_JOBS: dict = {}
+_JOBS_LOCK = threading.Lock()
+_JOBS_MAX = 64
+
+
+def _new_job() -> str:
+    jid = secrets.token_hex(8)
+    with _JOBS_LOCK:
+        _JOBS[jid] = {"status": "running", "step": "开始", "html": "", "error": "", "ts": time.time()}
+        while len(_JOBS) > _JOBS_MAX:
+            _JOBS.pop(next(iter(_JOBS)))
+    return jid
+
+
+def _set_job(jid: str, **kw) -> None:
+    with _JOBS_LOCK:
+        if jid in _JOBS:
+            _JOBS[jid].update(kw)
+
+
+def _get_job(jid: str):
+    with _JOBS_LOCK:
+        return dict(_JOBS[jid]) if jid in _JOBS else None
+
+
+def _start_job(work) -> str:
+    """Run ``work(job_id) -> html`` in a daemon thread; store result/error on the job."""
+    jid = _new_job()
+
+    def run():
+        try:
+            _set_job(jid, status="done", html=work(jid))
+        except PaperMindError as exc:
+            _set_job(jid, status="error", error=str(exc))
+        except Exception as exc:  # noqa: BLE001 - surface any failure to the poller
+            _set_job(jid, status="error", error=f"分析出错：{exc}")
+
+    threading.Thread(target=run, daemon=True).start()
+    return jid
+
+
+def _poll_js(job_id: str) -> str:
+    return (
+        "(function(){var ov=document.getElementById('pm-busy');if(ov){ov.classList.add('on');}"
+        "var se=document.getElementById('pm-step'),sec=document.getElementById('pm-sec'),t0=Date.now();"
+        "setInterval(function(){if(sec){sec.textContent=Math.round((Date.now()-t0)/1000);}},250);"
+        "function poll(){fetch('/job/" + job_id + "').then(function(r){return r.json();}).then(function(j){"
+        "if(j.step&&se){se.textContent=j.step;}"
+        "if(j.status==='done'){location.replace('/result/" + job_id + "');}"
+        "else if(j.status==='error'){if(ov){ov.classList.remove('on');}var m=document.querySelector('main');"
+        "if(m){m.innerHTML=\"<section class='panel'><p class='err'>\"+(j.error||'分析失败')+\"</p>"
+        "<p class='lead'>可返回重试。</p></section>\";}}"
+        "else if(j.status==='missing'){location.replace('/');}"
+        "else{setTimeout(poll,2500);}}).catch(function(){setTimeout(poll,3000);});}"
+        "poll();})();"
+    )
+
+
+def _job_page(job_id: str, live: bool, tab: str = "/") -> str:
+    body = (
+        "<section class='panel'><h2>分析中…</h2>"
+        "<p class='lead'>正在分析这篇论文，完成后会自动显示结果。重论文可能要 1–3 分钟，"
+        "可以离开本页稍后再回来。</p></section>"
+        f"<script>{_poll_js(job_id)}</script>"
+    )
+    return _page(tab, body, live)
+
+
 def create_app(live: bool = False, rate_per_ip: int = 8, rate_global: int = 300,
                with_figures: bool = True, svg_figures: bool = False, no_cache: bool = False):
     try:
@@ -144,28 +217,64 @@ def create_app(live: bool = False, rate_per_ip: int = 8, rate_global: int = 300,
     def index():
         return _page("/", _analyze_form(live), live)
 
+    def _analyze_async(request, src, model, refresh):
+        """Live analysis -> background job + polling page (avoids the 100s timeout).
+        A cached result still resolves in one quick poll. Quota is reserved up front."""
+        blocked = gate(request)
+        if blocked:
+            return _page("/", _analyze_form(live, blocked), live)
+        figs = with_figures
+
+        def work(jid):
+            from papermind.analyze import analyze as run_analyze
+            from papermind.config import load_config
+
+            report = run_analyze(
+                src, model=(model or None), config=load_config(),
+                with_figures=figs, svg_figures=(figs and svg_figures), refresh=refresh,
+                on_progress=lambda step: _set_job(jid, step=step),
+            )
+            return report.to_html()
+
+        return _job_page(_start_job(work), live, "/")
+
     @app.post("/analyze", response_class=HTMLResponse)
     def analyze_route(request: Request, source: str = Form(""), model: str = Form(""),
                       refresh: str = Form(""), file: Optional[UploadFile] = File(None)):
         src = _resolve_upload(source, file)
         if not src:
             return _page("/", _analyze_form(live, "请填入论文 URL（arXiv 链接或 PDF 直链），或上传 PDF。"), live)
-        report, err, _ran = _report_for(src, model, live, on_live=lambda: gate(request),
-                                        with_figures=with_figures, svg_figures=svg_figures,
-                                        refresh=(no_cache or bool(refresh)))
-        if err:
-            return _page("/", _analyze_form(live, err), live)
-        return report.to_html()
+        if not live:  # demo: only already-cached reports; never runs a model
+            report, err, _ran = _report_for(src, model, live, with_figures=with_figures, svg_figures=svg_figures)
+            return report.to_html() if report is not None else _page("/", _analyze_form(live, err), live)
+        return _analyze_async(request, src, model, no_cache or bool(refresh))
 
     @app.get("/analyze", response_class=HTMLResponse)
     def analyze_get(request: Request, source: str = ""):
         if not source.strip():
             return _page("/", _analyze_form(live), live)
-        report, err, _ran = _report_for(source, "", live, on_live=lambda: gate(request),
-                                        with_figures=with_figures, svg_figures=svg_figures, refresh=no_cache)
-        if err:
-            return _page("/", _analyze_form(live, err), live)
-        return report.to_html()
+        if not live:
+            report, err, _ran = _report_for(source, "", live, with_figures=with_figures, svg_figures=svg_figures)
+            return report.to_html() if report is not None else _page("/", _analyze_form(live, err), live)
+        return _analyze_async(request, source, "", no_cache)
+
+    @app.get("/job/{job_id}")
+    def job_status(job_id: str):
+        job = _get_job(job_id)
+        if job is None:
+            return {"status": "missing"}
+        return {"status": job["status"], "step": job.get("step", ""), "error": job.get("error", "")}
+
+    @app.get("/result/{job_id}", response_class=HTMLResponse)
+    def job_result(job_id: str):
+        job = _get_job(job_id)
+        if job is None:
+            return _page("/", "<section class='panel'><p class='err'>结果已过期，请重新分析。</p></section>", live)
+        if job["status"] == "done":
+            return job["html"]
+        if job["status"] == "error":
+            return _page("/", _analyze_form(live, job["error"]), live)
+        return _job_page(job_id, live, "/")  # still running -> keep polling
 
     # -- ask (multi-turn grounded Q&A) --------------------------------------- #
     @app.get("/ask", response_class=HTMLResponse)

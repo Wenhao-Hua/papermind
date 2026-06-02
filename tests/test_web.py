@@ -100,3 +100,49 @@ def test_rate_limiter_zero_means_unlimited_and_rollover():
     assert rl.take("a") == (False, "ip")
     rl._reset = 0  # force the window to elapse -> counters reset
     assert rl.take("a")[0] is True
+
+
+def _await_job(get_status, jid, tries=80):
+    import time
+
+    for _ in range(tries):
+        s = get_status(jid)
+        if s["status"] != "running":
+            return s
+        time.sleep(0.05)
+    return get_status(jid)
+
+
+def test_start_job_runs_and_captures_errors():
+    from papermind.errors import PaperMindError
+    from papermind.web import _get_job, _start_job
+
+    ok = _start_job(lambda j: "<html>ok</html>")
+    done = _await_job(_get_job, ok)
+    assert done["status"] == "done" and done["html"] == "<html>ok</html>"
+
+    def boom(j):
+        raise PaperMindError("nope")
+
+    bad = _await_job(_get_job, _start_job(boom))
+    assert bad["status"] == "error" and "nope" in bad["error"]
+
+
+def test_analyze_live_runs_async_and_polls(monkeypatch):
+    import re
+
+    import papermind.analyze as analyze_mod
+    from papermind.output.schema import PaperMeta, Report
+
+    monkeypatch.setattr(analyze_mod, "analyze", lambda *a, **k: Report(paper=PaperMeta(title="FakePaper")))
+    client = TestClient(create_app(live=True, with_figures=False))
+
+    r = client.post("/analyze", data={"source": "https://arxiv.org/abs/1706.03762"})
+    assert r.status_code == 200
+    m = re.search(r"/job/([0-9a-f]+)", r.text)
+    assert m and "分析中" in r.text  # returned a polling page, not a blocking analysis
+    jid = m.group(1)
+
+    status = _await_job(lambda j: client.get(f"/job/{j}").json(), jid)
+    assert status["status"] == "done"
+    assert "FakePaper" in client.get(f"/result/{jid}").text

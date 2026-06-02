@@ -36,6 +36,7 @@ def analyze(
     refresh: bool = False,
     image_figures: bool = False,
     svg_figures: bool = False,
+    on_progress=None,
 ) -> Report:
     """Analyze a paper and return a structured :class:`Report`.
 
@@ -69,7 +70,7 @@ def analyze(
     if with_figures and "technical" in modules:
         steps.append("figures")
 
-    with _progress(console, steps) as advance:
+    with _progress(console, steps, on_progress=on_progress) as advance:
         parsed = parse_pdf(resolved.pdf_path, resolved.meta, resolved.cache_dir)
         advance("parse")
 
@@ -246,8 +247,9 @@ def _verify_citations(report: Report, parsed: ParsedPaper) -> None:
 
 
 @contextmanager
-def _progress(console, steps: List[str]):
-    """Yield an ``advance(step_name)`` callable; uses a rich bar if a console is given."""
+def _progress(console, steps: List[str], on_progress=None):
+    """Yield an ``advance(step_name)`` callable; uses a rich bar if a console is
+    given, and/or forwards the human label to ``on_progress`` (e.g. a web job)."""
     labels = {
         "parse": "解析 PDF",
         "contributions": "贡献与创新点",
@@ -256,8 +258,13 @@ def _progress(console, steps: List[str]):
         "reproduction": "复现指南",
         "figures": "图示匹配/生成",
     }
+
+    def emit(step: str) -> None:
+        if on_progress is not None:
+            on_progress(labels.get(step, step))
+
     if console is None:
-        yield lambda step: None
+        yield emit
         return
 
     from rich.progress import BarColumn, Progress, SpinnerColumn, TaskProgressColumn, TextColumn
@@ -274,5 +281,6 @@ def _progress(console, steps: List[str]):
 
         def advance(step: str) -> None:
             progress.update(task, advance=1, description=labels.get(step, step))
+            emit(step)
 
         yield advance
