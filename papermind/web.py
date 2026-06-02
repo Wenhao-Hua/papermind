@@ -113,7 +113,8 @@ def _quota_msg(scope: str, limiter: "RateLimiter") -> str:
     return f"今日额度已用完（每人 {limiter.per_ip} 次/天）。请明天再来，或本地零成本运行：pip install paper-mind 后 papermind analyze。"
 
 
-def create_app(live: bool = False, rate_per_ip: int = 8, rate_global: int = 300):
+def create_app(live: bool = False, rate_per_ip: int = 8, rate_global: int = 300,
+               with_figures: bool = True, svg_figures: bool = False):
     try:
         from fastapi import Cookie, FastAPI, File, Form, Request, UploadFile
         from fastapi.responses import HTMLResponse
@@ -148,7 +149,8 @@ def create_app(live: bool = False, rate_per_ip: int = 8, rate_global: int = 300)
         src = _resolve_upload(source, file)
         if not src:
             return _page("/", _analyze_form(live, "请填入论文 URL（arXiv 链接或 PDF 直链），或上传 PDF。"), live)
-        report, err, _ran = _report_for(src, model, live, on_live=lambda: gate(request))
+        report, err, _ran = _report_for(src, model, live, on_live=lambda: gate(request),
+                                        with_figures=with_figures, svg_figures=svg_figures)
         if err:
             return _page("/", _analyze_form(live, err), live)
         return report.to_html()
@@ -157,7 +159,8 @@ def create_app(live: bool = False, rate_per_ip: int = 8, rate_global: int = 300)
     def analyze_get(request: Request, source: str = ""):
         if not source.strip():
             return _page("/", _analyze_form(live), live)
-        report, err, _ran = _report_for(source, "", live, on_live=lambda: gate(request))
+        report, err, _ran = _report_for(source, "", live, on_live=lambda: gate(request),
+                                        with_figures=with_figures, svg_figures=svg_figures)
         if err:
             return _page("/", _analyze_form(live, err), live)
         return report.to_html()
@@ -310,18 +313,24 @@ def create_app(live: bool = False, rate_per_ip: int = 8, rate_global: int = 300)
 
 
 def serve(host: str = "0.0.0.0", port: int = 8080, live: bool = False,
-          rate_per_ip: int = 8, rate_global: int = 300) -> None:
+          rate_per_ip: int = 8, rate_global: int = 300,
+          with_figures: bool = True, svg_figures: bool = False) -> None:
     try:
         import uvicorn
     except ImportError as exc:  # pragma: no cover
         raise PaperMindError("Web demo 需要 uvicorn。安装：pip install 'paper-mind[web]'") from exc
-    uvicorn.run(create_app(live=live, rate_per_ip=rate_per_ip, rate_global=rate_global), host=host, port=port)
+    app = create_app(
+        live=live, rate_per_ip=rate_per_ip, rate_global=rate_global,
+        with_figures=with_figures, svg_figures=svg_figures,
+    )
+    uvicorn.run(app, host=host, port=port)
 
 
 # --------------------------------------------------------------------------- #
 # Shared report resolution (cached-or-live)
 # --------------------------------------------------------------------------- #
-def _report_for(source: str, model: str, live: bool, need: Optional[str] = None, on_live=None):
+def _report_for(source: str, model: str, live: bool, need: Optional[str] = None, on_live=None,
+                with_figures: bool = False, svg_figures: bool = False):
     """Return (report, error, ran_live). Serves a cached report for free; runs live
     analysis only if ``live``. ``on_live`` (if given) is called right before a live
     run and may return an error string to block it (used for rate limiting)."""
@@ -332,7 +341,7 @@ def _report_for(source: str, model: str, live: bool, need: Optional[str] = None,
 
     source = (source or "").strip()
     if not source:
-        return None, "请输入 arXiv id / URL。", False
+        return None, "请输入论文 URL（arXiv 链接或 PDF 直链）。", False
     config = load_config()
     try:
         resolved = resolve(source, config)
@@ -350,9 +359,12 @@ def _report_for(source: str, model: str, live: bool, need: Optional[str] = None,
         if blocked:
             return None, blocked, False
     try:
-        # Web stays snappy: skip figure generation (the extra per-point model calls);
-        # the report still has all four modules + formulas. Use CLI for figures.
-        return run_analyze(source, model=(model or None), config=config, with_figures=False), None, True
+        # need="reproduction" only needs setup.sh -> skip the extra figure calls.
+        figs = with_figures and need is None
+        return run_analyze(
+            source, model=(model or None), config=config,
+            with_figures=figs, svg_figures=(figs and svg_figures),
+        ), None, True
     except PaperMindError as exc:
         return None, str(exc), True
 

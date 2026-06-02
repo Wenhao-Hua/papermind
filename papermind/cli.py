@@ -128,7 +128,9 @@ def ui(
     if not no_browser:
         threading.Timer(1.2, lambda: webbrowser.open(url)).start()
     try:
-        run_serve(host=host, port=port, live=True, rate_per_ip=0, rate_global=0)  # local: unlimited
+        # Local: unlimited, figures on, SVG teaching figures (you run it on your own machine/key).
+        run_serve(host=host, port=port, live=True, rate_per_ip=0, rate_global=0,
+                  with_figures=True, svg_figures=True)
     except PaperMindError as exc:
         raise _fail(str(exc))
 
@@ -142,11 +144,14 @@ def serve(
     ),
     rate_per_ip: int = typer.Option(8, "--rate-per-ip", help="Max live requests per IP per day (0 = unlimited)."),
     rate_global: int = typer.Option(300, "--rate-global", help="Max live requests total per day (0 = unlimited)."),
+    figures: bool = typer.Option(True, "--figures/--no-figures", help="Generate figures in reports (off = fastest/cheapest)."),
+    svg_figures: bool = typer.Option(False, "--svg-figures", help="Use architecture-faithful teaching SVGs instead of Mermaid (heavier)."),
 ) -> None:
     """Run the web service. Default is demo mode (cached reports only, key-safe).
 
     With --live, model-calling requests are rate-limited per IP and globally so a
     public deployment can't drain your API key (tune with --rate-per-ip / --rate-global).
+    Figures default to Mermaid; --svg-figures upgrades to teaching SVGs (costs more).
     """
     from papermind.web import serve as run_serve
 
@@ -154,7 +159,8 @@ def serve(
     limits = f"  ·  限流 每IP {rate_per_ip}/天 · 全局 {rate_global}/天" if live else ""
     console.print(f"[bold cyan]PaperMind web[/bold cyan]  →  http://{host}:{port}\n[dim]{mode}{limits}  ·  Ctrl-C 停止[/dim]")
     try:
-        run_serve(host=host, port=port, live=live, rate_per_ip=rate_per_ip, rate_global=rate_global)
+        run_serve(host=host, port=port, live=live, rate_per_ip=rate_per_ip, rate_global=rate_global,
+                  with_figures=figures, svg_figures=svg_figures)
     except PaperMindError as exc:
         raise _fail(str(exc))
 
