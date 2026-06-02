@@ -41,6 +41,8 @@ dependencies = [
 local-embeddings = ["sentence-transformers>=2.2.0"]
 web = ["fastapi>=0.110.0", "uvicorn>=0.27.0", "python-multipart>=0.0.9"]
 ui = ["fastapi>=0.110.0", "uvicorn>=0.27.0", "python-multipart>=0.0.9"]
+# Research / training extras (dataset building now; model training & eval grow this later).
+train = ["datasets>=2.14.0"]
 dev = [
     "pytest>=7.0.0",
     "pytest-mock>=3.10.0",

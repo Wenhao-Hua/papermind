@@ -1,0 +1,4 @@
+# Downloaded QASPER and generated training pairs are large / derived — don't commit.
+*
+!.gitignore
+!README.md
