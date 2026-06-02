@@ -226,6 +226,29 @@ def image_diagram_prompt(name: str, explanation: str) -> str:
     )
 
 
+# A self-contained, architecture-faithful teaching SVG (not a generic flowchart).
+SVG_FIGURE_SYSTEM = (
+    "你是学术论文配图工程师，画**严谨、可教学**的讲解图——像高质量教科书/distill.pub 的图解，"
+    "而不是方框流程图。只输出一个**自包含的 <svg>…</svg>**：不要任何解释文字、不要代码围栏、"
+    "不要 <script>、不要外部资源(图片/字体/链接)。硬性要求：\n"
+    "1) **严格忠于给定论文的架构与记号**——按上下文里这篇论文的真实结构作画，绝不套用通用模板或臆造"
+    "不存在的组件（例如 decoder-only 模型不要画交叉注意力）。\n"
+    "2) 用**一个具体的小例子**（真实 token / 维度 / 矩阵 / 数值）把机制讲清，而非抽象方框。\n"
+    "3) 关键处标注**公式、张量形状、为什么**，体现数据流 / 因果 / 形状变化。\n"
+    "4) 固定 viewBox（宽 960，高自定且 ≤ 680）；**网格化布局，元素不重叠、文字不溢出**；配色克制。\n"
+    "5) 只用基础图元（rect/line/path/text/polygon/marker/g）与内联样式；中文用无衬线字体。"
+)
+
+
+def svg_figure_user(name: str, explanation: str, formula: Optional[str], context: str) -> str:
+    f = f"\n关键公式：{formula}" if formula else ""
+    return (
+        "【这篇论文的架构与上下文，务必据此作画，勿臆造】\n" + context + "\n\n"
+        f"【要画的技术点】{name}\n{explanation}{f}\n\n"
+        "请输出一张忠于本论文、带具体例子与标注的教学式 <svg>。"
+    )
+
+
 # --------------------------------------------------------------------------- #
 # Q&A / reasoning / tutoring
 # --------------------------------------------------------------------------- #

@@ -50,6 +50,9 @@ pre code { background:none; color:inherit; padding:0; }
 pre.mermaid { background:#fafaff; border:1px solid var(--border); border-radius:10px; text-align:center; padding:18px; }
 pre.mermaid svg { max-width:100%; height:auto; }
 img.figure { max-width:100%; border:1px solid var(--border); border-radius:8px; display:block; margin:8px 0; }
+figure.svgfig { margin:8px 0; }
+figure.svgfig svg { max-width:100%; height:auto; display:block; margin:0 auto;
+  border:1px solid var(--border); border-radius:8px; background:#fff; }
 figcaption { color:var(--muted); font-size:.85rem; margin-bottom:1em; }
 .ai-tag { color:var(--accent); }
 .copy-btn { font:inherit; font-size:.86rem; cursor:pointer; background:var(--soft); color:var(--fg);
@@ -263,6 +266,9 @@ def _figure(p: TechnicalPoint) -> List[str]:
             cap = esc(fig.caption or origin)
             tag = "" if fig.type == "original" else ' class="ai-tag"'
             return [f'<figure><img class="figure" src="{uri}" alt="{cap}"><figcaption{tag}>{cap}（{origin}）</figcaption></figure>']
+    if fig.svg:  # self-contained teaching SVG (architecture-faithful), inlined
+        cap = esc(fig.caption or "教学示意图")
+        return [f'<figure class="svgfig">{fig.svg}</figure>', f'<figcaption class="ai-tag">{cap}</figcaption>']
     if fig.type == "ai_generated" and fig.mermaid:
         cap = esc(fig.caption or "AI 生成示意图")
         return [f'<pre class="mermaid">{fig.mermaid}</pre>', f'<figcaption class="ai-tag">{cap}</figcaption>']

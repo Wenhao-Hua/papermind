@@ -157,6 +157,14 @@ def _figure_md(point: TechnicalPoint) -> List[str]:
         out.append(f"![{caption}]({fig.image_path})")
         out.append(f"*{caption} ({origin})*")
         out.append("")
+    elif fig.svg:  # self-contained teaching SVG -> embed as a data-URI image
+        import base64
+
+        b64 = base64.b64encode(fig.svg.encode("utf-8")).decode("ascii")
+        caption = fig.caption or "教学示意图"
+        out.append(f"![{caption}](data:image/svg+xml;base64,{b64})")
+        out.append(f"*{caption}（教学示意图）*")
+        out.append("")
     elif fig.type == "ai_generated" and fig.mermaid:
         out.append("```mermaid")
         out.append(fig.mermaid)

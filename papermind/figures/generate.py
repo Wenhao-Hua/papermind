@@ -12,7 +12,7 @@ from typing import List
 
 from papermind.errors import LLMError
 from papermind.llm.base import LLMClient
-from papermind.llm.prompts import MERMAID_SYSTEM, image_diagram_prompt, mermaid_user
+from papermind.llm.prompts import MERMAID_SYSTEM, SVG_FIGURE_SYSTEM, image_diagram_prompt, mermaid_user, svg_figure_user
 from papermind.output.schema import Figure, TechnicalPoint
 
 _MAX_WORKERS = 4
@@ -62,6 +62,38 @@ def generate_image_diagrams(
         point.figure = Figure(type="ai_generated", image_path=str(dest), caption=f"AI 生成示意图：{point.name}")
 
 
+def generate_svg_diagrams(points: List[TechnicalPoint], client: LLMClient, context: str, on_notice=None) -> None:
+    """Generate a self-contained, architecture-faithful teaching SVG per point.
+
+    Best-effort: invalid/unsafe output is dropped so the caller can fall back to
+    Mermaid. The SVG is validated (well-formed XML) and sanitized (no scripts /
+    event handlers / external refs) before it's stored.
+    """
+    todo = [p for p in points if p.figure is None]
+    if not todo:
+        return
+    ctx = (context or "")[:6000]
+
+    def _gen(point):
+        try:
+            raw = client.complete(
+                SVG_FIGURE_SYSTEM, svg_figure_user(point.name, point.explanation, point.formula, ctx), max_tokens=3600
+            )
+        except LLMError:
+            return None
+        svg = _clean_svg(raw)
+        return Figure(type="ai_generated", svg=svg, caption=f"教学示意图：{point.name}") if svg else None
+
+    failed = False
+    for point, fig in zip(todo, _parallel_map(_gen, todo)):
+        if fig is not None:
+            point.figure = fig
+        else:
+            failed = True
+    if failed and on_notice:
+        on_notice("部分技术点的 SVG 讲解图生成失败，已回退到 Mermaid。")
+
+
 def generate_diagrams(points: List[TechnicalPoint], client: LLMClient) -> None:
     todo = [p for p in points if p.figure is None]
     if not todo:
@@ -92,3 +124,29 @@ def _clean_mermaid(value) -> str:
     if fence:
         text = fence.group(1).strip()
     return text
+
+
+def _clean_svg(value) -> str:
+    """Extract a single <svg> element, strip scripts/handlers/external refs, and
+    require it to be well-formed XML. Returns '' if anything is off."""
+    if not value or not isinstance(value, str):
+        return ""
+    text = value.strip()
+    fence = re.match(r"^```(?:svg|xml|html)?\s*(.*?)\s*```$", text, re.DOTALL)
+    if fence:
+        text = fence.group(1).strip()
+    match = re.search(r"<svg\b.*?</svg>", text, re.DOTALL | re.IGNORECASE)
+    if not match:
+        return ""
+    svg = match.group(0)
+    # Sanitize: reports are shared HTML, so drop anything executable/external.
+    svg = re.sub(r"<script\b.*?</script>", "", svg, flags=re.DOTALL | re.IGNORECASE)
+    svg = re.sub(r"""\son\w+\s*=\s*(["']).*?\1""", "", svg, flags=re.IGNORECASE | re.DOTALL)
+    svg = re.sub(r"""(?:xlink:)?href\s*=\s*(["'])\s*(?:javascript:|https?:|//).*?\1""", "", svg, flags=re.IGNORECASE)
+    try:
+        import xml.etree.ElementTree as ET
+
+        ET.fromstring(svg)  # must be well-formed
+    except Exception:  # noqa: BLE001
+        return ""
+    return svg

@@ -171,6 +171,7 @@ def analyze(
     refresh: bool = typer.Option(False, "--refresh", help="Ignore cached result and re-analyze."),
     local: bool = typer.Option(False, "--local", help="Run fully local & free via Ollama (LLM + embeddings)."),
     image_figures: bool = typer.Option(False, "--image-figures", help="Use an image model for AI figures instead of Mermaid (needs `config set image-model`)."),
+    svg_figures: bool = typer.Option(False, "--svg-figures", help="Architecture-faithful teaching SVG diagrams (per technical point) instead of Mermaid."),
     open_report: bool = typer.Option(False, "--open", help="Open the HTML report in a browser when done."),
     estimate: bool = typer.Option(False, "--estimate", help="Estimate token cost and exit (no model calls)."),
 ) -> None:
@@ -202,7 +203,7 @@ def analyze(
     try:
         report = run_analyze(
             source, model=model, modules=modules, with_figures=not no_figures, console=console,
-            refresh=refresh, image_figures=image_figures,
+            refresh=refresh, image_figures=image_figures, svg_figures=svg_figures,
         )
     except PaperMindError as exc:
         raise _fail(str(exc))

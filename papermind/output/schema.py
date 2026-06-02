@@ -97,6 +97,7 @@ class Figure(BaseModel):
     type: FigureType = "ai_generated"
     image_path: Optional[str] = None
     mermaid: Optional[str] = None
+    svg: Optional[str] = None  # self-contained teaching SVG (architecture-faithful), if generated
     caption: Optional[str] = None
 
 
