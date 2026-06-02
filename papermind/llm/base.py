@@ -109,14 +109,12 @@ class LLMClient:
         user: str,
         temperature: float = 0.0,
         max_tokens: Optional[int] = None,
-        reasoning_effort: Optional[str] = None,
     ):
         """Return parsed JSON (dict or list). Retries once to repair invalid JSON."""
         return self.complete_json_messages(
             [{"role": "system", "content": system}, {"role": "user", "content": user}],
             temperature=temperature,
             max_tokens=max_tokens,
-            reasoning_effort=reasoning_effort,
         )
 
     def complete_json_messages(
@@ -125,7 +123,6 @@ class LLMClient:
         temperature: float = 0.0,
         max_tokens: Optional[int] = None,
         on_delta: OnDelta = None,
-        reasoning_effort: Optional[str] = None,
     ):
         """JSON completion from a full message list (for multi-turn chat).
 
@@ -133,8 +130,7 @@ class LLMClient:
         forwarded as they arrive); the repair attempt is always non-streamed.
         """
         raw = self._call(
-            messages, temperature=temperature, max_tokens=max_tokens, json_mode=True, on_delta=on_delta,
-            reasoning_effort=reasoning_effort,
+            messages, temperature=temperature, max_tokens=max_tokens, json_mode=True, on_delta=on_delta
         )
         parsed = _try_parse_json(raw)
         if parsed is not None:
@@ -154,7 +150,6 @@ class LLMClient:
             temperature=0.0,
             max_tokens=max_tokens,
             json_mode=True,
-            reasoning_effort=reasoning_effort,
         )
         parsed = _try_parse_json(repair)
         if parsed is None:

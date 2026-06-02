@@ -64,21 +64,3 @@ def test_svg_renders_inline_in_html_and_datauri_in_md():
     assert "<svg viewBox='0 0 20 20'>" in html  # inlined, not escaped
     md = report.to_markdown()
     assert "data:image/svg+xml;base64," in md
-
-
-def test_figure_explain_renders_in_html_and_md():
-    from papermind.output.schema import FigureExplain
-
-    svg = "<svg viewBox='0 0 20 20'><rect width='20' height='20'/></svg>"
-    ex = FigureExplain(gist="这张图定义浪费比率", parts=["T_extra 是多开检查", "fee 用 CMS 换算"], takeaway="比率越低越克制")
-    report = Report(
-        paper=PaperMeta(title="T"),
-        technical=TechnicalSection(details=[
-            TechnicalPoint(name="X", explanation="...", figure=Figure(type="ai_generated", svg=svg, explain=ex)),
-        ]),
-    )
-    html = report.to_html()
-    assert 'class="readfig"' in html and "读图" in html
-    assert "T_extra 是多开检查" in html and "比率越低越克制" in html
-    md = report.to_markdown()
-    assert "> **读图**：这张图定义浪费比率" in md and "> - T_extra 是多开检查" in md and "**关键**：比率越低越克制" in md

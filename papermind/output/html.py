@@ -55,14 +55,6 @@ figure.svgfig svg { max-width:100%; height:auto; display:block; margin:0 auto;
   border:1px solid var(--border); border-radius:8px; background:#fff; }
 figcaption { color:var(--muted); font-size:.85rem; margin-bottom:1em; }
 .ai-tag { color:var(--accent); }
-.readfig { background:var(--soft); border:1px solid var(--border); border-left:4px solid var(--accent);
-  border-radius:0 10px 10px 0; padding:12px 16px; margin:4px 0 1.4em; font-size:.92rem; line-height:1.6; }
-.readfig .rf-gist { margin:0 0 8px; font-weight:600; color:var(--fg); }
-.readfig .rf-gist span, .readfig .rf-take span { display:inline-block; font-size:.72rem; font-weight:600;
-  color:#fff; background:var(--accent); border-radius:5px; padding:1px 7px; margin-right:8px; }
-.readfig .rf-parts { margin:0 0 8px; padding-left:1.25em; color:var(--fg); }
-.readfig .rf-parts li { margin:3px 0; }
-.readfig .rf-take { margin:0; color:var(--fg); }
 .copy-btn { font:inherit; font-size:.86rem; cursor:pointer; background:var(--soft); color:var(--fg);
   border:1px solid var(--border); border-radius:8px; padding:5px 12px; margin:4px 0 10px; }
 .copy-btn:hover { border-color:var(--accent); color:var(--accent); }
@@ -276,25 +268,11 @@ def _figure(p: TechnicalPoint) -> List[str]:
             return [f'<figure><img class="figure" src="{uri}" alt="{cap}"><figcaption{tag}>{cap}（{origin}）</figcaption></figure>']
     if fig.svg:  # self-contained teaching SVG (architecture-faithful), inlined
         cap = esc(fig.caption or "教学示意图")
-        return [
-            f'<figure class="svgfig">{fig.svg}</figure>',
-            f'<figcaption class="ai-tag">{cap}</figcaption>',
-            *_explain_html(fig.explain),
-        ]
+        return [f'<figure class="svgfig">{fig.svg}</figure>', f'<figcaption class="ai-tag">{cap}</figcaption>']
     if fig.type == "ai_generated" and fig.mermaid:
         cap = esc(fig.caption or "AI 生成示意图")
         return [f'<pre class="mermaid">{fig.mermaid}</pre>', f'<figcaption class="ai-tag">{cap}</figcaption>']
     return []
-
-
-def _explain_html(ex) -> List[str]:
-    """Render the structured "how to read this figure" walkthrough as a tidy block."""
-    if not ex or not ex.gist:
-        return []
-    parts = "".join(f"<li>{esc(p)}</li>" for p in ex.parts)
-    ul = f'<ul class="rf-parts">{parts}</ul>' if parts else ""
-    take = f'<p class="rf-take"><span>关键</span>{esc(ex.takeaway)}</p>' if ex.takeaway else ""
-    return [f'<aside class="readfig"><p class="rf-gist"><span>读图</span>{esc(ex.gist)}</p>{ul}{take}</aside>']
 
 
 def _connections(works: List[Connection]) -> List[str]:
