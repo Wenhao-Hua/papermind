@@ -23,6 +23,7 @@ from typing import List, Set, Tuple
 
 from evaluation.metrics import aggregate
 from trainer.build_dataset import (
+    _TEST_TGZ,
     _TRAIN_DEV_TGZ,
     _evidence_norms,
     _is_positive,
@@ -34,7 +35,8 @@ from trainer.build_dataset import (
 
 def load_eval(raw_dir: str, split: str = "dev", max_papers: int = 0):
     """-> list of (paragraph_texts, [(question, gold_idx_set)])."""
-    papers = _split_json(Path(raw_dir), _TRAIN_DEV_TGZ, split)
+    tgz = _TEST_TGZ if split == "test" else _TRAIN_DEV_TGZ  # test lives in a separate archive
+    papers = _split_json(Path(raw_dir), tgz, split)
     instances: List[Tuple[List[str], List[Tuple[str, Set[int]]]]] = []
     for _pid, record in papers.items():
         if max_papers and len(instances) >= max_papers:
@@ -69,16 +71,19 @@ def _tok(text: str) -> List[str]:
 
 
 class DenseScorer:
-    def __init__(self, model_name: str):
+    def __init__(self, model_name: str, query_instruction: str = ""):
         from sentence_transformers import SentenceTransformer
 
         self.model = SentenceTransformer(model_name)
+        self.query_instruction = query_instruction  # e.g. bge: "Represent this sentence ..."
 
     def embed_paragraphs(self, paras: List[str]):
         return self.model.encode(paras, normalize_embeddings=True, convert_to_numpy=True, batch_size=64)
 
     def scores(self, question: str, para_emb) -> List[float]:
-        q = self.model.encode([question], normalize_embeddings=True, convert_to_numpy=True)[0]
+        q = self.model.encode(
+            [self.query_instruction + question], normalize_embeddings=True, convert_to_numpy=True
+        )[0]
         return (para_emb @ q).tolist()
 
 
@@ -115,7 +120,7 @@ def run(args) -> dict:
 
     instances = load_eval(args.raw_dir, args.split, args.max_papers)
     print(f"eval papers={len(instances)} · questions={sum(len(q) for _, q in instances)}")
-    dense = DenseScorer(args.dense_model)
+    dense = DenseScorer(args.dense_model, args.query_instruction)
     reranker = RerankScorer(args.reranker) if args.reranker else None
 
     ranked = {"BM25": [], "Dense": [], "Dense+Reranker": []}
@@ -159,6 +164,7 @@ def main() -> None:
     ap.add_argument("--raw-dir", default="data/raw")
     ap.add_argument("--split", default="dev")
     ap.add_argument("--dense-model", default="sentence-transformers/all-MiniLM-L6-v2")
+    ap.add_argument("--query-instruction", default="", help="prepended to the query (bge needs one)")
     ap.add_argument("--reranker", default="checkpoints/reranker", help="checkpoint dir; empty to skip")
     ap.add_argument("--rerank-topk", type=int, default=30)
     ap.add_argument("--max-papers", type=int, default=0)
