@@ -121,14 +121,23 @@ def _quota_msg(scope: str, limiter: "RateLimiter") -> str:
 _JOBS: dict = {}
 _JOBS_LOCK = threading.Lock()
 _JOBS_MAX = 64
+_JOBS_TTL = 1800  # keep a finished job's result reachable for 30 min
 
 
 def _new_job() -> str:
     jid = secrets.token_hex(8)
     with _JOBS_LOCK:
-        _JOBS[jid] = {"status": "running", "step": "开始", "html": "", "error": "", "ts": time.time()}
+        now = time.time()
+        # reclaim finished jobs past their TTL (never touch running ones)
+        for k in [k for k, v in _JOBS.items() if v["status"] in ("done", "error") and now - v["ts"] > _JOBS_TTL]:
+            _JOBS.pop(k, None)
+        _JOBS[jid] = {"status": "running", "step": "开始", "html": "", "error": "", "ts": now}
+        # over capacity: evict the oldest FINISHED job only — never drop an in-flight analysis
         while len(_JOBS) > _JOBS_MAX:
-            _JOBS.pop(next(iter(_JOBS)))
+            victim = next((k for k, v in _JOBS.items() if v["status"] in ("done", "error")), None)
+            if victim is None:
+                break
+            _JOBS.pop(victim)
     return jid
 
 
@@ -160,19 +169,17 @@ def _start_job(work) -> str:
 
 
 def _poll_js(job_id: str) -> str:
+    # Any non-running state (done / error / missing) is rendered by /result, which
+    # escapes everything server-side — so no untrusted text is ever injected here.
     return (
         "(function(){var ov=document.getElementById('pm-busy');if(ov){ov.classList.add('on');}"
         "var se=document.getElementById('pm-step'),sec=document.getElementById('pm-sec'),t0=Date.now();"
         "setInterval(function(){if(sec){sec.textContent=Math.round((Date.now()-t0)/1000);}},250);"
         "function poll(){fetch('/job/" + job_id + "').then(function(r){return r.json();}).then(function(j){"
         "if(j.step&&se){se.textContent=j.step;}"
-        "if(j.status==='done'){location.replace('/result/" + job_id + "');}"
-        "else if(j.status==='error'){if(ov){ov.classList.remove('on');}var m=document.querySelector('main');"
-        "if(m){m.innerHTML=\"<section class='panel'><p class='err'>\"+(j.error||'分析失败')+\"</p>"
-        "<p class='lead'>可返回重试。</p></section>\";}}"
-        "else if(j.status==='missing'){location.replace('/');}"
-        "else{setTimeout(poll,2500);}}).catch(function(){setTimeout(poll,3000);});}"
-        "poll();})();"
+        "if(j.status==='running'){setTimeout(poll,2500);}"
+        "else{location.replace('/result/" + job_id + "');}"
+        "}).catch(function(){setTimeout(poll,3000);});}poll();})();"
     )
 
 
@@ -244,9 +251,9 @@ def create_app(live: bool = False, rate_per_ip: int = 8, rate_global: int = 300,
         src = _resolve_upload(source, file)
         if not src:
             return _page("/", _analyze_form(live, "请填入论文 URL（arXiv 链接或 PDF 直链），或上传 PDF。"), live)
-        if not live:  # demo: only already-cached reports; never runs a model
-            report, err, _ran = _report_for(src, model, live, with_figures=with_figures, svg_figures=svg_figures)
-            return report.to_html() if report is not None else _page("/", _analyze_form(live, err), live)
+        if not live:  # demo: only already-cached reports; never runs a model or hits the network
+            report = _demo_cached(src)
+            return report.to_html() if report is not None else _page("/", _analyze_form(live, _DEMO_MSG), live)
         return _analyze_async(request, src, model, no_cache or bool(refresh))
 
     @app.get("/analyze", response_class=HTMLResponse)
@@ -254,8 +261,8 @@ def create_app(live: bool = False, rate_per_ip: int = 8, rate_global: int = 300,
         if not source.strip():
             return _page("/", _analyze_form(live), live)
         if not live:
-            report, err, _ran = _report_for(source, "", live, with_figures=with_figures, svg_figures=svg_figures)
-            return report.to_html() if report is not None else _page("/", _analyze_form(live, err), live)
+            report = _demo_cached(source)
+            return report.to_html() if report is not None else _page("/", _analyze_form(live, _DEMO_MSG), live)
         return _analyze_async(request, source, "", no_cache)
 
     @app.get("/job/{job_id}")
@@ -340,15 +347,17 @@ def create_app(live: bool = False, rate_per_ip: int = 8, rate_global: int = 300,
         blocked = gate(request)
         if blocked:
             return _page("/summary", _summary_form(live, blocked), live)
-        from papermind.summarize import summarize
+        src = source.strip()
 
-        try:
-            result, _usage = summarize(source.strip(), model=(model or None))
-        except PaperMindError as exc:
-            return _page("/summary", _summary_form(live, str(exc)), live)
-        points = "".join(f"<li>{_e(p)}</li>" for p in result.key_points)
-        body = f"<section class='panel'><h2>{_e(result.title)}</h2><p>{_e(result.tldr)}</p><ul>{points}</ul></section>"
-        return _page("/summary", body + _summary_form(live), live)
+        def work(jid):
+            from papermind.summarize import summarize
+
+            result, _usage = summarize(src, model=(model or None))
+            points = "".join(f"<li>{_e(p)}</li>" for p in result.key_points)
+            body = f"<section class='panel'><h2>{_e(result.title)}</h2><p>{_e(result.tldr)}</p><ul>{points}</ul></section>"
+            return _page("/summary", body + _summary_form(live), live)
+
+        return _job_page(_start_job(work), live, "/summary")
 
     # -- compare -------------------------------------------------------------- #
     @app.get("/compare", response_class=HTMLResponse)
@@ -360,17 +369,18 @@ def create_app(live: bool = False, rate_per_ip: int = 8, rate_global: int = 300,
         items = [s.strip() for s in sources.splitlines() if s.strip()][:4]
         if len(items) < 2:
             return _page("/compare", _compare_form(live, "请每行一个来源，至少 2 篇。"), live)
-        if live:
-            blocked = gate(request)
-            if blocked:
-                return _page("/compare", _compare_form(live, blocked), live)
-        from papermind.compare import compare as run_compare
+        if not live:
+            return _page("/compare", _compare_form(live, "演示模式不支持对比（需调用模型）。请以 --live 启动。"), live)
+        blocked = gate(request)
+        if blocked:
+            return _page("/compare", _compare_form(live, blocked), live)
 
-        try:
-            comparison = run_compare(items, model=(model or None), synthesize=live)
-        except PaperMindError as exc:
-            return _page("/compare", _compare_form(live, str(exc)), live)
-        return comparison.to_html()
+        def work(jid):
+            from papermind.compare import compare as run_compare
+
+            return run_compare(items, model=(model or None), synthesize=True).to_html()
+
+        return _job_page(_start_job(work), live, "/compare")
 
     # -- reproduce ------------------------------------------------------------ #
     @app.get("/reproduce", response_class=HTMLResponse)
@@ -379,18 +389,28 @@ def create_app(live: bool = False, rate_per_ip: int = 8, rate_global: int = 300,
 
     @app.post("/reproduce", response_class=HTMLResponse)
     def reproduce_route(request: Request, source: str = Form(...), model: str = Form("")):
-        report, err, _ran = _report_for(source, model, live, need="reproduction",
-                                        on_live=lambda: gate(request), refresh=no_cache)
-        if err:
-            return _page("/reproduce", _reproduce_form(live, err), live)
-        script = report.to_setup_script()
-        body = (
-            "<section class='panel'><h2>setup.sh</h2>"
-            "<button class='copy-btn' onclick=\"navigator.clipboard.writeText("
-            "document.getElementById('sh').textContent)\">复制</button>"
-            f"<pre id='sh'>{_e(script)}</pre></section>"
-        )
-        return _page("/reproduce", body + _reproduce_form(live), live)
+        if not live:  # demo: only already-cached reports
+            report = _demo_cached(source)
+            if report is not None and report.reproduction is not None:
+                return _page("/reproduce", _repro_body(report) + _reproduce_form(live), live)
+            return _page("/reproduce", _reproduce_form(live, "演示模式仅展示已缓存论文的复现。请以 --live 启动。"), live)
+        blocked = gate(request)
+        if blocked:
+            return _page("/reproduce", _reproduce_form(live, blocked), live)
+        src = source.strip()
+
+        def work(jid):
+            from papermind.analyze import analyze as run_analyze
+            from papermind.config import load_config
+
+            report = run_analyze(src, model=(model or None), config=load_config(),
+                                 with_figures=False, refresh=no_cache,
+                                 on_progress=lambda step: _set_job(jid, step=step))
+            if report.reproduction is None:
+                raise PaperMindError("这篇论文没有可导出的复现信息。")
+            return _page("/reproduce", _repro_body(report) + _reproduce_form(live), live)
+
+        return _job_page(_start_job(work), live, "/reproduce")
 
     # -- search (no model calls -> always available) ------------------------- #
     @app.get("/search", response_class=HTMLResponse)
@@ -439,60 +459,31 @@ def serve(host: str = "0.0.0.0", port: int = 8080, live: bool = False,
 
 
 # --------------------------------------------------------------------------- #
-# Shared report resolution (cached-or-live)
+# Demo (cached-only) lookups + small renderers
 # --------------------------------------------------------------------------- #
-def _report_for(source: str, model: str, live: bool, need: Optional[str] = None, on_live=None,
-                with_figures: bool = False, svg_figures: bool = False, refresh: bool = False):
-    """Return (report, error, ran_live). Serves a cached report for free; runs live
-    analysis only if ``live``. ``on_live`` (if given) is called right before a live
-    run and may return an error string to block it (used for rate limiting)."""
-    from papermind.analyze import ALL_MODULES
-    from papermind.analyze import analyze as run_analyze
-    from papermind.cache import latest_report_path, load_cached_report, report_cache_path
-    from papermind.config import load_config
-    from papermind.llm.base import LLMClient
-    from papermind.parser.arxiv import resolve
+_DEMO_MSG = "演示模式仅展示已缓存的论文。分析新论文请用 CLI，或以 --live 启动服务。"
 
-    source = (source or "").strip()
-    if not source:
-        return None, "请输入论文 URL（arXiv 链接或 PDF 直链）。", False
-    config = load_config()
-    try:
-        resolved = resolve(source, config)
-    except PaperMindError as exc:
-        return None, str(exc), False
 
-    figs = with_figures and need is None
-    fig_mode = ("svg" if svg_figures else "mermaid") if figs else "off"
+def _demo_cached(source: str):
+    """A cached report for ``source`` WITHOUT any network/download (demo mode)."""
+    from papermind.cache import latest_report_path, load_cached_report
+    from papermind.parser.arxiv import cache_dir_for
 
-    if not live:
-        # Demo can't run anything -> show whatever's already cached for this paper.
-        report_path = latest_report_path(resolved.cache_dir)
-        report = load_cached_report(report_path) if report_path else None
-        if report is not None and (need is None or getattr(report, need, None) is not None):
-            return report, None, False
-        return None, "演示模式仅展示已缓存的论文。新论文请用 CLI 分析，或以 --live 启动服务。", False
+    cache_dir = cache_dir_for(source)
+    if cache_dir is None:
+        return None
+    path = latest_report_path(cache_dir)
+    return load_cached_report(path) if path else None
 
-    # Live: key the cache by the EXACT run config, so changing the model/figures
-    # re-analyzes instead of silently returning a stale report.
-    if not refresh:
-        cache_path = report_cache_path(
-            resolved.cache_dir, LLMClient(model=(model or None), config=config).model, ALL_MODULES, fig_mode
-        )
-        report = load_cached_report(cache_path)
-        if report is not None and (need is None or getattr(report, need, None) is not None):
-            return report, None, False  # exact-config hit -> free, no quota
-    if on_live is not None:
-        blocked = on_live()  # reserves a quota slot; returns a message if over the limit
-        if blocked:
-            return None, blocked, False
-    try:
-        return run_analyze(
-            source, model=(model or None), config=config,
-            with_figures=figs, svg_figures=(figs and svg_figures), refresh=refresh,
-        ), None, True
-    except PaperMindError as exc:
-        return None, str(exc), True
+
+def _repro_body(report) -> str:
+    script = report.to_setup_script()
+    return (
+        "<section class='panel'><h2>setup.sh</h2>"
+        "<button class='copy-btn' onclick=\"navigator.clipboard.writeText("
+        "document.getElementById('sh').textContent)\">复制</button>"
+        f"<pre id='sh'>{_e(script)}</pre></section>"
+    )
 
 
 # --------------------------------------------------------------------------- #

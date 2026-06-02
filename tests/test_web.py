@@ -146,3 +146,116 @@ def test_analyze_live_runs_async_and_polls(monkeypatch):
     status = _await_job(lambda j: client.get(f"/job/{j}").json(), jid)
     assert status["status"] == "done"
     assert "FakePaper" in client.get(f"/result/{jid}").text
+
+
+def test_start_job_generic_exception_is_prefixed():
+    from papermind.web import _get_job, _start_job
+
+    def boom(j):
+        raise ValueError("kaboom")
+
+    j = _await_job(_get_job, _start_job(boom))
+    assert j["status"] == "error" and j["error"].startswith("分析出错") and "kaboom" in j["error"]
+
+
+def test_eviction_keeps_running_drops_finished():
+    import papermind.web as web
+
+    with web._JOBS_LOCK:
+        saved = dict(web._JOBS)
+        web._JOBS.clear()
+    try:
+        run_ids = [web._new_job() for _ in range(web._JOBS_MAX)]  # all running
+        web._set_job(run_ids[0], status="done")
+        extra = web._new_job()  # over cap -> must evict the finished one, not a running one
+        assert web._get_job(run_ids[0]) is None
+        assert all(web._get_job(i) is not None for i in run_ids[1:])
+        assert web._get_job(extra) is not None
+    finally:
+        with web._JOBS_LOCK:
+            web._JOBS.clear()
+            web._JOBS.update(saved)
+
+
+def test_missing_job_and_result_degrade_gracefully():
+    c = TestClient(create_app(live=True))
+    assert c.get("/job/deadbeef").json() == {"status": "missing"}
+    r = c.get("/result/deadbeef")
+    assert r.status_code == 200 and "结果已过期" in r.text
+
+
+def test_result_error_renders_escaped_form(monkeypatch):
+    import re
+
+    import papermind.analyze as analyze_mod
+
+    def _raise(*a, **k):
+        from papermind.errors import PaperMindError
+        raise PaperMindError("解析失败<x>")
+
+    monkeypatch.setattr(analyze_mod, "analyze", _raise)
+    c = TestClient(create_app(live=True, with_figures=False))
+    r = c.post("/analyze", data={"source": "https://arxiv.org/abs/x"})
+    jid = re.search(r"/job/([0-9a-f]+)", r.text).group(1)
+    assert _await_job(lambda j: c.get(f"/job/{j}").json(), jid)["status"] == "error"
+    res = c.get(f"/result/{jid}")
+    assert res.status_code == 200 and "解析失败" in res.text and "action='/analyze'" in res.text
+    assert "<x>" not in res.text and "&lt;x&gt;" in res.text  # error is HTML-escaped (no XSS)
+
+
+def test_analyze_get_runs_async(monkeypatch):
+    import re
+
+    import papermind.analyze as analyze_mod
+    from papermind.output.schema import PaperMeta, Report
+
+    monkeypatch.setattr(analyze_mod, "analyze", lambda *a, **k: Report(paper=PaperMeta(title="GetPaper")))
+    c = TestClient(create_app(live=True, with_figures=False))
+    r = c.get("/analyze", params={"source": "https://arxiv.org/abs/1706.03762"})
+    m = re.search(r"/job/([0-9a-f]+)", r.text)
+    assert m and "分析中" in r.text
+    assert _await_job(lambda j: c.get(f"/job/{j}").json(), m.group(1))["status"] == "done"
+    assert "GetPaper" in c.get(f"/result/{m.group(1)}").text
+
+
+def test_async_analyze_gated_over_quota(monkeypatch):
+    import papermind.analyze as analyze_mod
+    from papermind.output.schema import PaperMeta, Report
+
+    monkeypatch.setattr(analyze_mod, "analyze", lambda *a, **k: Report(paper=PaperMeta(title="X")))
+    c = TestClient(create_app(live=True, with_figures=False, rate_per_ip=1, rate_global=99))
+    assert "/job/" in c.post("/analyze", data={"source": "https://arxiv.org/abs/a"}).text
+    blocked = c.post("/analyze", data={"source": "https://arxiv.org/abs/b"})
+    assert "/job/" not in blocked.text and "额度已用完" in blocked.text  # gated before starting a job
+
+
+def test_demo_never_hits_network(monkeypatch):
+    import papermind.parser.arxiv as arxiv_mod
+
+    def _boom(*a, **k):
+        raise AssertionError("demo mode must not resolve/download")
+
+    monkeypatch.setattr(arxiv_mod, "resolve", _boom)
+    # an id that won't be cached locally -> demo returns the cached-only message,
+    # and crucially must NOT call resolve() (which would raise AssertionError here)
+    r = TestClient(create_app(live=False)).post("/analyze", data={"source": "https://arxiv.org/abs/9999.99999"})
+    assert r.status_code == 200 and "演示模式" in r.text
+
+
+def test_on_progress_step_reaches_job(monkeypatch):
+    import re
+
+    import papermind.analyze as analyze_mod
+    from papermind.output.schema import PaperMeta, Report
+    from papermind.web import _get_job
+
+    def fake(*a, on_progress=None, **k):
+        if on_progress:
+            on_progress("技术细节")
+        return Report(paper=PaperMeta(title="P"))
+
+    monkeypatch.setattr(analyze_mod, "analyze", fake)
+    c = TestClient(create_app(live=True, with_figures=False))
+    jid = re.search(r"/job/([0-9a-f]+)", c.post("/analyze", data={"source": "https://arxiv.org/abs/x"}).text).group(1)
+    _await_job(lambda j: c.get(f"/job/{j}").json(), jid)
+    assert _get_job(jid)["step"] == "技术细节"  # on_progress -> _set_job -> /job chain works

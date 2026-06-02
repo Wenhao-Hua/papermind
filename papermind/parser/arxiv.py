@@ -106,6 +106,23 @@ def parse_arxiv_id(source: str) -> Optional[str]:
     return match.group(1) if match else None
 
 
+def cache_dir_for(source: str, config: Optional[Config] = None) -> Optional[Path]:
+    """The cache dir a source *would* use — computed WITHOUT any network, so a
+    cached-only lookup (e.g. demo mode) never downloads. Mirrors the keys used by
+    the _resolve_* functions. Returns None for an unrecognized source."""
+    config = config or load_config()
+    source = (source or "").strip()
+    arxiv_id = parse_arxiv_id(source)
+    if arxiv_id:
+        return config.paper_cache(arxiv_id.replace("/", "_"))
+    if re.match(r"https?://", source, re.IGNORECASE):
+        return config.paper_cache(f"url-{hashlib.sha1(source.encode('utf-8')).hexdigest()[:12]}")
+    path = Path(source).expanduser()
+    if path.exists():
+        return config.paper_cache(f"local-{hashlib.sha1(str(path.resolve()).encode('utf-8')).hexdigest()[:10]}")
+    return None
+
+
 def resolve(source: str, config: Optional[Config] = None) -> ResolvedSource:
     """Resolve a source into a local PDF + best-effort metadata.
 
