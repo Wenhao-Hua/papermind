@@ -26,3 +26,6 @@ report/
 .idea/
 .DS_Store
 Thumbs.db
+
+# Playwright MCP browser artifacts / screenshots
+.playwright-mcp/
