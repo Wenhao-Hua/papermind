@@ -169,15 +169,14 @@ def _start_job(work) -> str:
 
 
 def _poll_js(job_id: str) -> str:
-    # A REAL, determinate progress bar: it fills as analyze reports each step
-    # (parse -> contributions -> ... -> figures) and creeps with elapsed time so
-    # it never freezes. Any non-running state is rendered by /result (escaped
-    # server-side), so no untrusted text is ever injected here.
+    # Drives the inline progress bar on the job page (elements jp-* are rendered
+    # just above this script, so they exist when it runs). The bar fills as
+    # analyze reports each real step and creeps with elapsed time so it never
+    # freezes; jumps to 100% on done. Any non-running state -> /result (escaped).
     return (
         "(function(){var ORDER=['解析 PDF','贡献与创新点','技术细节','知识关联','复现指南','图示匹配/生成'];"
-        "var ov=document.getElementById('pm-busy');if(ov){ov.classList.add('on');}"
-        "var se=document.getElementById('pm-step'),sec=document.getElementById('pm-sec'),"
-        "pf=document.getElementById('pm-fill'),pp=document.getElementById('pm-pct'),t0=Date.now(),pct=5,sp=0;"
+        "var se=document.getElementById('jp-step'),sec=document.getElementById('jp-sec'),"
+        "pf=document.getElementById('jp-fill'),pp=document.getElementById('jp-pct'),t0=Date.now(),pct=5,sp=0;"
         "function paint(){var w=Math.min(pct,99);if(pf){pf.style.width=w+'%';}if(pp){pp.textContent=Math.round(w);}}"
         "setInterval(function(){var el=(Date.now()-t0)/1000;if(sec){sec.textContent=Math.round(el);}"
         "pct=Math.max(pct,Math.min(90,5+el/100*85));paint();},300);"
@@ -191,10 +190,14 @@ def _poll_js(job_id: str) -> str:
 
 
 def _job_page(job_id: str, live: bool, tab: str = "/") -> str:
+    # Progress bar lives INLINE in the card (not the shared overlay) so the
+    # elements exist before the inline poll script runs.
     body = (
         "<section class='panel'><h2>分析中…</h2>"
-        "<p class='lead'>正在分析这篇论文，完成后会自动显示结果。重论文可能要 1–3 分钟，"
-        "可以离开本页稍后再回来。</p></section>"
+        "<div class='pm-bar' style='margin:14px 0'><span id='jp-fill'></span></div>"
+        "<p class='pm-busy-step' id='jp-step'>开始</p>"
+        "<p class='pm-busy-time'><b id='jp-pct'>0</b>% · 已用 <b id='jp-sec'>0</b> 秒</p>"
+        "<p class='lead'>完成后自动显示结果。重论文可能要 1–3 分钟，可以离开本页稍后再回来。</p></section>"
         f"<script>{_poll_js(job_id)}</script>"
     )
     return _page(tab, body, live)
