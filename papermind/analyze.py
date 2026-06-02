@@ -115,8 +115,15 @@ def analyze(
             if svg_figures:
                 # Architecture-faithful teaching SVGs, conditioned on the paper context.
                 # No Mermaid fallback here: with SVGs on we'd rather show no figure than
-                # a generic candy-colored flowchart.
-                generate_svg_diagrams(report.technical.details, client, context, on_notice=notice)
+                # a generic candy-colored flowchart. A separate (typically fast, non-thinking)
+                # figure model can be configured to speed this up, at some cost to layout polish.
+                if config.figure_model:
+                    fig_client = LLMClient(model=config.figure_model, config=config, on_notice=notice)
+                    generate_svg_diagrams(
+                        report.technical.details, fig_client, context, on_notice=notice, reasoning_effort=None
+                    )
+                else:
+                    generate_svg_diagrams(report.technical.details, client, context, on_notice=notice)
             else:
                 # Legacy path (only when SVGs aren't requested): Mermaid fills any gap.
                 generate_diagrams(report.technical.details, client)

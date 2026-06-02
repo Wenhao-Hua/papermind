@@ -10,7 +10,7 @@ from __future__ import annotations
 import re
 from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
-from typing import List
+from typing import List, Optional
 
 from papermind.errors import LLMError
 from papermind.llm.base import LLMClient
@@ -64,7 +64,10 @@ def generate_image_diagrams(
         point.figure = Figure(type="ai_generated", image_path=str(dest), caption=f"AI 生成示意图：{point.name}")
 
 
-def generate_svg_diagrams(points: List[TechnicalPoint], client: LLMClient, context: str, on_notice=None) -> None:
+def generate_svg_diagrams(
+    points: List[TechnicalPoint], client: LLMClient, context: str, on_notice=None,
+    reasoning_effort: Optional[str] = "low",
+) -> None:
     """Generate a self-contained, architecture-faithful teaching SVG per point.
 
     Only points without a figure are processed, so an extracted *original* figure
@@ -84,7 +87,7 @@ def generate_svg_diagrams(points: List[TechnicalPoint], client: LLMClient, conte
                 SVG_FIGURE_SYSTEM,
                 svg_figure_user(point.name, point.explanation, point.formula, ctx),
                 max_tokens=18000,  # headroom: a complete definition-forward SVG can run ~14k chars
-                reasoning_effort="low",  # a thinking model would otherwise spend the whole budget reasoning
+                reasoning_effort=reasoning_effort,  # "low" for thinking models; None for fast non-thinking ones
             )
         except LLMError:
             return None

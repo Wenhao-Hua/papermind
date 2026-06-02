@@ -68,6 +68,8 @@ docker run -p 8080:8080 -e OPENAI_API_KEY=sk-... papermind \
 ```
 
 > `--live` 默认**带限流**（每 IP 8 次/天、全局 300 次/天，可用 `--rate-per-ip` / `--rate-global` 调，`0` 表示不限）——公开挂出去也不会被陌生人刷爆你的 key。免费操作（搜索 / 缓存 / 离线 demo）不受限。
+>
+> 想**加快出图**：默认配图用主模型（思考模型布局最干净但慢）。给配图单独配一个快速的非思考模型即可大幅提速：`papermind config set figure-model deepseek/deepseek-chat`（结构同样到位，布局精度略降）。
 
 ## 能做什么
 
