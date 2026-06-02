@@ -83,7 +83,7 @@ def generate_svg_diagrams(points: List[TechnicalPoint], client: LLMClient, conte
             raw = client.complete(
                 SVG_FIGURE_SYSTEM,
                 svg_figure_user(point.name, point.explanation, point.formula, ctx),
-                max_tokens=14000,
+                max_tokens=18000,  # headroom: a complete definition-forward SVG can run ~14k chars
                 reasoning_effort="low",  # a thinking model would otherwise spend the whole budget reasoning
             )
         except LLMError:
