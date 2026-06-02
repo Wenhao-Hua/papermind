@@ -145,12 +145,13 @@ def create_app(live: bool = False, rate_per_ip: int = 8, rate_global: int = 300,
         return _page("/", _analyze_form(live), live)
 
     @app.post("/analyze", response_class=HTMLResponse)
-    def analyze_route(request: Request, source: str = Form(""), model: str = Form(""), file: Optional[UploadFile] = File(None)):
+    def analyze_route(request: Request, source: str = Form(""), model: str = Form(""),
+                      refresh: str = Form(""), file: Optional[UploadFile] = File(None)):
         src = _resolve_upload(source, file)
         if not src:
             return _page("/", _analyze_form(live, "请填入论文 URL（arXiv 链接或 PDF 直链），或上传 PDF。"), live)
         report, err, _ran = _report_for(src, model, live, on_live=lambda: gate(request),
-                                        with_figures=with_figures, svg_figures=svg_figures)
+                                        with_figures=with_figures, svg_figures=svg_figures, refresh=bool(refresh))
         if err:
             return _page("/", _analyze_form(live, err), live)
         return report.to_html()
@@ -330,13 +331,15 @@ def serve(host: str = "0.0.0.0", port: int = 8080, live: bool = False,
 # Shared report resolution (cached-or-live)
 # --------------------------------------------------------------------------- #
 def _report_for(source: str, model: str, live: bool, need: Optional[str] = None, on_live=None,
-                with_figures: bool = False, svg_figures: bool = False):
+                with_figures: bool = False, svg_figures: bool = False, refresh: bool = False):
     """Return (report, error, ran_live). Serves a cached report for free; runs live
     analysis only if ``live``. ``on_live`` (if given) is called right before a live
     run and may return an error string to block it (used for rate limiting)."""
+    from papermind.analyze import ALL_MODULES
     from papermind.analyze import analyze as run_analyze
-    from papermind.cache import latest_report_path, load_cached_report
+    from papermind.cache import latest_report_path, load_cached_report, report_cache_path
     from papermind.config import load_config
+    from papermind.llm.base import LLMClient
     from papermind.parser.arxiv import resolve
 
     source = (source or "").strip()
@@ -348,22 +351,34 @@ def _report_for(source: str, model: str, live: bool, need: Optional[str] = None,
     except PaperMindError as exc:
         return None, str(exc), False
 
-    report_path = latest_report_path(resolved.cache_dir)
-    report = load_cached_report(report_path) if report_path else None
-    if report is not None and (need is None or getattr(report, need, None) is not None):
-        return report, None, False  # cached -> free, no quota consumed
+    figs = with_figures and need is None
+    fig_mode = ("svg" if svg_figures else "mermaid") if figs else "off"
+
     if not live:
+        # Demo can't run anything -> show whatever's already cached for this paper.
+        report_path = latest_report_path(resolved.cache_dir)
+        report = load_cached_report(report_path) if report_path else None
+        if report is not None and (need is None or getattr(report, need, None) is not None):
+            return report, None, False
         return None, "演示模式仅展示已缓存的论文。新论文请用 CLI 分析，或以 --live 启动服务。", False
+
+    # Live: key the cache by the EXACT run config, so changing the model/figures
+    # re-analyzes instead of silently returning a stale report.
+    if not refresh:
+        cache_path = report_cache_path(
+            resolved.cache_dir, LLMClient(model=(model or None), config=config).model, ALL_MODULES, fig_mode
+        )
+        report = load_cached_report(cache_path)
+        if report is not None and (need is None or getattr(report, need, None) is not None):
+            return report, None, False  # exact-config hit -> free, no quota
     if on_live is not None:
         blocked = on_live()  # reserves a quota slot; returns a message if over the limit
         if blocked:
             return None, blocked, False
     try:
-        # need="reproduction" only needs setup.sh -> skip the extra figure calls.
-        figs = with_figures and need is None
         return run_analyze(
             source, model=(model or None), config=config,
-            with_figures=figs, svg_figures=(figs and svg_figures),
+            with_figures=figs, svg_figures=(figs and svg_figures), refresh=refresh,
         ), None, True
     except PaperMindError as exc:
         return None, str(exc), True
@@ -580,10 +595,12 @@ def _analyze_form(live: bool, error: str = "") -> str:
         "<p class='lead'>四模块结构化解读：核心贡献 · 方法与图示 · 关联工作 · 复现要点。</p>"
         f"{note}{_err(error)}"
         "<form method='post' action='/analyze' enctype='multipart/form-data'>"
-        "<label>论文 <span class='hint'>arXiv id / URL</span></label>"
+        "<label>论文 <span class='hint'>URL（arXiv 链接或 PDF 直链）</span></label>"
         "<input name='source' placeholder='https://arxiv.org/abs/2307.08691 或 任意论文 PDF 直链' autofocus>"
         "<label>或上传 PDF <span class='hint'>本地论文</span></label>"
         "<input type='file' name='file' accept='application/pdf'>"
+        "<label style='font-weight:400;color:var(--soft)'>"
+        "<input type='checkbox' name='refresh' value='1' style='width:auto;margin-right:8px'>忽略缓存，重新分析</label>"
         "<button>分析</button></form>"
         f"{_examples_row()}</section>"
     )
