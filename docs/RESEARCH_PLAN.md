@@ -70,8 +70,7 @@ Do **not** run both in the MVP.
   to show generalization (and dataset-building skill).
 
 ```bash
-pip install 'paper-mind[train]'
-python -m trainer.build_dataset --max-papers 20   # smoke
+python -m trainer.build_dataset --max-papers 20   # smoke (downloads raw QASPER JSON)
 python -m trainer.build_dataset                   # full
 ```
 

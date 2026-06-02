@@ -13,10 +13,13 @@ data/
 ## Build the reranker training set (QASPER → JSONL)
 
 ```bash
-pip install 'paper-mind[train]'          # installs `datasets`
-python -m trainer.build_dataset          # full QASPER -> data/processed/*.jsonl
+# No extra deps needed — QASPER's raw JSON is fetched via httpx (a core dep).
+python -m trainer.build_dataset                   # full QASPER -> data/processed/*.jsonl
 python -m trainer.build_dataset --max-papers 20   # quick smoke run
 ```
+
+> Downloads the official `.tgz` from AllenAI S3 into `data/raw/` (cached/reused).
+> If S3 is slow/blocked, `wget` the two `.tgz` into `data/raw/` manually and re-run.
 
 Each line of `processed/*.jsonl` is one `(question, paragraph)` relevance pair:
 
