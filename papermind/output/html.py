@@ -1,7 +1,7 @@
 """Render a Report to a single self-contained HTML file.
 
-Images are inlined as base64 data URIs and Mermaid diagrams render via a CDN
-script, so the file is shareable as-is (open in any browser, no local assets).
+AI teaching figures are inlined as SVG; images as base64 data URIs; legacy Mermaid
+renders via a CDN script — so the file is shareable as-is (any browser, no assets).
 """
 
 from __future__ import annotations

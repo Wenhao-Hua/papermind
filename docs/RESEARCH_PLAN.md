@@ -87,7 +87,7 @@ On an **AutoDL** box (`/root/autodl-tmp`, GPU; torch usually preinstalled):
 cd /root/autodl-tmp
 git clone https://github.com/Wenhao-Hua/papermind && cd papermind   # or: git pull
 export HF_ENDPOINT=https://hf-mirror.com      # HuggingFace mirror (needed in CN)
-pip install -e ".[train]"                      # datasets + sentence-transformers
+pip install -e ".[train]"                      # sentence-transformers + rank-bm25
 python -c "import torch; print(torch.cuda.is_available(), torch.cuda.get_device_name(0))"
 
 python -m trainer.build_dataset --max-papers 20   # data smoke -> inspect data/processed/*.jsonl

@@ -48,6 +48,9 @@ def analyze(
         config: explicit Config (otherwise loaded from env + file).
         console: optional rich Console to show a progress bar.
         refresh: ignore any cached report and re-run the analysis.
+        image_figures: use an image model for figures (needs config.image_model).
+        svg_figures: generate architecture-faithful teaching SVGs (else Mermaid).
+        on_progress: optional callback(step_label) for external progress (e.g. web).
     """
     config = config or load_config()
     modules = modules or ALL_MODULES

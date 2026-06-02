@@ -32,7 +32,7 @@
 ╭──────────────── Attention Is All You Need · 2017 · arXiv:1706.03762 ───────────────╮
 🎯 核心贡献   提出完全基于注意力的 Transformer，去掉循环与卷积，机器翻译刷新 SOTA…
 🔬 技术细节   1. 缩放点积注意力 [high]  Q·Kᵀ 除以 √d_k 再 softmax 加权 V；缩放避免梯度饱和
-              💡 类比：像搜索引擎按匹配度加权汇总文档；📊 附 Mermaid 结构图
+              💡 类比：像搜索引擎按匹配度加权汇总文档；📊 附结构示意图（教学 SVG）
 💬 问答       「为什么除以 √d_k？」→【论文事实】维度大时点积方差大… 📌 出处 Section 3.2.1 (p.4) ✓已核验
 🛠️ 复现       官方代码（已核实·★24k）github.com/... → setup.sh（真实依赖 + README 运行命令）
 ```
@@ -51,7 +51,7 @@
 
 | | Recall@5 | MRR | nDCG@10 |
 | --- | --- | --- | --- |
-| Dense (`bge-small-en`) | 0.519 | 0.463 | 0.469 |
+| Dense (`bge-small-en-v1.5`) | 0.519 | 0.463 | 0.469 |
 | **+ 自训练 Reranker** | **0.660** | **0.612** | **0.609** |
 
 dev（888 题）与独立 test（1309 题）一致，无过拟合。复现：[`docs/RESEARCH_PLAN.md`](docs/RESEARCH_PLAN.md)（`trainer/` 训练 · `evaluation/` 评测）。

@@ -30,8 +30,10 @@ papermind/
 ├── config.py         # keys / model / cache resolution (env > file > default)
 ├── parser/           # arxiv.py (download+meta), pdf.py (text+figures)
 ├── modules/          # contributions / technical / connections / reproduction
-├── figures/          # extract.py (match originals), generate.py (Mermaid)
+├── figures/          # extract.py (match originals), generate.py (teaching SVGs; legacy Mermaid)
 ├── qa/               # index.py (chunk+FAISS), retriever.py, chat.py (PaperChat)
+├── repro/            # repo.py (locate & verify the paper's official code repo)
+├── rerank/           # infer.py (trained cross-encoder reranker inference)
 ├── llm/              # base.py (litellm wrapper), prompts.py (all prompts)
 └── output/           # schema.py (pydantic, single source of truth), markdown/json/terminal
 ```

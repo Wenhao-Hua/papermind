@@ -260,15 +260,15 @@ class LLMClient:
         try:
             resp = litellm.completion(**kwargs)
         except Exception as exc:  # noqa: BLE001
-            # Retry once without json response_format if the provider rejected it.
-            if json_mode and "response_format" in kwargs:
-                kwargs.pop("response_format")
-                try:
-                    resp = litellm.completion(**kwargs)
-                except Exception as exc2:  # noqa: BLE001
-                    raise _wrap_llm_error(exc2, self.model) from exc2
-            else:
+            # Retry once after dropping params some providers reject: reasoning_effort
+            # (a non-reasoning model 400s on it) and/or a json response_format.
+            retry = {k: v for k, v in kwargs.items() if k not in ("reasoning_effort", "response_format")}
+            if len(retry) == len(kwargs):  # nothing droppable -> the error is real
                 raise _wrap_llm_error(exc, self.model) from exc
+            try:
+                resp = litellm.completion(**retry)
+            except Exception as exc2:  # noqa: BLE001
+                raise _wrap_llm_error(exc2, self.model) from exc2
 
         self._record_usage(
             self.model, _usage_value(resp, "prompt_tokens"), _usage_value(resp, "completion_tokens")
@@ -476,15 +476,15 @@ def _wrap_llm_error(exc: Exception, model: str) -> LLMError:
             return LLMError(f"本地模型未下载：{model}。先执行  ollama pull {name}  再重试。\n原始错误：{msg}")
     if "api key" in low or "authentication" in low or "no api_key" in low or "openai_api_key" in low:
         return LLMError(
-            f"Authentication failed for model {model!r}.\n"
-            f"Option A — set a key:  papermind config set openai-key sk-...\n"
-            f"            (or export OPENAI_API_KEY / ANTHROPIC_API_KEY)\n"
-            f"Option B — run fully free & local with Ollama (no key needed):\n"
-            f"            install from https://ollama.com, then:\n"
-            f"            papermind analyze <paper> --model {OLLAMA_DEFAULT_MODEL}\n"
-            f"            (local embeddings: pip install 'paper-mind[local-embeddings]')\n"
-            f"Original error: {msg}"
+            f"模型 {model!r} 鉴权失败。\n"
+            f"方式 A —— 配置 key：  papermind config set openai-key sk-...\n"
+            f"           （或 export OPENAI_API_KEY / ANTHROPIC_API_KEY）\n"
+            f"方式 B —— 用 Ollama 全本地免费运行（无需 key）：\n"
+            f"           从 https://ollama.com 安装后：\n"
+            f"           papermind analyze <paper> --model {OLLAMA_DEFAULT_MODEL}\n"
+            f"           （本地向量：pip install 'paper-mind[local-embeddings]'）\n"
+            f"原始错误：{msg}"
         )
     if "model" in low and ("not found" in low or "does not exist" in low):
-        return LLMError(f"Model {model!r} not available: {msg}")
-    return LLMError(f"LLM call failed for model {model!r}: {msg}")
+        return LLMError(f"模型 {model!r} 不可用：{msg}")
+    return LLMError(f"模型 {model!r} 调用失败：{msg}")

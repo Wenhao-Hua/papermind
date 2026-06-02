@@ -2,7 +2,7 @@
 
 Only figures that actually have a saved image are attached. Figure handling is
 best-effort: any failure here leaves technical points without a figure (the
-Mermaid generator then fills the gap) rather than aborting the analysis.
+SVG/AI diagram generator then fills the gap) rather than aborting the analysis.
 """
 
 from __future__ import annotations

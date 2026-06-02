@@ -154,11 +154,10 @@ def _resolve_local(source: str, config: Config) -> ResolvedSource:
     path = Path(source).expanduser()
     if not path.exists():
         raise SourceError(
-            f"Could not interpret source {source!r}. It is not a recognized arXiv id/URL "
-            f"and no file exists at that path."
+            f"无法识别来源 {source!r}：既不是可识别的 arXiv URL，该路径下也没有文件。"
         )
     if path.suffix.lower() != ".pdf":
-        raise SourceError(f"Local source must be a .pdf file, got: {path}")
+        raise SourceError(f"本地来源必须是 .pdf 文件，收到的是：{path}")
 
     digest = hashlib.sha1(str(path.resolve()).encode("utf-8")).hexdigest()[:10]
     cache_key = f"local-{digest}"
@@ -239,11 +238,11 @@ def _fetch_arxiv_metadata(arxiv_id: str) -> PaperMeta:
     try:
         root = ET.fromstring(text)
     except ET.ParseError as exc:
-        raise SourceError(f"arXiv returned an unparseable response for {arxiv_id!r}: {exc}") from exc
+        raise SourceError(f"arXiv 对 {arxiv_id!r} 返回了无法解析的响应：{exc}") from exc
 
     entry = root.find("atom:entry", ARXIV_ATOM_NS)
     if entry is None or entry.find("atom:id", ARXIV_ATOM_NS) is None:
-        raise SourceError(f"No arXiv paper found for id {arxiv_id!r}.")
+        raise SourceError(f"找不到 arXiv id 为 {arxiv_id!r} 的论文。")
 
     title = _text(entry.find("atom:title", ARXIV_ATOM_NS)) or arxiv_id
     abstract = _text(entry.find("atom:summary", ARXIV_ATOM_NS))
@@ -278,11 +277,11 @@ def _download_pdf(url: str, dest: Path) -> None:
                     fh.write(chunk)
     except httpx.HTTPError as exc:
         dest.unlink(missing_ok=True)
-        raise SourceError(f"Failed to download PDF from {url}: {exc}") from exc
+        raise SourceError(f"从 {url} 下载 PDF 失败：{exc}") from exc
 
     if dest.stat().st_size == 0:
         dest.unlink(missing_ok=True)
-        raise SourceError(f"Downloaded an empty PDF from {url}.")
+        raise SourceError(f"从 {url} 下载到的是空 PDF。")
 
 
 def _text(node: Optional[ET.Element]) -> str:

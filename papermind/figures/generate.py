@@ -1,6 +1,8 @@
-"""Generate Mermaid diagrams for technical points that have no matched original
-figure. Clearly labeled as AI-generated so they are distinguishable from
-extracted figures.
+"""Generate diagrams for technical points that have no matched original figure.
+
+The default is an architecture-faithful teaching SVG (``generate_svg_diagrams``);
+``generate_diagrams`` (Mermaid) is a legacy fallback used only when SVGs are off.
+All generated figures are clearly labeled AI-generated, distinct from extracted ones.
 """
 
 from __future__ import annotations
@@ -96,7 +98,7 @@ def generate_svg_diagrams(points: List[TechnicalPoint], client: LLMClient, conte
         else:
             failed = True
     if failed and on_notice:
-        on_notice("部分技术点的 SVG 讲解图生成失败，已回退到 Mermaid。")
+        on_notice("部分技术点的 SVG 讲解图生成失败，已跳过该图（不回退 Mermaid）。")
 
 
 def generate_diagrams(points: List[TechnicalPoint], client: LLMClient) -> None:

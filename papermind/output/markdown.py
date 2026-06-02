@@ -1,7 +1,8 @@
 """Render a Report to a Markdown document.
 
 Source citations become clickable PDF deep-links (``[Section 3.1](pdf#page=5)``).
-Original figures embed as images; AI diagrams render as ```mermaid``` blocks.
+Original figures embed as images; AI teaching figures embed as inline SVG data-URIs
+by default (legacy Mermaid renders as ```mermaid``` blocks).
 Reproduction details use tables/code blocks.
 """
 

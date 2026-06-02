@@ -95,7 +95,9 @@ def _render_technical(report: Report, console: Console) -> None:
             if fig.image_path:
                 origin = "原图" if fig.type == "original" else "AI 生成示意图(图片)"
                 body.append(f"\n🖼  {origin}: {fig.caption or fig.image_path}", style="dim cyan")
-            elif fig.type == "ai_generated" and fig.mermaid:
+            elif fig.svg:
+                body.append("\n📊 AI 教学示意图 (SVG，见 Markdown/HTML 报告)", style="dim cyan")
+            elif fig.mermaid:
                 body.append("\n📊 AI 生成示意图 (Mermaid，见 Markdown/HTML 报告)", style="dim cyan")
         console.print(Panel(body, title=header, border_style=style, title_align="left"))
 

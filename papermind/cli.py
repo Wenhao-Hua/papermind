@@ -34,7 +34,7 @@ err_console = Console(stderr=True)
 
 app = typer.Typer(
     name="papermind",
-    help="Read arXiv papers for real: structured analysis, grounded Q&A, and reproduction tutoring.",
+    help="Read any paper from its URL: structured analysis, grounded Q&A, and reproduction tutoring.",
     no_args_is_help=True,
     add_completion=False,
 )
@@ -171,7 +171,7 @@ def serve(
 @app.command()
 def analyze(
     source: str = typer.Argument(..., help="arXiv URL, any PDF URL, or local PDF path."),
-    model: Optional[str] = typer.Option(None, "--model", "-m", help="LLM (litellm format). Default: gpt-4o-mini."),
+    model: Optional[str] = typer.Option(None, "--model", "-m", help="LLM (litellm format). Default: the configured model."),
     fmt: str = typer.Option("md", "--format", "-f", help="Output format: md | json | html | all."),
     output: Optional[str] = typer.Option(None, "--output", "-o", help="Output path/prefix. Prints to terminal if omitted."),
     only: Optional[str] = typer.Option(None, "--only", help="Comma-separated modules to run."),
@@ -179,7 +179,7 @@ def analyze(
     no_figures: bool = typer.Option(False, "--no-figures", help="Skip figure extraction/generation."),
     refresh: bool = typer.Option(False, "--refresh", help="Ignore cached result and re-analyze."),
     local: bool = typer.Option(False, "--local", help="Run fully local & free via Ollama (LLM + embeddings)."),
-    image_figures: bool = typer.Option(False, "--image-figures", help="Use an image model for AI figures instead of Mermaid (needs `config set image-model`)."),
+    image_figures: bool = typer.Option(False, "--image-figures", help="Use an image model for AI figures instead of the default teaching SVGs (needs `config set image-model`)."),
     svg_figures: bool = typer.Option(True, "--svg-figures/--mermaid", help="Architecture-faithful teaching SVGs per technical point (default); --mermaid for legacy flowcharts."),
     open_report: bool = typer.Option(False, "--open", help="Open the HTML report in a browser when done."),
     estimate: bool = typer.Option(False, "--estimate", help="Estimate token cost and exit (no model calls)."),
@@ -192,7 +192,7 @@ def analyze(
 
         if not load_config().image_model:
             console.print(
-                "[yellow]提示：未配置图像模型，--image-figures 将退回 Mermaid。"
+                "[yellow]提示：未配置图像模型，--image-figures 不生效，将使用默认教学 SVG。"
                 "配置示例：papermind config set image-model gpt-image-1（需对应 key）。[/yellow]"
             )
     if quick:
@@ -598,7 +598,7 @@ def search(
     query: str = typer.Argument(..., help="Search terms."),
     num: int = typer.Option(10, "--num", "-n", help="Max results."),
 ) -> None:
-    """Search arXiv and list matching papers (then `papermind analyze <id>`)."""
+    """Search arXiv and list matching papers (then `papermind analyze https://arxiv.org/abs/<id>`)."""
     from rich.table import Table
 
     from papermind.parser.arxiv import search_arxiv
@@ -619,7 +619,7 @@ def search(
         authors = (", ".join(r.authors[:3]) + (" et al." if len(r.authors) > 3 else "")) if r.authors else "-"
         table.add_row(r.arxiv_id or "-", str(r.year or "-"), r.title[:60], authors[:36])
     console.print(table)
-    console.print("[dim]分析其中一篇: papermind analyze <arXiv ID>[/dim]")
+    console.print("[dim]分析其中一篇: papermind analyze https://arxiv.org/abs/<arXiv ID>[/dim]")
 
 
 @app.command()

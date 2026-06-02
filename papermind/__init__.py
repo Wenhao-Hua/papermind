@@ -1,9 +1,9 @@
-"""PaperMind — read arXiv papers for real.
+"""PaperMind — read any paper from its URL, for real.
 
 Public API::
 
     from papermind import analyze, PaperChat
-    report = analyze("https://arxiv.org/abs/2307.08691", model="gpt-4o")
+    report = analyze("https://arxiv.org/abs/2307.08691")  # uses the configured model
     chat = PaperChat("https://arxiv.org/abs/2307.08691", mode="balanced")
 
 Heavy dependencies (litellm, faiss, pymupdf) are imported lazily so that
