@@ -75,6 +75,35 @@ python -m trainer.build_dataset --max-papers 20   # smoke
 python -m trainer.build_dataset                   # full
 ```
 
+## 3b. Training run — Step 2 (AutoDL / Colab)
+
+`trainer/train_reranker.py` fine-tunes the cross-encoder and prints dev
+Recall@k / MRR. Pure helpers (`ranking_metrics`, `load_pairs`, `group_by_qid`)
+are unit-tested; torch / sentence-transformers load lazily. Inference wrapper:
+`papermind/rerank/infer.py` (`Reranker`).
+
+On an **AutoDL** box (`/root/autodl-tmp`, GPU; torch usually preinstalled):
+
+```bash
+cd /root/autodl-tmp
+git clone https://github.com/Wenhao-Hua/papermind && cd papermind   # or: git pull
+export HF_ENDPOINT=https://hf-mirror.com      # HuggingFace mirror (needed in CN)
+pip install -e ".[train]"                      # datasets + sentence-transformers
+python -c "import torch; print(torch.cuda.is_available(), torch.cuda.get_device_name(0))"
+
+python -m trainer.build_dataset --max-papers 20   # data smoke -> inspect data/processed/*.jsonl
+python -m trainer.train_reranker --smoke           # train smoke (minutes)
+
+python -m trainer.build_dataset                    # full
+python -m trainer.train_reranker --epochs 2        # full -> checkpoints/reranker/ + dev_metrics.json
+# stronger headline number (same single GPU):
+# python -m trainer.train_reranker --model BAAI/bge-reranker-base --batch-size 16 --epochs 2
+```
+
+GPU: MiniLM needs ≥4 GB; bge-reranker-base ≈6–8 GB; any AutoDL card (3090/4090/
+A5000/T4) is plenty. The dev metric ranks gold above in-document distractors;
+full-corpus Recall/nDCG vs BM25/dense baselines is Step 3 (`evaluation/`).
+
 ## 4. Tech stack (delta over what exists)
 
 - Retrieval: keep FAISS + sentence-transformers; **add BM25** (`rank_bm25`) as a
