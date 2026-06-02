@@ -55,7 +55,17 @@ class PaperChat:
                 self.index = PaperIndex.load_or_build(self.parsed, self.client)
         else:
             self.index = PaperIndex.load_or_build(self.parsed, self.client)
-        self.retriever = Retriever(self.index, self.client)
+
+        # Optional: a trained cross-encoder reranks recalled passages before the LLM.
+        from papermind.rerank.infer import maybe_load_reranker
+
+        reranker = maybe_load_reranker(self.config.reranker_path)
+        if notice:
+            if reranker is not None:
+                notice("已启用证据重排器（cross-encoder）。")
+            elif self.config.reranker_path:
+                notice("reranker 路径无效或缺依赖，回退到稠密检索。")
+        self.retriever = Retriever(self.index, self.client, reranker=reranker)
 
         self._history: List[dict] = []
         self._last_user: str = ""

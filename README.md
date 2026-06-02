@@ -40,6 +40,12 @@ python -m trainer.train_reranker --epochs 2          # 微调 cross-encoder（�
 python -m evaluation.eval_retrieval --reranker checkpoints/reranker   # 复现上表
 ```
 
+训练好后，**在问答里启用**（默认关，不影响现有行为）：
+
+```bash
+papermind config set reranker /path/to/checkpoints/reranker   # 问答召回后自动 over-fetch→重排
+```
+
 > 训练管线见 [`trainer/`](trainer/) · 评测见 [`evaluation/`](evaluation/) · 设计与路线见 [`docs/RESEARCH_PLAN.md`](docs/RESEARCH_PLAN.md)。
 
 ## ✨ 能做什么

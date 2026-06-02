@@ -7,7 +7,19 @@ so importing this module costs nothing until a reranker is actually used.
 
 from __future__ import annotations
 
-from typing import List, Sequence, Tuple
+import os
+from typing import List, Optional, Sequence, Tuple
+
+
+def maybe_load_reranker(path: Optional[str]) -> Optional["Reranker"]:
+    """Load a reranker if ``path`` points to a checkpoint dir and deps are present;
+    otherwise return None (Q&A then falls back to plain dense retrieval). Never raises."""
+    if not path or not os.path.isdir(path):
+        return None
+    try:
+        return Reranker(path)
+    except Exception:  # noqa: BLE001 - reranker is optional; never break Q&A over it
+        return None
 
 
 def order_by_score(scores: Sequence[float], top_k: int = None) -> List[int]:

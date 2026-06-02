@@ -37,6 +37,8 @@ _CLI_KEY_ALIASES: Dict[str, str] = {
     "local-model": "local_model",
     "image-model": "image_model",
     "cache-dir": "cache_dir",
+    "reranker": "reranker_path",
+    "reranker-path": "reranker_path",
 }
 
 # Config field -> environment variable that overrides it.
@@ -47,6 +49,7 @@ _ENV_OVERRIDES: Dict[str, str] = {
     "default_model": "PAPERMIND_MODEL",
     "embedding_provider": "PAPERMIND_EMBEDDING_PROVIDER",
     "embedding_model": "PAPERMIND_EMBEDDING_MODEL",
+    "reranker_path": "PAPERMIND_RERANKER",
 }
 
 _SENSITIVE = {"openai_key", "anthropic_key", "deepseek_key"}
@@ -72,6 +75,7 @@ class Config:
     local_model: Optional[str] = None  # model used by --local (default: ollama/llama3.1)
     image_model: Optional[str] = None  # image-gen model for --image-figures (e.g. gpt-image-1)
     cache_dir: Optional[str] = None
+    reranker_path: Optional[str] = None  # trained cross-encoder checkpoint for Q&A reranking (off if None)
 
     # -- derived ----------------------------------------------------------- #
     def resolved_embedding_model(self) -> str:
@@ -124,6 +128,7 @@ def load_config() -> Config:
         local_model=data.get("local_model"),
         image_model=data.get("image_model"),
         cache_dir=data.get("cache_dir"),
+        reranker_path=data.get("reranker_path"),
     )
     # Environment overrides win.
     for field_name, env_var in _ENV_OVERRIDES.items():
