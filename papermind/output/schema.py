@@ -93,12 +93,21 @@ class Contributions(BaseModel):
 # --------------------------------------------------------------------------- #
 # Module 2: Technical details (+ figures)
 # --------------------------------------------------------------------------- #
+class FigureExplain(BaseModel):
+    """A short "how to read this figure" walkthrough shown beside the figure."""
+
+    gist: str                                          # 一句话：这张图在讲/定义什么
+    parts: List[str] = Field(default_factory=list)     # 各关键部分的含义
+    takeaway: str = ""                                 # 一句关键结论 / 怎么读
+
+
 class Figure(BaseModel):
     type: FigureType = "ai_generated"
     image_path: Optional[str] = None
     mermaid: Optional[str] = None
     svg: Optional[str] = None  # self-contained teaching SVG (architecture-faithful), if generated
     caption: Optional[str] = None
+    explain: Optional[FigureExplain] = None  # 读图讲解（结构化），随生成图一起产出
 
 
 class TechnicalPoint(BaseModel):

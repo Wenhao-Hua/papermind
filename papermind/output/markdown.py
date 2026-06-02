@@ -166,6 +166,7 @@ def _figure_md(point: TechnicalPoint) -> List[str]:
         out.append(f"![{caption}](data:image/svg+xml;base64,{b64})")
         out.append(f"*{caption}（教学示意图）*")
         out.append("")
+        out += _explain_md(fig.explain)
     elif fig.type == "ai_generated" and fig.mermaid:
         out.append("```mermaid")
         out.append(fig.mermaid)
@@ -173,6 +174,21 @@ def _figure_md(point: TechnicalPoint) -> List[str]:
         out.append(f"*{fig.caption or 'AI 生成示意图'}*")
         out.append("")
     return out
+
+
+def _explain_md(ex) -> List[str]:
+    """Render the figure's "how to read it" walkthrough as a blockquote."""
+    if not ex or not ex.gist:
+        return []
+    lines = [f"> **读图**：{ex.gist}"]
+    if ex.parts:
+        lines.append(">")
+        lines += [f"> - {p}" for p in ex.parts]
+    if ex.takeaway:
+        lines.append(">")
+        lines.append(f"> **关键**：{ex.takeaway}")
+    lines.append("")
+    return lines
 
 
 def _connections_md(works: List[Connection]) -> List[str]:
