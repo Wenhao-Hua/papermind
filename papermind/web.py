@@ -169,17 +169,24 @@ def _start_job(work) -> str:
 
 
 def _poll_js(job_id: str) -> str:
-    # Any non-running state (done / error / missing) is rendered by /result, which
-    # escapes everything server-side — so no untrusted text is ever injected here.
+    # A REAL, determinate progress bar: it fills as analyze reports each step
+    # (parse -> contributions -> ... -> figures) and creeps with elapsed time so
+    # it never freezes. Any non-running state is rendered by /result (escaped
+    # server-side), so no untrusted text is ever injected here.
     return (
-        "(function(){var ov=document.getElementById('pm-busy');if(ov){ov.classList.add('on');}"
-        "var se=document.getElementById('pm-step'),sec=document.getElementById('pm-sec'),t0=Date.now();"
-        "setInterval(function(){if(sec){sec.textContent=Math.round((Date.now()-t0)/1000);}},250);"
+        "(function(){var ORDER=['解析 PDF','贡献与创新点','技术细节','知识关联','复现指南','图示匹配/生成'];"
+        "var ov=document.getElementById('pm-busy');if(ov){ov.classList.add('on');}"
+        "var se=document.getElementById('pm-step'),sec=document.getElementById('pm-sec'),"
+        "pf=document.getElementById('pm-fill'),pp=document.getElementById('pm-pct'),t0=Date.now(),pct=5,sp=0;"
+        "function paint(){var w=Math.min(pct,99);if(pf){pf.style.width=w+'%';}if(pp){pp.textContent=Math.round(w);}}"
+        "setInterval(function(){var el=(Date.now()-t0)/1000;if(sec){sec.textContent=Math.round(el);}"
+        "pct=Math.max(pct,Math.min(90,5+el/100*85));paint();},300);"
         "function poll(){fetch('/job/" + job_id + "').then(function(r){return r.json();}).then(function(j){"
-        "if(j.step&&se){se.textContent=j.step;}"
-        "if(j.status==='running'){setTimeout(poll,2500);}"
-        "else{location.replace('/result/" + job_id + "');}"
-        "}).catch(function(){setTimeout(poll,3000);});}poll();})();"
+        "if(j.step){if(se){se.textContent=j.step;}var i=ORDER.indexOf(j.step);"
+        "if(i>=0){sp=Math.round((i+1)/(ORDER.length+1)*100);pct=Math.max(pct,sp);paint();}}"
+        "if(j.status==='running'){setTimeout(poll,2000);}"
+        "else{pct=100;paint();location.replace('/result/" + job_id + "');}"
+        "}).catch(function(){setTimeout(poll,3000);});}paint();poll();})();"
     )
 
 
@@ -609,36 +616,23 @@ a{color:var(--accent)}
 .pm-busy.on{display:flex}
 .pm-busy-card{background:var(--surface);border:1px solid var(--line);border-radius:14px;
   padding:26px 32px;min-width:300px;text-align:center;box-shadow:0 20px 60px rgba(0,0,0,.28)}
-.pm-bar{height:6px;border-radius:6px;background:var(--accent-soft);overflow:hidden;margin-bottom:16px}
-.pm-bar span{display:block;height:100%;width:40%;border-radius:6px;background:var(--accent);
-  animation:pm-slide 1.2s ease-in-out infinite}
-@keyframes pm-slide{0%{margin-left:-42%}100%{margin-left:102%}}
+.pm-bar{height:9px;border-radius:6px;background:var(--accent-soft);overflow:hidden;margin-bottom:16px}
+.pm-bar span{display:block;height:100%;width:5%;border-radius:6px;background:var(--accent);transition:width .5s ease}
 .pm-busy-title{margin:0;font-weight:600}.pm-busy-step{margin:8px 0 0;color:var(--accent)}
 .pm-busy-time{margin:6px 0 0;color:var(--soft);font-size:.85rem}
-@media(prefers-reduced-motion:reduce){.pm-bar span{animation:none;width:100%}}
 @media(max-width:600px){.pm-wrap{padding:0 16px 64px}.pm-mast{padding:30px 0 14px}.panel{padding:22px}}
 """
 
 
-# Heavy form submits show a progress overlay: an animated bar + cycling step
-# labels + an elapsed timer (an estimated indicator — a synchronous form post
-# can't stream real per-step progress without a bigger async refactor).
+# On submit of a heavy op, show the busy overlay immediately; the real,
+# step-driven progress bar then takes over on the job page (see _poll_js).
 _BUSY_JS = """
-var PM_STEPS={'/analyze':['解析 PDF','核心贡献','技术点 + 图示','知识关联','复现指南','汇总报告'],
-'/ask':['建立向量索引','检索原文片段','生成分层回答'],
-'/summary':['解析 PDF','生成速读'],
-'/compare':['解析各篇论文','逐篇分析','生成对比小结'],
-'/reproduce':['解析 PDF','核实代码仓库','生成复现脚本']};
+var PM_HEAVY={'/analyze':1,'/summary':1,'/compare':1,'/reproduce':1,'/ask':1};
 document.addEventListener('submit',function(e){
-  var f=e.target, act=(f.getAttribute('action')||''), b=f.querySelector('button');
-  if(b){b.disabled=true;}
-  var steps=PM_STEPS[act]; if(!steps){return;}
+  var f=e.target, b=f.querySelector('button'); if(b){b.disabled=true;}
+  if(!PM_HEAVY[f.getAttribute('action')||'']){return;}
   var ov=document.getElementById('pm-busy'); if(ov){ov.classList.add('on');}
-  var se=document.getElementById('pm-step'), sec=document.getElementById('pm-sec');
-  var i=0; if(se){se.textContent=steps[0];}
-  var t0=Date.now();
-  setInterval(function(){ if(sec){sec.textContent=Math.round((Date.now()-t0)/1000);} },250);
-  setInterval(function(){ if(i<steps.length-1){i++; if(se){se.textContent=steps[i];}} },6000);
+  var se=document.getElementById('pm-step'); if(se){se.textContent='提交中…';}
 });
 document.addEventListener('click',function(e){
   var a=e.target.closest('.ex a'); if(!a){return;} e.preventDefault();
@@ -670,9 +664,9 @@ def _page(active: str, body: str, live: bool) -> str:
         f"<span>当前模型 <span class='m'>{_e(_active_model_label())}</span></span>"
         f"<span>{mode}</span><a href='/demo'>离线示例</a></footer>"
         "<div id='pm-busy' class='pm-busy'><div class='pm-busy-card'>"
-        "<div class='pm-bar'><span></span></div>"
-        "<p class='pm-busy-title'>处理中…</p><p class='pm-busy-step' id='pm-step'>开始</p>"
-        "<p class='pm-busy-time'><b id='pm-sec'>0</b> 秒 · 通常 30–90 秒，请勿刷新</p></div></div>"
+        "<div class='pm-bar'><span id='pm-fill'></span></div>"
+        "<p class='pm-busy-title'>分析中…</p><p class='pm-busy-step' id='pm-step'>开始</p>"
+        "<p class='pm-busy-time'><b id='pm-pct'>0</b>% · 已用 <b id='pm-sec'>0</b> 秒</p></div></div>"
         f"<script>{_BUSY_JS}</script>"
         "</body></html>"
     )
