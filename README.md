@@ -24,26 +24,29 @@ PaperMind 不是又一个「论文摘要器」。给它一篇 arXiv 论文，它
 
 ## 📊 证据检索不是黑箱：自训练 reranker + 基准评测
 
-证据检索是本项目的一等模块——我们在 **QASPER**（论文问答+证据标注）上**自训练了一个 cross-encoder 重排器**，并在 dev 全集（276 篇 / 888 题，候选 = 该论文全部段落）做了 BM25 / 稠密 / 稠密+重排的消融：
+证据检索是本项目的一等模块——我们在 **QASPER**（论文问答+证据标注）上**自训练了一个 cross-encoder 重排器**（`bge-reranker-base`），在 **dev 与独立 test 两个集**上做 BM25 / 稠密 / 稠密+重排消融（候选 = 该论文全部段落）：
 
 | 方法 | Recall@1 | Recall@5 | Recall@10 | MRR | nDCG@10 |
 | --- | --- | --- | --- | --- | --- |
 | BM25 | 0.109 | 0.374 | 0.554 | 0.340 | 0.341 |
-| Dense (MiniLM) | 0.141 | 0.456 | 0.643 | 0.401 | 0.413 |
-| **Dense + 自训练 Reranker** | **0.307** | **0.657** | **0.787** | **0.611** | **0.607** |
+| Dense (`bge-small-en`) | 0.177 | 0.519 | 0.699 | 0.463 | 0.469 |
+| **Dense + 自训练 Reranker** | **0.298** | **0.660** | **0.798** | **0.612** | **0.609** |
 
-重排器相对稠密基线 **Recall@5 +0.20、nDCG@10 +0.19、MRR +0.21、Recall@1 翻倍**。数据/训练/评测全部可复现：
+*（dev，276 篇 / 888 题）* 重排相对**已经很强的** bge 稠密基线仍 **Recall@5 +0.14、MRR +0.15、nDCG@10 +0.14**；**独立 test（408 篇 / 1309 题）结果一致**（R@5 0.660 / MRR 0.668 / nDCG 0.638）——**没有过拟合 dev**。数据/训练/评测全部可复现：
 
 ```bash
 python -m trainer.build_dataset          # QASPER -> 训练对（原始 JSON，无需 datasets）
-python -m trainer.train_reranker --epochs 2          # 微调 cross-encoder（单 GPU/Colab）
-python -m evaluation.eval_retrieval --reranker checkpoints/reranker   # 复现上表
+python -m trainer.train_reranker --model BAAI/bge-reranker-base --batch-size 32 --epochs 2 \
+        --out checkpoints/reranker-bge                            # 微调 cross-encoder（单 GPU/Colab）
+python -m evaluation.eval_retrieval --dense-model BAAI/bge-small-en-v1.5 \
+        --query-instruction "Represent this sentence for searching relevant passages: " \
+        --reranker checkpoints/reranker-bge --split test          # 复现上表（--split dev 同理）
 ```
 
 训练好后，**在问答里启用**（默认关，不影响现有行为）：
 
 ```bash
-papermind config set reranker /path/to/checkpoints/reranker   # 问答召回后自动 over-fetch→重排
+papermind config set reranker /path/to/checkpoints/reranker-bge   # 问答召回后自动 over-fetch→重排
 ```
 
 > 训练管线见 [`trainer/`](trainer/) · 评测见 [`evaluation/`](evaluation/) · 设计与路线见 [`docs/RESEARCH_PLAN.md`](docs/RESEARCH_PLAN.md)。

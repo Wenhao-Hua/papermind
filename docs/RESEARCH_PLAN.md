@@ -193,24 +193,38 @@ visibly better; the numbers in the README.
 - **EN:** PaperMind — Evidence-Grounded Scientific Paper Understanding & Retrieval
 - Bullets: end-to-end traceable paper Q&A (parse → hybrid recall →
   **self-trained cross-encoder reranker** → grounded layered answers);
-  **built a QASPER dataset (19.4k pairs) and fine-tuned an evidence reranker**
-  that lifts retrieval on QASPER dev (888 Q, full-paper candidates)
-  **Recall@5 0.46→0.66, nDCG@10 0.41→0.61, MRR 0.40→0.61** over a dense
-  baseline, with a BM25/dense/reranker ablation; verified citations +
-  reproduction grounded in the paper's real code repo.
+  **built a QASPER dataset (19.4k pairs) and fine-tuned a `bge-reranker-base`
+  evidence reranker** that, over a strong `bge-small-en` dense baseline, lifts
+  full-paper retrieval **Recall@5 0.52→0.66, nDCG@10 0.47→0.61, MRR 0.46→0.61**
+  on dev and **holds on a held-out test set** (888/1309 Q, no overfitting),
+  with a BM25/dense/reranker ablation; integrated into the live RAG; plus
+  verified citations + reproduction grounded in the paper's real code repo.
 
-## 12. Results (QASPER dev, 276 papers / 888 questions)
+## 12. Results (QASPER, candidate = all paragraphs of the paper)
 
-Candidate set per question = all paragraphs of its paper. Reranker = fine-tuned
-`cross-encoder/ms-marco-MiniLM-L-6-v2`; dense = `all-MiniLM-L6-v2`. Full table in
-`evaluation/results/ablation.json`; reproduce with `python -m evaluation.eval_retrieval`.
+Reranker = fine-tuned `BAAI/bge-reranker-base`; dense = `BAAI/bge-small-en-v1.5`.
+Full tables in `evaluation/results/ablation_bge_{dev,test}.json`; reproduce with
+`python -m evaluation.eval_retrieval --dense-model BAAI/bge-small-en-v1.5
+--query-instruction "Represent this sentence for searching relevant passages: "
+--reranker checkpoints/reranker-bge --split {dev,test}`.
+
+**dev** (276 papers / 888 q):
 
 | method | Recall@1 | Recall@5 | Recall@10 | MRR | nDCG@10 | F1@5 |
 |---|---|---|---|---|---|---|
 | BM25 | 0.109 | 0.374 | 0.554 | 0.340 | 0.341 | 0.171 |
-| Dense | 0.141 | 0.456 | 0.643 | 0.401 | 0.413 | 0.215 |
-| Dense+Reranker | 0.307 | 0.657 | 0.787 | 0.611 | 0.607 | 0.311 |
+| Dense | 0.177 | 0.519 | 0.699 | 0.463 | 0.469 | 0.242 |
+| Dense+Reranker | 0.298 | 0.660 | 0.798 | 0.612 | 0.609 | 0.312 |
 
-(F1@5 is a cutoff-based evidence F1, not the official QASPER evaluator.)
+**test** (408 papers / 1309 q) — held out, confirms no overfitting:
+
+| method | Recall@1 | Recall@5 | Recall@10 | MRR | nDCG@10 | F1@5 |
+|---|---|---|---|---|---|---|
+| BM25 | 0.123 | 0.359 | 0.532 | 0.365 | 0.351 | 0.181 |
+| Dense | 0.215 | 0.517 | 0.675 | 0.521 | 0.497 | 0.262 |
+| Dense+Reranker | 0.315 | 0.660 | 0.791 | 0.668 | 0.638 | 0.343 |
+
+(An earlier MiniLM-based run is in `evaluation/results/ablation.json`. F1@5 is a
+cutoff-based evidence F1, not the official QASPER evaluator.)
 - Tags: LLM · RAG · information retrieval / reranking · long-document
   understanding · structured extraction · trainable module · full-stack · eval.
