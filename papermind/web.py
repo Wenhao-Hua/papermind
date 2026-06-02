@@ -473,7 +473,46 @@ a{color:var(--accent)}
 .pm-foot>*+*{margin-left:18px;padding-left:18px;border-left:1px solid var(--line)}
 .pm-foot .m{font-weight:600;color:var(--ink)}
 @media(prefers-reduced-motion:reduce){*{transition:none!important}}
+.pm-busy{display:none;position:fixed;inset:0;z-index:50;background:rgba(20,20,30,.45);
+  align-items:center;justify-content:center}
+.pm-busy.on{display:flex}
+.pm-busy-card{background:var(--surface);border:1px solid var(--line);border-radius:14px;
+  padding:26px 32px;min-width:300px;text-align:center;box-shadow:0 20px 60px rgba(0,0,0,.28)}
+.pm-bar{height:6px;border-radius:6px;background:var(--accent-soft);overflow:hidden;margin-bottom:16px}
+.pm-bar span{display:block;height:100%;width:40%;border-radius:6px;background:var(--accent);
+  animation:pm-slide 1.2s ease-in-out infinite}
+@keyframes pm-slide{0%{margin-left:-42%}100%{margin-left:102%}}
+.pm-busy-title{margin:0;font-weight:600}.pm-busy-step{margin:8px 0 0;color:var(--accent)}
+.pm-busy-time{margin:6px 0 0;color:var(--soft);font-size:.85rem}
+@media(prefers-reduced-motion:reduce){.pm-bar span{animation:none;width:100%}}
 @media(max-width:600px){.pm-wrap{padding:0 16px 64px}.pm-mast{padding:30px 0 14px}.panel{padding:22px}}
+"""
+
+
+# Heavy form submits show a progress overlay: an animated bar + cycling step
+# labels + an elapsed timer (an estimated indicator — a synchronous form post
+# can't stream real per-step progress without a bigger async refactor).
+_BUSY_JS = """
+var PM_STEPS={'/analyze':['解析 PDF','核心贡献','技术点 + 图示','知识关联','复现指南','汇总报告'],
+'/ask':['建立向量索引','检索原文片段','生成分层回答'],
+'/summary':['解析 PDF','生成速读'],
+'/compare':['解析各篇论文','逐篇分析','生成对比小结'],
+'/reproduce':['解析 PDF','核实代码仓库','生成复现脚本']};
+document.addEventListener('submit',function(e){
+  var f=e.target, act=(f.getAttribute('action')||''), b=f.querySelector('button');
+  if(b){b.disabled=true;}
+  var steps=PM_STEPS[act]; if(!steps){return;}
+  var ov=document.getElementById('pm-busy'); if(ov){ov.classList.add('on');}
+  var se=document.getElementById('pm-step'), sec=document.getElementById('pm-sec');
+  var i=0; if(se){se.textContent=steps[0];}
+  var t0=Date.now();
+  setInterval(function(){ if(sec){sec.textContent=Math.round((Date.now()-t0)/1000);} },250);
+  setInterval(function(){ if(i<steps.length-1){i++; if(se){se.textContent=steps[i];}} },6000);
+});
+document.addEventListener('click',function(e){
+  var a=e.target.closest('.ex a'); if(!a){return;} e.preventDefault();
+  var i=document.querySelector("input[name='source']"); if(i){i.value=a.dataset.id; i.focus();}
+});
 """
 
 
@@ -499,11 +538,11 @@ def _page(active: str, body: str, live: bool) -> str:
         "<footer class='pm-foot'>"
         f"<span>当前模型 <span class='m'>{_e(_active_model_label())}</span></span>"
         f"<span>{mode}</span><a href='/demo'>离线示例</a></footer>"
-        "</div><script>document.addEventListener('submit',function(e){var b=e.target.querySelector('button');"
-        "if(b&&!b.dataset.t){b.dataset.t=b.textContent;b.disabled=true;b.textContent='处理中…';}});"
-        "document.addEventListener('click',function(e){var a=e.target.closest('.ex a');if(!a)return;"
-        "e.preventDefault();var i=document.querySelector(\"input[name='source']\");"
-        "if(i){i.value=a.dataset.id;i.focus();}});</script>"
+        "<div id='pm-busy' class='pm-busy'><div class='pm-busy-card'>"
+        "<div class='pm-bar'><span></span></div>"
+        "<p class='pm-busy-title'>处理中…</p><p class='pm-busy-step' id='pm-step'>开始</p>"
+        "<p class='pm-busy-time'><b id='pm-sec'>0</b> 秒 · 通常 30–90 秒，请勿刷新</p></div></div>"
+        f"<script>{_BUSY_JS}</script>"
         "</body></html>"
     )
 
