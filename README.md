@@ -1,344 +1,78 @@
 # PaperMind
 
-> 读懂一篇 arXiv 论文，到能动手复现它 —— 一个命令行工具（含 Python API）。
+> **把一篇 arXiv 论文读懂、读到能复现 —— 每句话都有原文出处。**
+> *Understand any arXiv paper: structured analysis, grounded & cited Q&A, runnable reproduction.*
 
 [![CI](https://github.com/Wenhao-Hua/papermind/actions/workflows/ci.yml/badge.svg)](https://github.com/Wenhao-Hua/papermind/actions/workflows/ci.yml)
 [![PyPI](https://img.shields.io/pypi/v/paper-mind)](https://pypi.org/project/paper-mind/)
 [![Python](https://img.shields.io/pypi/pyversions/paper-mind)](https://pypi.org/project/paper-mind/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 
-PaperMind 不是又一个「论文摘要器」。给它一篇 arXiv 论文，它会产出**结构化分析报告**（贡献、最难懂的技术点+图示、知识脉络、完整复现指南），并提供**带原文依据的 RAG 问答**和**复现全程辅导**。每个回答都把「论文事实 / 基于论文的推理 / 超出论文范围」分层标注，**找不到依据时直说"原文未提及"，绝不编造**。
-
-<p align="center">
-  <a href="examples/README.md"><b>▶️ 查看示例报告（Gallery，GitHub 直接渲染含 Mermaid 图）</b></a>
-</p>
-<!-- 录制 demo 后取消注释（见 docs/DEMO.md）：
-<p align="center"><img src="docs/demo.gif" alt="PaperMind demo" width="760"></p>
+<!-- 录制后取消注释（见 docs/DEMO.md）：
+<p align="center"><img src="docs/demo.gif" alt="PaperMind demo" width="820"></p>
 -->
+<p align="center">
+  <a href="examples/transformer.md"><b>▶ 看真实样例报告</b></a> ·
+  <a href="examples/README.md">Gallery</a>（GitHub 直接渲染，含 Mermaid 图）
+</p>
 
-## 凭什么不是又一个「和论文聊天」
+## 三种用法，挑最方便的
 
-- **答案有据可查，且会自动核验。** 问答与分析的每条引用都标注「论文事实 / 基于论文的推理 / 超出范围」，并把出处**逐条对着原文核验**——核不到就标「⚠️ 未核实」，不让模型蒙混；长论文按段**抽取式聚合**，后面的实验/复现细节不会被截断丢掉。
-- **复现指南基于论文的真实代码仓库。** 自动找到官方仓库（论文原文链接 / PapersWithCode），读取仓库里**真实的依赖文件与 README 运行命令**生成 `setup.sh`——不是模型凭空编的步骤。
-- **零配置可试，免费可跑。** `papermind demo` 离线看效果（无需 key）；装了 Ollama 加 `--local` 全本地零成本；没配 key 也会自动回退本地，并在缺东西时给出可操作的提示。
+| | 怎么用 | 适合 |
+| --- | --- | --- |
+| 🌐 **在线用** | 打开 **_<在线地址，部署后填>_**，零安装 | 想立刻试、不装东西 |
+| 🖥️ **图形界面** | `pip install "paper-mind[web]"` → `papermind ui` | 本地全功能、浏览器操作 |
+| ⌨️ **命令行 / API** | `pip install paper-mind` → `papermind analyze 2307.08691` | 脚本化、批量、集成 |
 
-## 📊 证据检索不是黑箱：自训练 reranker + 基准评测
+> 🆓 不想花钱：`papermind demo` 离线看效果（无需 key）；任何命令加 `--local` 走本地 Ollama，全程零成本。
 
-证据检索是本项目的一等模块——我们在 **QASPER**（论文问答+证据标注）上**自训练了一个 cross-encoder 重排器**（`bge-reranker-base`），在 **dev 与独立 test 两个集**上做 BM25 / 稠密 / 稠密+重排消融（候选 = 该论文全部段落）：
+## 效果
 
-| 方法 | Recall@1 | Recall@5 | Recall@10 | MRR | nDCG@10 |
-| --- | --- | --- | --- | --- | --- |
-| BM25 | 0.109 | 0.374 | 0.554 | 0.340 | 0.341 |
-| Dense (`bge-small-en`) | 0.177 | 0.519 | 0.699 | 0.463 | 0.469 |
-| **Dense + 自训练 Reranker** | **0.298** | **0.660** | **0.798** | **0.612** | **0.609** |
+```
+╭──────────────── Attention Is All You Need · 2017 · arXiv:1706.03762 ───────────────╮
+🎯 核心贡献   提出完全基于注意力的 Transformer，去掉循环与卷积，机器翻译刷新 SOTA…
+🔬 技术细节   1. 缩放点积注意力 [high]  Q·Kᵀ 除以 √d_k 再 softmax 加权 V；缩放避免梯度饱和
+              💡 类比：像搜索引擎按匹配度加权汇总文档；📊 附 Mermaid 结构图
+💬 问答       「为什么除以 √d_k？」→【论文事实】维度大时点积方差大… 📌 出处 Section 3.2.1 (p.4) ✓已核验
+🛠️ 复现       官方代码（已核实·★24k）github.com/... → setup.sh（真实依赖 + README 运行命令）
+```
 
-*（dev，276 篇 / 888 题）* 重排相对**已经很强的** bge 稠密基线仍 **Recall@5 +0.14、MRR +0.15、nDCG@10 +0.14**；**独立 test（408 篇 / 1309 题）结果一致**（R@5 0.660 / MRR 0.668 / nDCG 0.638）——**没有过拟合 dev**。数据/训练/评测全部可复现：
+完整渲染样例：[Transformer](examples/transformer.md) · [FlashAttention-2](examples/flashattention2.md) · [LLaMA 2](examples/llama2.md)
+
+## 凭什么不一样
+
+- **🔎 答案有据可查、自动核验**：分层标注「事实 / 推理(带置信度) / 超纲」，出处逐条对着原文核验，核不到标 ⚠️。
+- **🛠️ 复现接论文的真实代码仓库**：自动找官方仓库，用仓库里**真实的依赖与运行命令**生成 `setup.sh`，不是模型瞎编。
+- **🆓 零配置、本地免费**：`demo` 离线看；`--local` 全本地；没 key 自动回退本地。
+
+## 📊 证据检索是自训练 + 实测的，不是黑箱
+
+在 **QASPER** 上自训练 cross-encoder 重排器（`bge-reranker-base`），全段落候选下相对强稠密基线：
+
+| | Recall@5 | MRR | nDCG@10 |
+| --- | --- | --- | --- |
+| Dense (`bge-small-en`) | 0.519 | 0.463 | 0.469 |
+| **+ 自训练 Reranker** | **0.660** | **0.612** | **0.609** |
+
+dev（888 题）与独立 test（1309 题）一致，无过拟合。复现：[`docs/RESEARCH_PLAN.md`](docs/RESEARCH_PLAN.md)（`trainer/` 训练 · `evaluation/` 评测）。
+
+## 维护一个在线服务（自托管）
+
+同一套网页，Docker 一行起服务，公网暴露也安全（默认演示模式只读缓存、不烧 key）：
 
 ```bash
-python -m trainer.build_dataset          # QASPER -> 训练对（原始 JSON，无需 datasets）
-python -m trainer.train_reranker --model BAAI/bge-reranker-base --batch-size 32 --epochs 2 \
-        --out checkpoints/reranker-bge                            # 微调 cross-encoder（单 GPU/Colab）
-python -m evaluation.eval_retrieval --dense-model BAAI/bge-small-en-v1.5 \
-        --query-instruction "Represent this sentence for searching relevant passages: " \
-        --reranker checkpoints/reranker-bge --split test          # 复现上表（--split dev 同理）
+git clone https://github.com/Wenhao-Hua/papermind && cd papermind
+docker build -t papermind . && docker run -p 8080:8080 papermind
+docker run -p 8080:8080 -e OPENAI_API_KEY=sk-... papermind \
+       papermind serve --host 0.0.0.0 --port 8080 --live    # 实时分析（你的 key 付费）
 ```
 
-训练好后，**在问答里启用**（默认关，不影响现有行为）：
+## 能做什么
 
-```bash
-papermind config set reranker /path/to/checkpoints/reranker-bge   # 问答召回后自动 over-fetch→重排
-```
+`analyze`（四模块报告）· `summary`（TL;DR）· `ask`/`chat`（带依据问答）· `tutor`/`debug`（复现辅导）· `compare`（多篇对比）· `reproduce`（导出 setup.sh/notebook）· `search`/`batch`/`list` · `cite`。
 
-> 训练管线见 [`trainer/`](trainer/) · 评测见 [`evaluation/`](evaluation/) · 设计与路线见 [`docs/RESEARCH_PLAN.md`](docs/RESEARCH_PLAN.md)。
+模型走 [litellm](https://github.com/BerriAI/litellm)：OpenAI / Anthropic / DeepSeek / Gemini / 本地 Ollama 任选；结果本地缓存，二次运行秒出。更多用法：`papermind --help`。
 
-## ✨ 能做什么
+## 贡献 / License
 
-| 命令 | 作用 |
-| --- | --- |
-| `analyze` | 四模块报告：🎯 贡献 · 🔬 技术点（**含公式 + 原图/AI 示意图**）· 🔗 知识关联 · 🛠️ 复现指南 |
-| `summary` | 一句话 TL;DR + 要点（一次调用，便宜） |
-| `ask` / `chat` | **带原文依据的分层问答**：论文事实 / 基于论文的推理(+置信度) / 超出论文范围 + 可跳转页码 |
-| `tutor` / `debug` | 复现辅导；贴报错直接给可运行的修复 |
-| `compare` | 2–4 篇论文**并排对比表** + 对比小结 |
-| `reproduce` | 复现指南导出为可运行 `setup.sh` / Jupyter notebook，**自动核实论文的官方代码仓库**（论文原文链接 / PapersWithCode），用仓库里**真实的依赖与运行命令**——不是模型瞎编 |
-| `search` / `batch` / `list` | 搜 arXiv · 批量分析整目录 · 本地论文库 |
-| `cite` | 一键 BibTeX（不调模型） |
-
-> 模型走 [litellm](https://github.com/BerriAI/litellm)：OpenAI / Anthropic / **DeepSeek** / 本地 **Ollama** 任选；分析结果与索引本地缓存，二次运行秒出。
-
-## 30 秒上手
-
-**零配置先看一眼**（内置离线回放，无需 key、无需联网）：
-
-```bash
-pip install paper-mind
-papermind demo
-```
-
-> 📦 安装名是 **`paper-mind`**，命令名仍是 **`papermind`**（PyPI 上 `papermind` 已被占用）。
-
-**免费，无需 API key**（用本地 [Ollama](https://ollama.com)）：
-
-```bash
-pip install paper-mind            # 或从源码： pip install -e ".[local-embeddings]"
-ollama pull llama3.1             # 装好 Ollama 后拉一个模型
-papermind analyze https://arxiv.org/abs/2307.08691 --model ollama/llama3.1 --format all -o ./report
-```
-
-**或用云端模型**（质量更高）：
-
-```bash
-pip install paper-mind
-export OPENAI_API_KEY=sk-...
-papermind analyze https://arxiv.org/abs/2307.08691 --format all --output ./report
-```
-
-> 没配 key 但本机跑着 Ollama 时，PaperMind 会**自动改用本地模型**，开箱即用。
-
-输出（节选）：
-
-```
-╭──────────────────────────── Attention Is All You Need ──────────────────────╮
-│ Ashish Vaswani et al. • 2017 • arXiv:1706.03762                             │
-╰─────────────────────────────────────────────────────────────────────────────╯
-🎯 贡献与创新点
-  核心贡献: 提出完全基于注意力的 Transformer，去掉循环与卷积，在机器翻译上刷新 SOTA…
-🔬 技术细节解释
-  1. 缩放点积注意力 (Scaled Dot-Product Attention)   [high]
-     Q·Kᵀ 缩放 √d_k 后 softmax 加权 V；缩放避免点积过大把 softmax 推入梯度饱和区…
-     💡 类比: 像搜索引擎按匹配度加权汇总文档内容(V)。
-     📊 AI 生成示意图 (Mermaid，见 Markdown 报告)
-🛠️ 复现指南
-  官方代码: https://github.com/tensorflow/tensor2tensor
-  关键超参: d_model=512, h=8, d_ff=2048, N=6, warmup_steps=4000
-```
-
-完整样例见 [**Gallery**](examples/README.md)：[FlashAttention-2](examples/flashattention2.md) · [LLaMA 2](examples/llama2.md) · [Transformer](examples/transformer.md)（GitHub 直接渲染，含 Mermaid 图）。
-
----
-
-## 🖥️ 图形界面（Web GUI）
-
-不想用命令行？一个极简学术风格的网页界面，把全部能力搬进浏览器：
-
-```bash
-pip install "paper-mind[ui]"
-papermind ui                 # 本地全功能，打开 http://localhost:8501
-```
-
-标签页：**分析 · 问答 · 速读 · 对比 · 复现 · 搜索**。粘贴 arXiv id/URL 即可分析 / 问答；分层标注（论文事实 · 推理 · 超出范围）并附原文依据；报告渲染公式与图示，支持深色模式。模型用你配置的默认值（页脚小字显示，`papermind config set model ...` 切换）。
-
-> 公开演示 / 隧道端用 `papermind serve`（同一界面，默认只读缓存、不烧 key；`--live` 才实时分析）。
-
-## 为什么用 PaperMind
-
-| 痛点 | PaperMind 怎么解决 |
-| --- | --- |
-| 摘要工具只给你"是什么"，不给"为什么/怎么做" | 主动挑出**最难懂**的技术点，直白解释 + 类比 + **原文图/AI 示意图** |
-| 问答工具会一本正经地胡说 | 回答**分层标注**事实/推理/超纲，附**可跳转的原文出处** |
-| 想复现，但环境、超参、报错全靠自己踩坑 | 完整**复现指南**：先**核实论文的真实代码仓库**（★/官方标记），用仓库里真实的依赖与运行命令；再加分步配置、性能基准、数据集直链、常见报错与修复 |
-| 跑起来还是卡住 | **Tutor / Debug** 模式：贴报错直接给可运行的修复代码 |
-
-## 安装
-
-```bash
-pip install paper-mind
-
-# 可选：本地 embedding（配合 Ollama 实现完全离线、零成本）
-pip install "paper-mind[local-embeddings]"
-```
-
-或从源码安装（开发）：
-
-```bash
-git clone https://github.com/Wenhao-Hua/papermind
-cd papermind
-pip install -e ".[dev]"
-```
-
-需要 Python 3.9+。PDF 解析用 PyMuPDF，向量检索用 faiss-cpu，模型统一走 litellm（OpenAI / Anthropic / Ollama 等）。
-
-## 配置
-
-API key 可通过环境变量或配置文件（`~/.papermind/config.json`）设置：
-
-```bash
-# 方式一：环境变量
-export OPENAI_API_KEY=sk-...
-export ANTHROPIC_API_KEY=sk-ant-...
-
-# 方式二：写入配置文件
-papermind config set openai-key sk-...
-papermind config set anthropic-key sk-ant-...
-papermind config set model gpt-4o          # 默认 gpt-4o-mini
-papermind config set embedding-provider local   # 本地多语言 embedding（中文问英文论文也能检索）
-papermind config show
-```
-
-环境变量优先级高于配置文件。解析结果与向量索引缓存在 `~/.papermind/cache/<arxiv_id>/`，二次运行直接命中缓存。
-
-### 云端 + 本地，一键切换
-
-配一次云端 key 当默认，任何命令加 `--local` 即**整条链路（LLM + embedding）切到本地 Ollama**，无需联网、零成本：
-
-```bash
-papermind config set openai-key sk-...        # 默认走云端（gpt-4o-mini）
-papermind config set local-model ollama/llama3.1   # 可选：自定义本地模型
-
-papermind analyze <source>                    # 云端
-papermind analyze <source> --local            # 本地（需 Ollama 在跑 + 已装 local-embeddings）
-papermind chat <source> --local               # chat/ask/tutor/debug/summary/compare/reproduce 同样支持 --local
-```
-
-> 没配任何 key 时，只要本机跑着 Ollama，PaperMind 会**自动**走本地，`--local` 可省略。
-
-## CLI 用法
-
-```bash
-# 零配置看效果（离线回放，无需 key）
-papermind demo
-
-# 分析论文，生成四模块报告（md / json / html / all）
-papermind analyze <source> --format all --output ./report
-papermind analyze <source> --only contributions,technical    # 只跑部分模块
-papermind analyze <source> --quick                           # 快速子集（贡献+技术，无图）
-papermind analyze <source> --refresh                         # 忽略缓存重新分析
-papermind analyze <source> --open                            # 生成后浏览器打开 HTML
-papermind analyze <source> --estimate                        # 只估算 token/成本，不调用模型
-
-# 快速 TL;DR（一次调用，便宜）
-papermind summary <source>
-
-# 交互式问答（多轮、带原文依据）
-papermind chat <source> --mode balanced     # strict | balanced | explore
-papermind ask <source> "调大某超参会怎样？"  --section 3.2    # 定向到某一节
-papermind tutor <source>                                      # 复现全程辅导
-papermind debug <source> --error "RuntimeError: ... only supports fp16 and bf16"
-
-# 发现 / 批量 / 库 / 对比
-papermind search "flash attention"                            # 搜 arXiv
-papermind batch <src1> <src2> --dir ./pdfs -o ./reports       # 批量分析 + 索引
-papermind compare <src1> <src2> [src3]                        # 2-4 篇并排对比表 + 小结
-papermind list                                                # 你分析过的论文库
-
-# 导出
-papermind reproduce <source> --format both -o ./repro         # setup.sh + notebook
-papermind cite <source>                                       # BibTeX
-
-# 缓存与配置
-papermind cache list        # 查看缓存（PDF/索引/报告）
-papermind cache clear <key> # 或 --all
-papermind open <source>     # 浏览器打开缓存的报告（--pdf 打开 PDF）
-papermind config show
-
-# Web 演示（需 pip install "paper-mind[web]"）
-papermind serve --port 8080          # 默认演示模式：只展示已缓存的论文（公网暴露也不会烧 key）
-papermind serve --port 8080 --live   # 实时分析：用本机配置的 key（有成本）
-```
-
-浏览器里粘贴 arXiv id、下拉选模型（GPT / Claude / DeepSeek / Gemini / 本地 Ollama）即可出 HTML 报告。适合挂到反向代理 / Cloudflare 隧道做公开演示——默认 demo 模式只读缓存，不会被陌生人刷爆你的 API key。
-
-`<source>` 三种写法等价：`https://arxiv.org/abs/2307.08691`、`arxiv:2307.08691`、`2307.08691`，也可以是本地 `./paper.pdf`。
-
-> **缓存复用**：同一篇 + 同模型 + 同模块的 `analyze` 结果会被缓存，二次运行**秒出、不重复花钱**，需要重算时加 `--refresh`。
-
-### 三档推理强度（`--mode`）
-
-- **strict** — 只答论文明写的事实，不做任何推理。
-- **balanced**（默认）— 事实 + 必要推理，分层标注，推理给出依据与置信度。
-- **explore** — 鼓励延伸推理与应用建议，仍区分事实/推理/超纲。
-
-### 流式输出与 token 用量
-
-`chat`/`ask`/`tutor`/`debug` 默认**流式生成**，实时显示回答（结构化分层结果在生成结束后渲染）；加 `--no-stream` 可关闭。每轮回答与会话/分析结束都会打印 **token 用量与估算成本**（如 `📊 用量: 3 calls · 4,120 tokens (prompt 3,800 / completion 320) · ~$0.0021`）。Python API 中对应 `report.usage` 与 `answer.usage`。
-
-## Python API
-
-```python
-from papermind import analyze, PaperChat
-
-# 一次性分析
-report = analyze(
-    source="arxiv:2307.08691",
-    model="gpt-4o",                       # 默认 gpt-4o-mini
-    modules=["contributions", "technical", "connections", "reproduction"],
-)
-print(report.contributions.main_contribution)
-for point in report.technical.details:    # List[TechnicalPoint]，含 figure 字段
-    print(point.name, point.difficulty, point.figure)
-report.connections.related_works          # List[Connection]
-report.reproduction.env_setup_steps       # List[SetupStep]
-report.to_markdown("report.md")
-report.to_json("report.json")
-report.to_html("report.html")            # 自包含可分享网页
-report.to_setup_script("setup.sh")       # 复现指南 → 可运行脚本
-report.to_notebook("repro.ipynb")        # 复现指南 → Jupyter notebook
-report.usage                             # 本次分析 token 用量/成本
-
-# 快速 TL;DR（一次调用）
-from papermind.summarize import summarize
-summary, usage = summarize("arxiv:2307.08691")
-print(summary.tldr, summary.key_points)
-
-# 多论文对比（复用各自缓存）
-from papermind import compare
-cmp = compare(["arxiv:2307.08691", "arxiv:1706.03762"])
-cmp.to_markdown("compare.md"); cmp.to_html("compare.html")
-
-# 多轮问答 + 分层推理
-chat = PaperChat("arxiv:2307.08691", mode="balanced")
-ans = chat.ask("如果把 block_size 调大到 256 会怎样？", section="3.2")  # 可定向到某节
-for seg in ans.segments:                  # kind = fact | inference | out_of_scope
-    print(seg.kind, seg.confidence, seg.text)
-ans.evidence                              # 原文依据片段（含 section/page）
-ans.sources                               # [{"section": "3.1", "page": 5}, ...]
-
-# 辅导 / 调试
-chat.tutor("怎么把这个方法迁移到我自己的 decoder-only 模型？")
-chat.debug("RuntimeError: CUDA out of memory")
-```
-
-## 输出格式
-
-- **JSON** — 由 [`papermind/output/schema.py`](papermind/output/schema.py) 的 pydantic 模型定义，作为单一数据源。
-- **Markdown** — 原文出处渲染成可点击的 `[Section 3.1](pdf#page=5)`；论文原图以图片嵌入，AI 示意图以 ` ```mermaid ` 代码块呈现；复现步骤/性能表/报错以表格与代码块组织。
-- **终端** — rich 彩色分模块展示，技术点难度用颜色区分，附分析进度条。
-
-## 图示能力
-
-技术点的图示遵循「**先原图，后 AI 图**」：
-
-1. 用 PyMuPDF 提取论文原图：**嵌入的位图**直接抽取；**矢量图**（无位图的结构图）则按 caption 定位、渲染该页区域为 PNG。再由 LLM 按语义把图匹配到对应技术点，标注 Figure 编号与来源。
-2. 没有合适原图时，由 LLM 生成 **Mermaid 示意图**（数据流/模块结构/训练流程），明确标注「AI 生成示意图」。
-
-## 工作原理
-
-```
-source ──▶ parser ──▶ ┌ contributions ┐
-(arxiv/pdf)  (pdf+meta) │ technical      │──▶ Report ──▶ markdown / json / terminal
-                        │ connections    │       │
-                        └ reproduction ──┘       └─ figures (原图匹配 + Mermaid)
-
-chat:  parser ──▶ chunk + embed ──▶ FAISS (缓存) ──▶ retrieve ──▶ 分层回答(事实/推理/超纲)
-```
-
-依赖刻意保持精简，**不使用 LangChain**：`typer` · `rich` · `pydantic` · `pymupdf` · `litellm` · `faiss-cpu`。
-
-## Roadmap
-
-- [x] 流式输出（`chat`/`ask`/`tutor`/`debug` 实时生成，`--no-stream` 关闭）
-- [x] token 用量与成本统计（每轮 + 会话/分析合计）
-- [x] 向量图（vector figure）渲染抽取，覆盖更多论文图
-- [x] 分析结果缓存复用、缓存管理、HTML 导出与一键打开
-- [x] 复现指南导出为可运行 `setup.sh` / Jupyter notebook、BibTeX 引用
-- [x] arXiv 搜索、批量分析、本地论文库、快速 TL;DR、成本预估、定向问答
-- [x] 多论文对比分析（`papermind compare a b` — 贡献/方法/基准并排成表 + 对比小结）
-- [ ] OCR 支持（扫描版 PDF）
-
-## 贡献
-
-欢迎 PR / issue，见 [CONTRIBUTING.md](CONTRIBUTING.md)。
-
-## License
-
-[MIT](LICENSE)
+欢迎 PR / issue（[CONTRIBUTING.md](CONTRIBUTING.md)）· [MIT](LICENSE)
