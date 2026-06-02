@@ -286,7 +286,8 @@ def create_app(live: bool = False, rate_per_ip: int = 8, rate_global: int = 300,
     def job_result(job_id: str):
         job = _get_job(job_id)
         if job is None:
-            return _page("/", "<section class='panel'><p class='err'>结果已过期，请重新分析。</p></section>", live)
+            # job lost (server restarted / expired) -> give back a usable retry form
+            return _page("/", _analyze_form(live, "结果已过期或服务刚更新过，请重新分析。"), live)
         if job["status"] == "done":
             return job["html"]
         if job["status"] == "error":
