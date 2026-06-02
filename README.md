@@ -20,7 +20,7 @@
 
 | | 怎么用 | 适合 |
 | --- | --- | --- |
-| 🌐 **在线用** | 打开 **_<在线地址，部署后填>_**，零安装 | 想立刻试、不装东西 |
+| 🌐 **在线用** | 打开 **[papermind.try2026.cn](https://papermind.try2026.cn)**，零安装 | 想立刻试、不装东西 |
 | 🖥️ **图形界面** | `pip install "paper-mind[web]"` → `papermind ui` | 本地全功能、浏览器操作 |
 | ⌨️ **命令行 / API** | `pip install paper-mind` → `papermind analyze 2307.08691` | 脚本化、批量、集成 |
 
