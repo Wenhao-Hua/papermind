@@ -76,3 +76,27 @@ def test_analyze_demo_mode_does_not_run_when_uncached(monkeypatch, tmp_path):
     r = client.post("/analyze", data={"source": "9999.99999", "model": ""})
     assert r.status_code == 200
     assert "演示模式" in r.text  # falls back to the safe note, no analysis run
+
+
+def test_rate_limiter_per_ip_and_global_caps():
+    from papermind.web import RateLimiter
+
+    rl = RateLimiter(per_ip=2, global_max=3, window=9999)
+    assert rl.take("a") == (True, "")
+    assert rl.take("a") == (True, "")
+    assert rl.take("a") == (False, "ip")       # per-IP cap (2) hit; not counted globally
+    assert rl.take("b") == (True, "")           # 3rd global slot
+    assert rl.take("b") == (False, "global")    # global cap (3) reached
+
+
+def test_rate_limiter_zero_means_unlimited_and_rollover():
+    from papermind.web import RateLimiter
+
+    unlimited = RateLimiter(per_ip=0, global_max=0)
+    assert all(unlimited.take("x")[0] for _ in range(50))
+
+    rl = RateLimiter(per_ip=1, global_max=10, window=9999)
+    assert rl.take("a")[0] is True
+    assert rl.take("a") == (False, "ip")
+    rl._reset = 0  # force the window to elapse -> counters reset
+    assert rl.take("a")[0] is True

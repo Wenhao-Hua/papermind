@@ -128,7 +128,7 @@ def ui(
     if not no_browser:
         threading.Timer(1.2, lambda: webbrowser.open(url)).start()
     try:
-        run_serve(host=host, port=port, live=True)
+        run_serve(host=host, port=port, live=True, rate_per_ip=0, rate_global=0)  # local: unlimited
     except PaperMindError as exc:
         raise _fail(str(exc))
 
@@ -140,14 +140,21 @@ def serve(
     live: bool = typer.Option(
         False, "--live", help="Allow live analysis using the server's keys (has cost). Default: cached-only."
     ),
+    rate_per_ip: int = typer.Option(8, "--rate-per-ip", help="Max live requests per IP per day (0 = unlimited)."),
+    rate_global: int = typer.Option(300, "--rate-global", help="Max live requests total per day (0 = unlimited)."),
 ) -> None:
-    """Run the web demo. Default is demo mode (serves cached reports only, key-safe)."""
+    """Run the web service. Default is demo mode (cached reports only, key-safe).
+
+    With --live, model-calling requests are rate-limited per IP and globally so a
+    public deployment can't drain your API key (tune with --rate-per-ip / --rate-global).
+    """
     from papermind.web import serve as run_serve
 
     mode = "[yellow]LIVE — 实时分析会用本机 key（有成本）[/yellow]" if live else "演示模式（仅展示已缓存论文，安全）"
-    console.print(f"[bold cyan]PaperMind web[/bold cyan]  →  http://{host}:{port}\n[dim]{mode}  ·  Ctrl-C 停止[/dim]")
+    limits = f"  ·  限流 每IP {rate_per_ip}/天 · 全局 {rate_global}/天" if live else ""
+    console.print(f"[bold cyan]PaperMind web[/bold cyan]  →  http://{host}:{port}\n[dim]{mode}{limits}  ·  Ctrl-C 停止[/dim]")
     try:
-        run_serve(host=host, port=port, live=live)
+        run_serve(host=host, port=port, live=live, rate_per_ip=rate_per_ip, rate_global=rate_global)
     except PaperMindError as exc:
         raise _fail(str(exc))
 

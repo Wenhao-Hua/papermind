@@ -67,6 +67,8 @@ docker run -p 8080:8080 -e OPENAI_API_KEY=sk-... papermind \
        papermind serve --host 0.0.0.0 --port 8080 --live    # 实时分析（你的 key 付费）
 ```
 
+> `--live` 默认**带限流**（每 IP 8 次/天、全局 300 次/天，可用 `--rate-per-ip` / `--rate-global` 调，`0` 表示不限）——公开挂出去也不会被陌生人刷爆你的 key。免费操作（搜索 / 缓存 / 离线 demo）不受限。
+
 ## 能做什么
 
 `analyze`（四模块报告）· `summary`（TL;DR）· `ask`/`chat`（带依据问答）· `tutor`/`debug`（复现辅导）· `compare`（多篇对比）· `reproduce`（导出 setup.sh/notebook）· `search`/`batch`/`list` · `cite`。

@@ -17,6 +17,7 @@ from __future__ import annotations
 import html as _html
 import secrets
 import threading
+import time
 from typing import Optional
 
 from papermind.errors import PaperMindError
@@ -64,14 +65,68 @@ _TABS = [
 ]
 
 
-def create_app(live: bool = False):
+# --------------------------------------------------------------------------- #
+# Rate limiting — only gates LIVE, model-calling requests so a public --live
+# deployment can't drain the host's API key. Free ops (demo, search, cached
+# reports) are never limited. In-memory, per-instance; resets every window.
+# --------------------------------------------------------------------------- #
+class RateLimiter:
+    def __init__(self, per_ip: int = 8, global_max: int = 300, window: int = 86400):
+        self.per_ip = per_ip
+        self.global_max = global_max
+        self.window = window
+        self._lock = threading.Lock()
+        self._ip: dict = {}
+        self._global = 0
+        self._reset = time.time() + window
+
+    def _rollover(self) -> None:
+        if time.time() >= self._reset:
+            self._ip.clear()
+            self._global = 0
+            self._reset = time.time() + self.window
+
+    def take(self, ip: str):
+        """Reserve one slot for ``ip``. Returns (allowed, scope) — scope in {'ip','global',''}."""
+        with self._lock:
+            self._rollover()
+            if self.global_max and self._global >= self.global_max:
+                return False, "global"
+            if self.per_ip and self._ip.get(ip, 0) >= self.per_ip:
+                return False, "ip"
+            self._ip[ip] = self._ip.get(ip, 0) + 1
+            self._global += 1
+            return True, ""
+
+
+def _client_ip(request) -> str:
+    for header in ("cf-connecting-ip", "x-real-ip", "x-forwarded-for"):
+        value = request.headers.get(header)
+        if value:
+            return value.split(",")[0].strip()
+    return request.client.host if getattr(request, "client", None) else "unknown"
+
+
+def _quota_msg(scope: str, limiter: "RateLimiter") -> str:
+    if scope == "global":
+        return f"本服务今日总额度已用完（{limiter.global_max} 次/天）。请明天再来，或本地运行：pip install paper-mind。"
+    return f"今日额度已用完（每人 {limiter.per_ip} 次/天）。请明天再来，或本地零成本运行：pip install paper-mind 后 papermind analyze。"
+
+
+def create_app(live: bool = False, rate_per_ip: int = 8, rate_global: int = 300):
     try:
-        from fastapi import Cookie, FastAPI, File, Form, UploadFile
+        from fastapi import Cookie, FastAPI, File, Form, Request, UploadFile
         from fastapi.responses import HTMLResponse
     except ImportError as exc:  # pragma: no cover
         raise PaperMindError("Web demo 需要 FastAPI。安装：pip install 'paper-mind[web]'") from exc
 
     app = FastAPI(title="PaperMind", docs_url=None, redoc_url=None)
+    limiter = RateLimiter(rate_per_ip, rate_global)
+
+    def gate(request) -> Optional[str]:
+        """Reserve a quota slot for this request's IP; return an error message if over."""
+        ok, scope = limiter.take(_client_ip(request))
+        return None if ok else _quota_msg(scope, limiter)
 
     @app.get("/healthz")
     def healthz():
@@ -89,20 +144,20 @@ def create_app(live: bool = False):
         return _page("/", _analyze_form(live), live)
 
     @app.post("/analyze", response_class=HTMLResponse)
-    def analyze_route(source: str = Form(""), model: str = Form(""), file: Optional[UploadFile] = File(None)):
+    def analyze_route(request: Request, source: str = Form(""), model: str = Form(""), file: Optional[UploadFile] = File(None)):
         src = _resolve_upload(source, file)
         if not src:
             return _page("/", _analyze_form(live, "请填入 arXiv id / URL，或上传 PDF。"), live)
-        report, err = _report_for(src, model, live)
+        report, err, _ran = _report_for(src, model, live, on_live=lambda: gate(request))
         if err:
             return _page("/", _analyze_form(live, err), live)
         return report.to_html()
 
     @app.get("/analyze", response_class=HTMLResponse)
-    def analyze_get(source: str = ""):
+    def analyze_get(request: Request, source: str = ""):
         if not source.strip():
             return _page("/", _analyze_form(live), live)
-        report, err = _report_for(source, "", live)
+        report, err, _ran = _report_for(source, "", live, on_live=lambda: gate(request))
         if err:
             return _page("/", _analyze_form(live, err), live)
         return report.to_html()
@@ -116,6 +171,7 @@ def create_app(live: bool = False):
 
     @app.post("/ask", response_class=HTMLResponse)
     def ask_route(
+        request: Request,
         source: str = Form(...),
         question: str = Form(...),
         model: str = Form(""),
@@ -130,6 +186,10 @@ def create_app(live: bool = False):
         prior = _chat_log_html(sess["log"]) if sess and sess.get("log") else ""
         if not source.strip() or not question.strip():
             return _page("/ask", prior + _ask_form(live, "请填写论文和问题。"), live)
+
+        blocked = gate(request)
+        if blocked:
+            return _page("/ask", prior + _ask_form(live, blocked), live)
 
         from papermind.qa.chat import PaperChat
 
@@ -160,9 +220,12 @@ def create_app(live: bool = False):
         return _page("/summary", _summary_form(live), live)
 
     @app.post("/summary", response_class=HTMLResponse)
-    def summary_route(source: str = Form(...), model: str = Form("")):
+    def summary_route(request: Request, source: str = Form(...), model: str = Form("")):
         if not live:
             return _page("/summary", _summary_form(live, "演示模式不支持速读（需调用模型）。请以 --live 启动。"), live)
+        blocked = gate(request)
+        if blocked:
+            return _page("/summary", _summary_form(live, blocked), live)
         from papermind.summarize import summarize
 
         try:
@@ -179,10 +242,14 @@ def create_app(live: bool = False):
         return _page("/compare", _compare_form(live), live)
 
     @app.post("/compare", response_class=HTMLResponse)
-    def compare_route(sources: str = Form(...), model: str = Form("")):
+    def compare_route(request: Request, sources: str = Form(...), model: str = Form("")):
         items = [s.strip() for s in sources.splitlines() if s.strip()][:4]
         if len(items) < 2:
             return _page("/compare", _compare_form(live, "请每行一个来源，至少 2 篇。"), live)
+        if live:
+            blocked = gate(request)
+            if blocked:
+                return _page("/compare", _compare_form(live, blocked), live)
         from papermind.compare import compare as run_compare
 
         try:
@@ -197,8 +264,8 @@ def create_app(live: bool = False):
         return _page("/reproduce", _reproduce_form(live), live)
 
     @app.post("/reproduce", response_class=HTMLResponse)
-    def reproduce_route(source: str = Form(...), model: str = Form("")):
-        report, err = _report_for(source, model, live, need="reproduction")
+    def reproduce_route(request: Request, source: str = Form(...), model: str = Form("")):
+        report, err, _ran = _report_for(source, model, live, need="reproduction", on_live=lambda: gate(request))
         if err:
             return _page("/reproduce", _reproduce_form(live, err), live)
         script = report.to_setup_script()
@@ -240,19 +307,22 @@ def create_app(live: bool = False):
     return app
 
 
-def serve(host: str = "0.0.0.0", port: int = 8080, live: bool = False) -> None:
+def serve(host: str = "0.0.0.0", port: int = 8080, live: bool = False,
+          rate_per_ip: int = 8, rate_global: int = 300) -> None:
     try:
         import uvicorn
     except ImportError as exc:  # pragma: no cover
         raise PaperMindError("Web demo 需要 uvicorn。安装：pip install 'paper-mind[web]'") from exc
-    uvicorn.run(create_app(live=live), host=host, port=port)
+    uvicorn.run(create_app(live=live, rate_per_ip=rate_per_ip, rate_global=rate_global), host=host, port=port)
 
 
 # --------------------------------------------------------------------------- #
 # Shared report resolution (cached-or-live)
 # --------------------------------------------------------------------------- #
-def _report_for(source: str, model: str, live: bool, need: Optional[str] = None):
-    """Return (report, error). Serves a cached report; runs live analysis only if ``live``."""
+def _report_for(source: str, model: str, live: bool, need: Optional[str] = None, on_live=None):
+    """Return (report, error, ran_live). Serves a cached report for free; runs live
+    analysis only if ``live``. ``on_live`` (if given) is called right before a live
+    run and may return an error string to block it (used for rate limiting)."""
     from papermind.analyze import analyze as run_analyze
     from papermind.cache import latest_report_path, load_cached_report
     from papermind.config import load_config
@@ -260,25 +330,29 @@ def _report_for(source: str, model: str, live: bool, need: Optional[str] = None)
 
     source = (source or "").strip()
     if not source:
-        return None, "请输入 arXiv id / URL。"
+        return None, "请输入 arXiv id / URL。", False
     config = load_config()
     try:
         resolved = resolve(source, config)
     except PaperMindError as exc:
-        return None, str(exc)
+        return None, str(exc), False
 
     report_path = latest_report_path(resolved.cache_dir)
     report = load_cached_report(report_path) if report_path else None
     if report is not None and (need is None or getattr(report, need, None) is not None):
-        return report, None
+        return report, None, False  # cached -> free, no quota consumed
     if not live:
-        return None, "演示模式仅展示已缓存的论文。新论文请用 CLI 分析，或以 --live 启动服务。"
+        return None, "演示模式仅展示已缓存的论文。新论文请用 CLI 分析，或以 --live 启动服务。", False
+    if on_live is not None:
+        blocked = on_live()  # reserves a quota slot; returns a message if over the limit
+        if blocked:
+            return None, blocked, False
     try:
         # Web stays snappy: skip figure generation (the extra per-point model calls);
         # the report still has all four modules + formulas. Use CLI for figures.
-        return run_analyze(source, model=(model or None), config=config, with_figures=False), None
+        return run_analyze(source, model=(model or None), config=config, with_figures=False), None, True
     except PaperMindError as exc:
-        return None, str(exc)
+        return None, str(exc), True
 
 
 # --------------------------------------------------------------------------- #
