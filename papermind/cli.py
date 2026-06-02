@@ -146,21 +146,24 @@ def serve(
     rate_global: int = typer.Option(300, "--rate-global", help="Max live requests total per day (0 = unlimited)."),
     figures: bool = typer.Option(True, "--figures/--no-figures", help="Generate figures in reports (off = fastest/cheapest)."),
     svg_figures: bool = typer.Option(False, "--svg-figures", help="Use architecture-faithful teaching SVGs instead of Mermaid (heavier)."),
+    no_cache: bool = typer.Option(False, "--no-cache", help="Always re-analyze (never reuse cached reports). Costs more every time."),
 ) -> None:
     """Run the web service. Default is demo mode (cached reports only, key-safe).
 
     With --live, model-calling requests are rate-limited per IP and globally so a
     public deployment can't drain your API key (tune with --rate-per-ip / --rate-global).
     Figures default to Mermaid; --svg-figures upgrades to teaching SVGs (costs more).
+    --no-cache forces a fresh analysis on every request (no reuse; costs more).
     """
     from papermind.web import serve as run_serve
 
     mode = "[yellow]LIVE — 实时分析会用本机 key（有成本）[/yellow]" if live else "演示模式（仅展示已缓存论文，安全）"
     limits = f"  ·  限流 每IP {rate_per_ip}/天 · 全局 {rate_global}/天" if live else ""
-    console.print(f"[bold cyan]PaperMind web[/bold cyan]  →  http://{host}:{port}\n[dim]{mode}{limits}  ·  Ctrl-C 停止[/dim]")
+    nocache = "  ·  [yellow]不缓存（每次都重跑）[/yellow]" if no_cache else ""
+    console.print(f"[bold cyan]PaperMind web[/bold cyan]  →  http://{host}:{port}\n[dim]{mode}{limits}{nocache}  ·  Ctrl-C 停止[/dim]")
     try:
         run_serve(host=host, port=port, live=live, rate_per_ip=rate_per_ip, rate_global=rate_global,
-                  with_figures=figures, svg_figures=svg_figures)
+                  with_figures=figures, svg_figures=svg_figures, no_cache=no_cache)
     except PaperMindError as exc:
         raise _fail(str(exc))
 

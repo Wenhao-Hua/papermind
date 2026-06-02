@@ -114,7 +114,7 @@ def _quota_msg(scope: str, limiter: "RateLimiter") -> str:
 
 
 def create_app(live: bool = False, rate_per_ip: int = 8, rate_global: int = 300,
-               with_figures: bool = True, svg_figures: bool = False):
+               with_figures: bool = True, svg_figures: bool = False, no_cache: bool = False):
     try:
         from fastapi import Cookie, FastAPI, File, Form, Request, UploadFile
         from fastapi.responses import HTMLResponse
@@ -151,7 +151,8 @@ def create_app(live: bool = False, rate_per_ip: int = 8, rate_global: int = 300,
         if not src:
             return _page("/", _analyze_form(live, "请填入论文 URL（arXiv 链接或 PDF 直链），或上传 PDF。"), live)
         report, err, _ran = _report_for(src, model, live, on_live=lambda: gate(request),
-                                        with_figures=with_figures, svg_figures=svg_figures, refresh=bool(refresh))
+                                        with_figures=with_figures, svg_figures=svg_figures,
+                                        refresh=(no_cache or bool(refresh)))
         if err:
             return _page("/", _analyze_form(live, err), live)
         return report.to_html()
@@ -161,7 +162,7 @@ def create_app(live: bool = False, rate_per_ip: int = 8, rate_global: int = 300,
         if not source.strip():
             return _page("/", _analyze_form(live), live)
         report, err, _ran = _report_for(source, "", live, on_live=lambda: gate(request),
-                                        with_figures=with_figures, svg_figures=svg_figures)
+                                        with_figures=with_figures, svg_figures=svg_figures, refresh=no_cache)
         if err:
             return _page("/", _analyze_form(live, err), live)
         return report.to_html()
@@ -269,7 +270,8 @@ def create_app(live: bool = False, rate_per_ip: int = 8, rate_global: int = 300,
 
     @app.post("/reproduce", response_class=HTMLResponse)
     def reproduce_route(request: Request, source: str = Form(...), model: str = Form("")):
-        report, err, _ran = _report_for(source, model, live, need="reproduction", on_live=lambda: gate(request))
+        report, err, _ran = _report_for(source, model, live, need="reproduction",
+                                        on_live=lambda: gate(request), refresh=no_cache)
         if err:
             return _page("/reproduce", _reproduce_form(live, err), live)
         script = report.to_setup_script()
@@ -315,14 +317,14 @@ def create_app(live: bool = False, rate_per_ip: int = 8, rate_global: int = 300,
 
 def serve(host: str = "0.0.0.0", port: int = 8080, live: bool = False,
           rate_per_ip: int = 8, rate_global: int = 300,
-          with_figures: bool = True, svg_figures: bool = False) -> None:
+          with_figures: bool = True, svg_figures: bool = False, no_cache: bool = False) -> None:
     try:
         import uvicorn
     except ImportError as exc:  # pragma: no cover
         raise PaperMindError("Web demo 需要 uvicorn。安装：pip install 'paper-mind[web]'") from exc
     app = create_app(
         live=live, rate_per_ip=rate_per_ip, rate_global=rate_global,
-        with_figures=with_figures, svg_figures=svg_figures,
+        with_figures=with_figures, svg_figures=svg_figures, no_cache=no_cache,
     )
     uvicorn.run(app, host=host, port=port)
 
