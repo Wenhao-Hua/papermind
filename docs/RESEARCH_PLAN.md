@@ -191,10 +191,26 @@ visibly better; the numbers in the README.
 
 - **CN:** 面向学术论文的结构化理解与证据检索系统（含可训练的证据重排模块）
 - **EN:** PaperMind — Evidence-Grounded Scientific Paper Understanding & Retrieval
-- Bullets (fill numbers after experiments): end-to-end traceable paper Q&A
-  (parse → hybrid recall → **self-trained cross-encoder reranker** → grounded
-  layered answers); **built a QASPER-based dataset and fine-tuned an evidence
-  reranker**, +__ Evidence-F1 / +__ Recall@5 with a BM25/dense/reranker ablation;
-  verified citations + reproduction grounded in the paper's real code repo.
+- Bullets: end-to-end traceable paper Q&A (parse → hybrid recall →
+  **self-trained cross-encoder reranker** → grounded layered answers);
+  **built a QASPER dataset (19.4k pairs) and fine-tuned an evidence reranker**
+  that lifts retrieval on QASPER dev (888 Q, full-paper candidates)
+  **Recall@5 0.46→0.66, nDCG@10 0.41→0.61, MRR 0.40→0.61** over a dense
+  baseline, with a BM25/dense/reranker ablation; verified citations +
+  reproduction grounded in the paper's real code repo.
+
+## 12. Results (QASPER dev, 276 papers / 888 questions)
+
+Candidate set per question = all paragraphs of its paper. Reranker = fine-tuned
+`cross-encoder/ms-marco-MiniLM-L-6-v2`; dense = `all-MiniLM-L6-v2`. Full table in
+`evaluation/results/ablation.json`; reproduce with `python -m evaluation.eval_retrieval`.
+
+| method | Recall@1 | Recall@5 | Recall@10 | MRR | nDCG@10 | F1@5 |
+|---|---|---|---|---|---|---|
+| BM25 | 0.109 | 0.374 | 0.554 | 0.340 | 0.341 | 0.171 |
+| Dense | 0.141 | 0.456 | 0.643 | 0.401 | 0.413 | 0.215 |
+| Dense+Reranker | 0.307 | 0.657 | 0.787 | 0.611 | 0.607 | 0.311 |
+
+(F1@5 is a cutoff-based evidence F1, not the official QASPER evaluator.)
 - Tags: LLM · RAG · information retrieval / reranking · long-document
   understanding · structured extraction · trainable module · full-stack · eval.

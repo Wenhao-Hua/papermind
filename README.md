@@ -22,6 +22,26 @@ PaperMind 不是又一个「论文摘要器」。给它一篇 arXiv 论文，它
 - **复现指南基于论文的真实代码仓库。** 自动找到官方仓库（论文原文链接 / PapersWithCode），读取仓库里**真实的依赖文件与 README 运行命令**生成 `setup.sh`——不是模型凭空编的步骤。
 - **零配置可试，免费可跑。** `papermind demo` 离线看效果（无需 key）；装了 Ollama 加 `--local` 全本地零成本；没配 key 也会自动回退本地，并在缺东西时给出可操作的提示。
 
+## 📊 证据检索不是黑箱：自训练 reranker + 基准评测
+
+证据检索是本项目的一等模块——我们在 **QASPER**（论文问答+证据标注）上**自训练了一个 cross-encoder 重排器**，并在 dev 全集（276 篇 / 888 题，候选 = 该论文全部段落）做了 BM25 / 稠密 / 稠密+重排的消融：
+
+| 方法 | Recall@1 | Recall@5 | Recall@10 | MRR | nDCG@10 |
+| --- | --- | --- | --- | --- | --- |
+| BM25 | 0.109 | 0.374 | 0.554 | 0.340 | 0.341 |
+| Dense (MiniLM) | 0.141 | 0.456 | 0.643 | 0.401 | 0.413 |
+| **Dense + 自训练 Reranker** | **0.307** | **0.657** | **0.787** | **0.611** | **0.607** |
+
+重排器相对稠密基线 **Recall@5 +0.20、nDCG@10 +0.19、MRR +0.21、Recall@1 翻倍**。数据/训练/评测全部可复现：
+
+```bash
+python -m trainer.build_dataset          # QASPER -> 训练对（原始 JSON，无需 datasets）
+python -m trainer.train_reranker --epochs 2          # 微调 cross-encoder（单 GPU/Colab）
+python -m evaluation.eval_retrieval --reranker checkpoints/reranker   # 复现上表
+```
+
+> 训练管线见 [`trainer/`](trainer/) · 评测见 [`evaluation/`](evaluation/) · 设计与路线见 [`docs/RESEARCH_PLAN.md`](docs/RESEARCH_PLAN.md)。
+
 ## ✨ 能做什么
 
 | 命令 | 作用 |
