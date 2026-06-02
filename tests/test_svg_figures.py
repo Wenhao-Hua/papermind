@@ -22,6 +22,27 @@ def test_clean_svg_rejects_non_svg_and_malformed():
     assert _clean_svg("<svg><rect></svg>") == ""  # unclosed <rect> -> not well-formed -> dropped
 
 
+def test_clean_svg_strips_external_refs():
+    out = _clean_svg(
+        '<svg><image href="http://x/y.png"/><use xlink:href="#a"/>'
+        '<rect/><a href="https://evil"></a></svg>'
+    )
+    assert out and "<image" not in out and "<use" not in out
+    assert "href" not in out and "<rect" in out  # safe content survives
+
+
+def test_clean_svg_escapes_bare_ampersand():
+    # "Add & Norm" (raw &) is invalid XML; we escape it rather than drop the whole figure
+    # (this was the #1 reason SVGs silently fell back to Mermaid).
+    out = _clean_svg("<svg viewBox='0 0 10 10'><text>Add & Norm</text></svg>")
+    assert out and "Add &amp; Norm" in out
+
+
+def test_clean_svg_preserves_existing_entities():
+    out = _clean_svg("<svg viewBox='0 0 10 10'><text>a &amp; b &#8594; &#x2192;</text></svg>")
+    assert out and out.count("&amp;") == 1 and "&#8594;" in out and "&#x2192;" in out
+
+
 def test_svg_renders_inline_in_html_and_datauri_in_md():
     svg = "<svg viewBox='0 0 20 20'><rect width='20' height='20'/></svg>"
     report = Report(

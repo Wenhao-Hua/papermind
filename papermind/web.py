@@ -204,7 +204,7 @@ def _job_page(job_id: str, live: bool, tab: str = "/") -> str:
 
 
 def create_app(live: bool = False, rate_per_ip: int = 8, rate_global: int = 300,
-               with_figures: bool = True, svg_figures: bool = False, no_cache: bool = False):
+               with_figures: bool = True, svg_figures: bool = True, no_cache: bool = False):
     try:
         from fastapi import Cookie, FastAPI, File, Form, Request, UploadFile
         from fastapi.responses import HTMLResponse
@@ -457,7 +457,7 @@ def create_app(live: bool = False, rate_per_ip: int = 8, rate_global: int = 300,
 
 def serve(host: str = "0.0.0.0", port: int = 8080, live: bool = False,
           rate_per_ip: int = 8, rate_global: int = 300,
-          with_figures: bool = True, svg_figures: bool = False, no_cache: bool = False) -> None:
+          with_figures: bool = True, svg_figures: bool = True, no_cache: bool = False) -> None:
     try:
         import uvicorn
     except ImportError as exc:  # pragma: no cover

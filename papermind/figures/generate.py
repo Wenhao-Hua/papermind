@@ -65,9 +65,11 @@ def generate_image_diagrams(
 def generate_svg_diagrams(points: List[TechnicalPoint], client: LLMClient, context: str, on_notice=None) -> None:
     """Generate a self-contained, architecture-faithful teaching SVG per point.
 
-    Best-effort: invalid/unsafe output is dropped so the caller can fall back to
-    Mermaid. The SVG is validated (well-formed XML) and sanitized (no scripts /
-    event handlers / external refs) before it's stored.
+    Only points without a figure are processed, so an extracted *original* figure
+    (precedence: original > AI SVG) is never overwritten. Best-effort: invalid /
+    unsafe output is dropped (the point simply gets no figure — we never fall back
+    to a Mermaid flowchart). The SVG is validated (well-formed XML) and sanitized
+    (no scripts / event handlers / external refs) before it's stored.
     """
     todo = [p for p in points if p.figure is None]
     if not todo:
@@ -77,7 +79,10 @@ def generate_svg_diagrams(points: List[TechnicalPoint], client: LLMClient, conte
     def _gen(point):
         try:
             raw = client.complete(
-                SVG_FIGURE_SYSTEM, svg_figure_user(point.name, point.explanation, point.formula, ctx), max_tokens=3600
+                SVG_FIGURE_SYSTEM,
+                svg_figure_user(point.name, point.explanation, point.formula, ctx),
+                max_tokens=14000,
+                reasoning_effort="low",  # a thinking model would otherwise spend the whole budget reasoning
             )
         except LLMError:
             return None
@@ -141,8 +146,15 @@ def _clean_svg(value) -> str:
     svg = match.group(0)
     # Sanitize: reports are shared HTML, so drop anything executable/external.
     svg = re.sub(r"<script\b.*?</script>", "", svg, flags=re.DOTALL | re.IGNORECASE)
+    svg = re.sub(r"<image\b.*?(?:/>|</image>)", "", svg, flags=re.DOTALL | re.IGNORECASE)
+    svg = re.sub(r"<use\b.*?(?:/>|</use>)", "", svg, flags=re.DOTALL | re.IGNORECASE)
     svg = re.sub(r"""\son\w+\s*=\s*(["']).*?\1""", "", svg, flags=re.IGNORECASE | re.DOTALL)
-    svg = re.sub(r"""(?:xlink:)?href\s*=\s*(["'])\s*(?:javascript:|https?:|//).*?\1""", "", svg, flags=re.IGNORECASE)
+    # The teaching-SVG spec uses no href at all, so drop every href/xlink:href.
+    svg = re.sub(r"""\s(?:xlink:)?href\s*=\s*(["']).*?\1""", "", svg, flags=re.IGNORECASE | re.DOTALL)
+    # LLM-drawn SVGs routinely contain a raw "&" (e.g. "Add & Norm") which is invalid
+    # XML and was silently sinking the whole figure to the Mermaid fallback. Escape any
+    # "&" that isn't already a valid entity so well-formedness checks can pass.
+    svg = re.sub(r"&(?!(?:#\d+|#x[0-9a-fA-F]+|[A-Za-z][A-Za-z0-9]*);)", "&amp;", svg)
     try:
         import xml.etree.ElementTree as ET
 

@@ -90,9 +90,12 @@ class LLMClient:
         user: str,
         temperature: Optional[float] = None,
         max_tokens: Optional[int] = None,
+        reasoning_effort: Optional[str] = None,
     ) -> str:
         messages = [{"role": "system", "content": system}, {"role": "user", "content": user}]
-        return self._call(messages, temperature=temperature, max_tokens=max_tokens)
+        return self._call(
+            messages, temperature=temperature, max_tokens=max_tokens, reasoning_effort=reasoning_effort
+        )
 
     def complete_messages(
         self, messages: List[dict], temperature: Optional[float] = None, max_tokens: Optional[int] = None
@@ -231,6 +234,7 @@ class LLMClient:
         max_tokens: Optional[int] = None,
         json_mode: bool = False,
         on_delta: OnDelta = None,
+        reasoning_effort: Optional[str] = None,
     ) -> str:
         litellm = _import_litellm()
         kwargs = {
@@ -240,6 +244,13 @@ class LLMClient:
         }
         if max_tokens:
             kwargs["max_tokens"] = max_tokens
+        if reasoning_effort:
+            # Drawing needs little chain-of-thought; lowering reasoning frees the
+            # token budget for the (large) SVG body. Passed through as-is (NOT via
+            # drop_params, which would strip it for models litellm doesn't recognize
+            # — then a thinking model burns the whole budget and returns nothing).
+            # A model that genuinely rejects it surfaces as a caught LLMError (no figure).
+            kwargs["reasoning_effort"] = reasoning_effort
         if json_mode and _supports_json_mode(self.model):
             kwargs["response_format"] = {"type": "json_object"}
 

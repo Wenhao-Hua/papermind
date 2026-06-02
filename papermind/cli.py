@@ -145,15 +145,15 @@ def serve(
     rate_per_ip: int = typer.Option(8, "--rate-per-ip", help="Max live requests per IP per day (0 = unlimited)."),
     rate_global: int = typer.Option(300, "--rate-global", help="Max live requests total per day (0 = unlimited)."),
     figures: bool = typer.Option(True, "--figures/--no-figures", help="Generate figures in reports (off = fastest/cheapest)."),
-    svg_figures: bool = typer.Option(False, "--svg-figures", help="Use architecture-faithful teaching SVGs instead of Mermaid (heavier)."),
+    svg_figures: bool = typer.Option(True, "--svg-figures/--mermaid", help="Architecture-faithful teaching SVGs (default); --mermaid for legacy Mermaid flowcharts."),
     no_cache: bool = typer.Option(False, "--no-cache", help="Always re-analyze (never reuse cached reports). Costs more every time."),
 ) -> None:
     """Run the web service. Default is demo mode (cached reports only, key-safe).
 
     With --live, model-calling requests are rate-limited per IP and globally so a
     public deployment can't drain your API key (tune with --rate-per-ip / --rate-global).
-    Figures default to Mermaid; --svg-figures upgrades to teaching SVGs (costs more).
-    --no-cache forces a fresh analysis on every request (no reuse; costs more).
+    Figures default to architecture-faithful teaching SVGs (--mermaid for the legacy
+    flowcharts, --no-figures to skip). --no-cache forces a fresh analysis every request.
     """
     from papermind.web import serve as run_serve
 
@@ -180,7 +180,7 @@ def analyze(
     refresh: bool = typer.Option(False, "--refresh", help="Ignore cached result and re-analyze."),
     local: bool = typer.Option(False, "--local", help="Run fully local & free via Ollama (LLM + embeddings)."),
     image_figures: bool = typer.Option(False, "--image-figures", help="Use an image model for AI figures instead of Mermaid (needs `config set image-model`)."),
-    svg_figures: bool = typer.Option(False, "--svg-figures", help="Architecture-faithful teaching SVG diagrams (per technical point) instead of Mermaid."),
+    svg_figures: bool = typer.Option(True, "--svg-figures/--mermaid", help="Architecture-faithful teaching SVGs per technical point (default); --mermaid for legacy flowcharts."),
     open_report: bool = typer.Option(False, "--open", help="Open the HTML report in a browser when done."),
     estimate: bool = typer.Option(False, "--estimate", help="Estimate token cost and exit (no model calls)."),
 ) -> None:

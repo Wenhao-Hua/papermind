@@ -111,9 +111,12 @@ def analyze(
                 )
             if svg_figures:
                 # Architecture-faithful teaching SVGs, conditioned on the paper context.
+                # No Mermaid fallback here: with SVGs on we'd rather show no figure than
+                # a generic candy-colored flowchart.
                 generate_svg_diagrams(report.technical.details, client, context, on_notice=notice)
-            # Mermaid fills any point still without a figure (image/SVG failures included).
-            generate_diagrams(report.technical.details, client)
+            else:
+                # Legacy path (only when SVGs aren't requested): Mermaid fills any gap.
+                generate_diagrams(report.technical.details, client)
             advance("figures")
 
     report.usage = client.usage
