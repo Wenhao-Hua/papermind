@@ -45,6 +45,31 @@ def test_resolve_rejects_bare_id_requires_url():
             resolve(bad)  # bare ids no longer accepted; needs a URL or local PDF (no network hit)
 
 
+def test_resolve_arxiv_falls_back_to_pdf_when_metadata_throttled(monkeypatch, tmp_path):
+    # arXiv's metadata API 429s (cloud IPs get throttled) -> analysis must still proceed
+    # by downloading the PDF and inferring a title, not hard-fail the whole request.
+    from papermind.config import load_config
+    from papermind.errors import SourceError
+    from papermind.parser import arxiv as ax
+
+    monkeypatch.setenv("PAPERMIND_HOME", str(tmp_path))
+    cfg = load_config()
+
+    def _boom_metadata(arxiv_id):
+        raise SourceError("arXiv 请求失败（可能被限流）")
+
+    monkeypatch.setattr(ax, "_fetch_arxiv_metadata", _boom_metadata)
+    monkeypatch.setattr(ax, "_download_pdf", lambda url, dest: dest.write_bytes(b"%PDF-1.5 x"))
+    monkeypatch.setattr(ax, "_title_from_pdf", lambda pdf_path, url: "Adam: A Method for Stochastic Optimization")
+
+    resolved = ax._resolve_arxiv("1412.6980", cfg)
+    assert resolved.meta.title == "Adam: A Method for Stochastic Optimization"
+    assert resolved.meta.arxiv_id == "1412.6980"
+    assert resolved.pdf_path.exists()
+    # metadata.json must NOT be cached, so a later run retries the API once it recovers.
+    assert not (resolved.cache_dir / "metadata.json").exists()
+
+
 def test_detect_heading_numbered():
     assert _detect_heading("3.1 Tiling and Recomputation") == ("3.1", "Tiling and Recomputation")
     assert _detect_heading("2 Background") == ("2", "Background")

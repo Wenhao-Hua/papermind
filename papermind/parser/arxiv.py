@@ -220,17 +220,34 @@ def _resolve_arxiv(arxiv_id: str, config: Config) -> ResolvedSource:
     cache_dir = config.paper_cache(cache_key)
     pdf_path = cache_dir / "paper.pdf"
     meta_path = cache_dir / "metadata.json"
+    pdf_url = f"https://arxiv.org/pdf/{arxiv_id}.pdf"
 
+    meta: Optional[PaperMeta] = None
     if meta_path.exists():
         meta = PaperMeta(**json.loads(meta_path.read_text(encoding="utf-8")))
     else:
-        meta = _fetch_arxiv_metadata(arxiv_id)
-        meta_path.write_text(
-            json.dumps(meta.model_dump(), indent=2, ensure_ascii=False), encoding="utf-8"
-        )
+        try:
+            meta = _fetch_arxiv_metadata(arxiv_id)
+            meta_path.write_text(
+                json.dumps(meta.model_dump(), indent=2, ensure_ascii=False), encoding="utf-8"
+            )
+        except SourceError:
+            # arXiv's metadata API is unreachable or rate-limiting this IP (cloud hosts
+            # routinely get 429'd even with retries). The PDF lives on a different
+            # endpoint — fall back to downloading it and inferring the title, so analysis
+            # proceeds instead of hard-failing. metadata.json is intentionally NOT written,
+            # so a later run still retries the API once it recovers.
+            meta = None
 
     if not pdf_path.exists() or pdf_path.stat().st_size == 0:
-        _download_pdf(meta.pdf_url or f"https://arxiv.org/pdf/{arxiv_id}.pdf", pdf_path)
+        _download_pdf((meta.pdf_url if meta else None) or pdf_url, pdf_path)
+
+    if meta is None:
+        meta = PaperMeta(
+            title=_title_from_pdf(pdf_path, f"https://arxiv.org/abs/{arxiv_id}"),
+            arxiv_id=arxiv_id,
+            pdf_url=pdf_url,
+        )
 
     return ResolvedSource(meta=meta, pdf_path=pdf_path, cache_key=cache_key, cache_dir=cache_dir)
 
