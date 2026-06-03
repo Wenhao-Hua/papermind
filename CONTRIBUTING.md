@@ -21,6 +21,24 @@ pytest
 
 Please add a test alongside any new parsing rule, schema field, or answer-layering behavior.
 
+The web demo (`test_web.py`) needs the `web` extra — `pip install -e ".[dev,web]"`.
+
+## Running against a model
+
+Every provider is routed through `litellm`, so they're config, not code. Set a key
+(env var, or `papermind config set <name>-key ...`) and pick a model:
+
+| Provider | Key | Example model |
+| --- | --- | --- |
+| OpenAI (default) | `OPENAI_API_KEY` | `gpt-4o-mini` |
+| Anthropic | `ANTHROPIC_API_KEY` | `claude-3-5-sonnet-latest` |
+| DeepSeek | `DEEPSEEK_API_KEY` | `deepseek/deepseek-chat` |
+| Gemini | `GEMINI_API_KEY` | `gemini/gemini-2.5-flash` |
+| Local / free | — | `--local` (Ollama) |
+
+Override the model with `--model` / `PAPERMIND_MODEL` and embeddings with
+`PAPERMIND_EMBEDDING_MODEL`. `papermind demo` runs fully offline with no key.
+
 ## Architecture at a glance
 
 ```

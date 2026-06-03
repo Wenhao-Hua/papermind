@@ -23,4 +23,4 @@ jobs:
           python -m pip install --upgrade pip
           pip install -e ".[dev,web]"  # web extra so the FastAPI test_web suite runs (not skipped)
       - name: Run tests
-        run: pytest -q
+        run: pytest -q --cov=papermind --cov-report=term-missing
