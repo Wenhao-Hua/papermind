@@ -1,0 +1,118 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 960 680" font-family="'Segoe UI','PingFang SC','Microsoft YaHei',sans-serif">
+  <rect x="0" y="0" width="960" height="680" fill="#ffffff"/>
+
+  <!-- 标题 -->
+  <text x="480" y="36" font-size="20" font-weight="bold" fill="#1e293b" text-anchor="middle">FlashAttention-2 后向传播：仅使用 Logsumexp</text>
+
+  <!-- 核心公式框（视觉焦点） -->
+  <rect x="240" y="56" width="480" height="56" rx="6" fill="#eef2ff" stroke="#6366f1" stroke-width="2"/>
+  <text x="480" y="80" font-size="18" fill="#3730a3" text-anchor="middle" font-weight="bold">核心公式：Pᵢ⁽ʲ⁾ = exp(Sᵢ⁽ʲ⁾ − Lᵢ)</text>
+  <text x="480" y="100" font-size="13" fill="#334155" text-anchor="middle">其中 Lᵢ = mᵢ + log(ℓᵢ) 为 logsumexp，仅需每行块一个标量</text>
+
+  <!-- 左侧：标准 FlashAttention 后向（对比） -->
+  <rect x="40" y="140" width="400" height="240" rx="4" fill="#f8fafc" stroke="#cbd5e1" stroke-width="1.5"/>
+  <text x="240" y="166" font-size="15" font-weight="bold" fill="#1e293b" text-anchor="middle">FlashAttention 后向（旧）</text>
+
+  <!-- 旧方案：保存 m 和 ℓ -->
+  <rect x="60" y="184" width="360" height="44" rx="3" fill="#f1f5f9" stroke="#94a3b8" stroke-width="1"/>
+  <text x="240" y="204" font-size="13" fill="#334155" text-anchor="middle">前向保存：每行块最大值 mᵢ + 指数和 ℓᵢ</text>
+  <text x="240" y="220" font-size="12" fill="#64748b" text-anchor="middle">（两个标量 / 行块 → 2× 存储与 HBM 读写）</text>
+
+  <!-- 旧方案：后向恢复 -->
+  <rect x="60" y="244" width="360" height="44" rx="3" fill="#f1f5f9" stroke="#94a3b8" stroke-width="1"/>
+  <text x="240" y="264" font-size="13" fill="#334155" text-anchor="middle">后向恢复：Pᵢ⁽ʲ⁾ = exp(Sᵢ⁽ʲ⁾ − mᵢ) / ℓᵢ</text>
+  <text x="240" y="280" font-size="12" fill="#64748b" text-anchor="middle">需同时加载 mᵢ 和 ℓᵢ，增加 HBM 带宽压力</text>
+
+  <!-- 旧方案：存储开销示意 -->
+  <rect x="60" y="304" width="360" height="56" rx="3" fill="#f1f5f9" stroke="#94a3b8" stroke-width="1"/>
+  <text x="240" y="324" font-size="13" fill="#334155" text-anchor="middle">存储开销：每行块 2 个 float32</text>
+  <text x="240" y="344" font-size="12" fill="#64748b" text-anchor="middle">总存储 = 2 × 行块数 × 4 bytes</text>
+
+  <!-- 右侧：FlashAttention-2 后向（新） -->
+  <rect x="480" y="140" width="440" height="240" rx="4" fill="#f8fafc" stroke="#6366f1" stroke-width="1.5"/>
+  <text x="700" y="166" font-size="15" font-weight="bold" fill="#1e293b" text-anchor="middle">FlashAttention-2 后向（新）</text>
+
+  <!-- 新方案：仅保存 L -->
+  <rect x="500" y="184" width="400" height="44" rx="3" fill="#eef2ff" stroke="#6366f1" stroke-width="1"/>
+  <text x="700" y="204" font-size="13" fill="#3730a3" text-anchor="middle">前向仅保存：logsumexp Lᵢ = mᵢ + log(ℓᵢ)</text>
+  <text x="700" y="220" font-size="12" fill="#334155" text-anchor="middle">（一个标量 / 行块 → 存储减半）</text>
+
+  <!-- 新方案：后向恢复 -->
+  <rect x="500" y="244" width="400" height="44" rx="3" fill="#eef2ff" stroke="#6366f1" stroke-width="1"/>
+  <text x="700" y="264" font-size="13" fill="#3730a3" text-anchor="middle">后向恢复：Pᵢ⁽ʲ⁾ = exp(Sᵢ⁽ʲ⁾ − Lᵢ)</text>
+  <text x="700" y="280" font-size="12" fill="#334155" text-anchor="middle">只需加载 Lᵢ，减少 HBM 读写量</text>
+
+  <!-- 新方案：存储开销示意 -->
+  <rect x="500" y="304" width="400" height="56" rx="3" fill="#eef2ff" stroke="#6366f1" stroke-width="1"/>
+  <text x="700" y="324" font-size="13" fill="#3730a3" text-anchor="middle">存储开销：每行块 1 个 float32</text>
+  <text x="700" y="344" font-size="12" fill="#334155" text-anchor="middle">总存储 = 行块数 × 4 bytes（减半）</text>
+
+  <!-- 箭头：旧→新 对比指示 -->
+  <line x1="440" y1="260" x2="480" y2="260" stroke="#6366f1" stroke-width="2"/>
+  <polygon points="480,256 492,260 480,264" fill="#6366f1"/>
+
+  <!-- 下方：显式集合/映射 -->
+  <rect x="40" y="400" width="880" height="260" rx="4" fill="#f8fafc" stroke="#cbd5e1" stroke-width="1.5"/>
+  <text x="480" y="428" font-size="15" font-weight="bold" fill="#1e293b" text-anchor="middle">关键集合与映射（显式记号）</text>
+
+  <!-- 集合 S 和 P -->
+  <text x="100" y="462" font-size="14" fill="#1e293b" text-anchor="middle" font-weight="bold">S = {Sᵢ⁽ʲ⁾}</text>
+  <text x="100" y="482" font-size="12" fill="#64748b" text-anchor="middle">注意力分数矩阵</text>
+
+  <text x="300" y="462" font-size="14" fill="#1e293b" text-anchor="middle" font-weight="bold">L = {Lᵢ}</text>
+  <text x="300" y="482" font-size="12" fill="#64748b" text-anchor="middle">logsumexp 向量</text>
+
+  <text x="500" y="462" font-size="14" fill="#1e293b" text-anchor="middle" font-weight="bold">P = {Pᵢ⁽ʲ⁾}</text>
+  <text x="500" y="482" font-size="12" fill="#64748b" text-anchor="middle">概率矩阵（恢复后）</text>
+
+  <!-- 映射 f: S → P -->
+  <rect x="680" y="448" width="220" height="44" rx="3" fill="#eef2ff" stroke="#6366f1" stroke-width="1"/>
+  <text x="790" y="468" font-size="14" fill="#3730a3" text-anchor="middle">f: S → P</text>
+  <text x="790" y="484" font-size="12" fill="#334155" text-anchor="middle">Pᵢ⁽ʲ⁾ = exp(Sᵢ⁽ʲ⁾ − Lᵢ)</text>
+
+  <!-- 二部图：S 节点 → P 节点 -->
+  <!-- S 列 -->
+  <circle cx="100" cy="530" r="6" fill="#6366f1"/>
+  <text x="100" y="550" font-size="11" fill="#334155" text-anchor="middle">S₁</text>
+  <circle cx="100" cy="570" r="6" fill="#6366f1"/>
+  <text x="100" y="590" font-size="11" fill="#334155" text-anchor="middle">S₂</text>
+  <circle cx="100" cy="610" r="6" fill="#6366f1"/>
+  <text x="100" y="630" font-size="11" fill="#334155" text-anchor="middle">S₃</text>
+
+  <!-- L 节点 -->
+  <circle cx="300" cy="530" r="6" fill="#6366f1"/>
+  <text x="300" y="550" font-size="11" fill="#334155" text-anchor="middle">L₁</text>
+  <circle cx="300" cy="570" r="6" fill="#6366f1"/>
+  <text x="300" y="590" font-size="11" fill="#334155" text-anchor="middle">L₂</text>
+  <circle cx="300" cy="610" r="6" fill="#6366f1"/>
+  <text x="300" y="630" font-size="11" fill="#334155" text-anchor="middle">L₃</text>
+
+  <!-- P 列 -->
+  <circle cx="500" cy="530" r="6" fill="#6366f1"/>
+  <text x="500" y="550" font-size="11" fill="#334155" text-anchor="middle">P₁</text>
+  <circle cx="500" cy="570" r="6" fill="#6366f1"/>
+  <text x="500" y="590" font-size="11" fill="#334155" text-anchor="middle">P₂</text>
+  <circle cx="500" cy="610" r="6" fill="#6366f1"/>
+  <text x="500" y="630" font-size="11" fill="#334155" text-anchor="middle">P₃</text>
+
+  <!-- 连边：S → P（通过 L） -->
+  <line x1="106" y1="530" x2="294" y2="530" stroke="#94a3b8" stroke-width="1" stroke-dasharray="4,3"/>
+  <line x1="306" y1="530" x2="494" y2="530" stroke="#6366f1" stroke-width="1.5"/>
+  <line x1="106" y1="570" x2="294" y2="570" stroke="#94a3b8" stroke-width="1" stroke-dasharray="4,3"/>
+  <line x1="306" y1="570" x2="494" y2="570" stroke="#6366f1" stroke-width="1.5"/>
+  <line x1="106" y1="610" x2="294" y2="610" stroke="#94a3b8" stroke-width="1" stroke-dasharray="4,3"/>
+  <line x1="306" y1="610" x2="494" y2="610" stroke="#6366f1" stroke-width="1.5"/>
+
+  <!-- 图例 -->
+  <rect x="680" y="520" width="220" height="100" rx="3" fill="#f1f5f9" stroke="#cbd5e1" stroke-width="1"/>
+  <text x="790" y="542" font-size="12" font-weight="bold" fill="#1e293b" text-anchor="middle">图例</text>
+  <line x1="700" y1="560" x2="740" y2="560" stroke="#6366f1" stroke-width="1.5"/>
+  <text x="750" y="564" font-size="11" fill="#334155">前向映射（S→P）</text>
+  <line x1="700" y1="580" x2="740" y2="580" stroke="#94a3b8" stroke-width="1" stroke-dasharray="4,3"/>
+  <text x="750" y="584" font-size="11" fill="#334155">依赖 L 的中间映射</text>
+  <circle cx="720" cy="602" r="4" fill="#6366f1"/>
+  <text x="750" y="606" font-size="11" fill="#334155">节点：标量值</text>
+
+  <!-- 底部说明 -->
+  <text x="480" y="670" font-size="11" fill="#64748b" text-anchor="middle">FlashAttention-2 后向传播仅需保存 logsumexp Lᵢ，减少 HBM 存储与读写量约 50%</text>
+</svg>

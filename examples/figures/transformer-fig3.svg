@@ -1,0 +1,84 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 960 680" font-family="'Segoe UI','PingFang SC','Microsoft YaHei',sans-serif">
+  <rect x="0" y="0" width="960" height="680" fill="#ffffff"/>
+
+  <!-- 标题 -->
+  <text x="480" y="36" font-size="20" font-weight="700" fill="#1e293b" text-anchor="middle">Learning Rate Schedule in Transformer</text>
+  <text x="480" y="58" font-size="13" fill="#64748b" text-anchor="middle">Warmup then Decay (Inverse Square Root)</text>
+
+  <!-- 主公式框（核心视觉焦点） -->
+  <rect x="200" y="80" width="560" height="72" rx="4" fill="#eef2ff" stroke="#6366f1" stroke-width="2"/>
+  <text x="480" y="108" font-size="16" font-weight="700" fill="#3730a3" text-anchor="middle">lrate = d_model⁻⁰·⁵ · min(step_num⁻⁰·⁵, step_num · warmup_steps⁻¹·⁵)</text>
+  <text x="480" y="134" font-size="13" fill="#334155" text-anchor="middle">where d_model = 512, warmup_steps = 4000 (default in paper)</text>
+
+  <!-- 左侧主面板：学习率曲线示意 + 阶段标注 -->
+  <rect x="40" y="180" width="620" height="380" rx="4" fill="#f8fafc" stroke="#cbd5e1" stroke-width="1"/>
+  <text x="350" y="206" font-size="14" font-weight="600" fill="#1e293b" text-anchor="middle">Learning Rate vs. Training Step (Schematic)</text>
+
+  <!-- 坐标轴 -->
+  <line x1="80" y1="520" x2="620" y2="520" stroke="#475569" stroke-width="1.5"/>
+  <line x1="80" y1="240" x2="80" y2="520" stroke="#475569" stroke-width="1.5"/>
+
+  <!-- 坐标轴标签 -->
+  <text x="620" y="540" font-size="12" fill="#334155" text-anchor="end">Training Step</text>
+  <text x="60" y="380" font-size="12" fill="#334155" text-anchor="middle" transform="rotate(-90,60,380)">Learning Rate</text>
+
+  <!-- 刻度 -->
+  <text x="80" y="538" font-size="11" fill="#64748b" text-anchor="middle">0</text>
+  <text x="200" y="538" font-size="11" fill="#64748b" text-anchor="middle">warmup</text>
+  <text x="400" y="538" font-size="11" fill="#64748b" text-anchor="middle">10k</text>
+  <text x="600" y="538" font-size="11" fill="#64748b" text-anchor="middle">20k</text>
+
+  <!-- 曲线：warmup 线性上升 + 衰减 -->
+  <!-- warmup 段 (0~warmup_steps) 线性 -->
+  <line x1="80" y1="520" x2="200" y2="280" stroke="#6366f1" stroke-width="2.5"/>
+  <!-- 衰减段：用平滑 path 近似 -->
+  <path d="M 200 280 Q 280 310 360 370 Q 440 410 520 440 Q 580 455 620 465" fill="none" stroke="#6366f1" stroke-width="2.5"/>
+
+  <!-- 阶段标注 -->
+  <rect x="100" y="248" width="80" height="24" rx="3" fill="#eef2ff" stroke="#6366f1" stroke-width="1"/>
+  <text x="140" y="264" font-size="11" fill="#3730a3" text-anchor="middle">Warmup</text>
+
+  <rect x="280" y="340" width="80" height="24" rx="3" fill="#f1f5f9" stroke="#94a3b8" stroke-width="1"/>
+  <text x="320" y="364" font-size="11" fill="#334155" text-anchor="middle">Decay</text>
+
+  <!-- 虚线标注 warmup_steps 位置 -->
+  <line x1="200" y1="240" x2="200" y2="520" stroke="#94a3b8" stroke-width="1" stroke-dasharray="5,4"/>
+  <text x="200" y="236" font-size="11" fill="#64748b" text-anchor="middle">warmup_steps</text>
+
+  <!-- 右侧面板：公式拆解与图例 -->
+  <rect x="680" y="180" width="250" height="380" rx="4" fill="#f8fafc" stroke="#cbd5e1" stroke-width="1"/>
+  <text x="805" y="206" font-size="14" font-weight="600" fill="#1e293b" text-anchor="middle">Formula Breakdown</text>
+
+  <!-- 公式拆解：两段 -->
+  <text x="805" y="240" font-size="13" font-weight="600" fill="#3730a3" text-anchor="middle">Phase 1: Warmup (step &lt; warmup_steps)</text>
+  <text x="805" y="262" font-size="12" fill="#334155" text-anchor="middle">lrate = d_model⁻⁰·⁵ · step · warmup_steps⁻¹·⁵</text>
+  <text x="805" y="282" font-size="11" fill="#64748b" text-anchor="middle">Linear increase from 0 to peak</text>
+
+  <line x1="700" y1="296" x2="910" y2="296" stroke="#cbd5e1" stroke-width="1"/>
+
+  <text x="805" y="320" font-size="13" font-weight="600" fill="#3730a3" text-anchor="middle">Phase 2: Decay (step ≥ warmup_steps)</text>
+  <text x="805" y="342" font-size="12" fill="#334155" text-anchor="middle">lrate = d_model⁻⁰·⁵ · step⁻⁰·⁵</text>
+  <text x="805" y="362" font-size="11" fill="#64748b" text-anchor="middle">Inverse square root decay</text>
+
+  <line x1="700" y1="376" x2="910" y2="376" stroke="#cbd5e1" stroke-width="1"/>
+
+  <!-- 图例 -->
+  <text x="805" y="400" font-size="13" font-weight="600" fill="#1e293b" text-anchor="middle">Legend</text>
+
+  <line x1="710" y1="420" x2="760" y2="420" stroke="#6366f1" stroke-width="2.5"/>
+  <text x="770" y="424" font-size="12" fill="#334155">Learning rate schedule</text>
+
+  <line x1="710" y1="446" x2="760" y2="446" stroke="#94a3b8" stroke-width="1" stroke-dasharray="5,4"/>
+  <text x="770" y="450" font-size="12" fill="#334155">warmup_steps boundary</text>
+
+  <rect x="710" y="466" width="50" height="18" rx="2" fill="#eef2ff" stroke="#6366f1" stroke-width="1"/>
+  <text x="735" y="479" font-size="10" fill="#3730a3" text-anchor="middle">Warmup</text>
+
+  <rect x="710" y="492" width="50" height="18" rx="2" fill="#f1f5f9" stroke="#94a3b8" stroke-width="1"/>
+  <text x="735" y="505" font-size="10" fill="#334155" text-anchor="middle">Decay</text>
+
+  <!-- 底部说明：关键参数 -->
+  <rect x="40" y="580" width="890" height="60" rx="4" fill="#f1f5f9" stroke="#cbd5e1" stroke-width="1"/>
+  <text x="485" y="604" font-size="13" font-weight="600" fill="#1e293b" text-anchor="middle">Key Parameters (from paper Section 5.3)</text>
+  <text x="485" y="626" font-size="12" fill="#334155" text-anchor="middle">d_model = 512  ·  warmup_steps = 4000  ·  Peak lrate ≈ 0.0007 (at step 4000)</text>
+</svg>

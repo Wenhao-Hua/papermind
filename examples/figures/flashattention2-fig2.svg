@@ -1,0 +1,137 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 960 680" font-family="'Segoe UI','PingFang SC','Microsoft YaHei',sans-serif">
+  <rect x="0" y="0" width="960" height="680" fill="#ffffff"/>
+
+  <!-- 标题 -->
+  <text x="480" y="36" font-size="20" font-weight="700" fill="#1e293b" text-anchor="middle">FlashAttention-2: Block Size Tuning for Tile Dimensions</text>
+  <line x1="160" y1="48" x2="800" y2="48" stroke="#cbd5e1" stroke-width="1"/>
+
+  <!-- 核心指标/定义面板（视觉焦点） -->
+  <rect x="40" y="68" width="880" height="120" rx="6" fill="#eef2ff" stroke="#6366f1" stroke-width="2"/>
+  <text x="480" y="96" font-size="16" font-weight="700" fill="#3730a3" text-anchor="middle">Core Tuning Variables</text>
+
+  <!-- 公式：B_r 和 B_c -->
+  <text x="140" y="130" font-size="15" fill="#1e293b" text-anchor="middle">Tile sizes for Q and K/V:</text>
+  <text x="340" y="130" font-size="15" fill="#3730a3" font-weight="600" text-anchor="middle">B<tspan baseline-shift="sub" font-size="75%">r</tspan> = block rows (Q)</text>
+  <text x="540" y="130" font-size="15" fill="#3730a3" font-weight="600" text-anchor="middle">B<tspan baseline-shift="sub" font-size="75%">c</tspan> = block cols (K/V)</text>
+
+  <text x="140" y="160" font-size="14" fill="#334155" text-anchor="middle">Constraint: B<tspan baseline-shift="sub" font-size="75%">r</tspan> &#215; B<tspan baseline-shift="sub" font-size="75%">c</tspan> &#215; d ≤ shared memory limit</text>
+  <text x="480" y="160" font-size="14" fill="#334155" text-anchor="middle">Candidate set: {64, 128} (per head dim d)</text>
+
+  <!-- 左侧：分块大小与资源权衡图 -->
+  <rect x="40" y="208" width="440" height="240" rx="4" fill="#f8fafc" stroke="#e2e8f0" stroke-width="1"/>
+  <text x="260" y="234" font-size="14" font-weight="700" fill="#1e293b" text-anchor="middle">Trade-off: Block Size vs. Resource Pressure</text>
+
+  <!-- 小表格：B_r / B_c 对性能的影响 -->
+  <rect x="60" y="252" width="400" height="180" rx="2" fill="#ffffff" stroke="#cbd5e1" stroke-width="1"/>
+  <text x="260" y="274" font-size="13" font-weight="700" fill="#1e293b" text-anchor="middle">Impact of Block Size on Key Metrics</text>
+
+  <!-- 表头 -->
+  <line x1="60" y1="286" x2="460" y2="286" stroke="#cbd5e1" stroke-width="1"/>
+  <text x="130" y="304" font-size="12" font-weight="600" fill="#334155" text-anchor="middle">Block Size</text>
+  <text x="260" y="304" font-size="12" font-weight="600" fill="#334155" text-anchor="middle">Shared Mem Loads</text>
+  <text x="390" y="304" font-size="12" font-weight="600" fill="#334155" text-anchor="middle">Register Pressure</text>
+
+  <!-- 行1 -->
+  <line x1="60" y1="316" x2="460" y2="316" stroke="#e2e8f0" stroke-width="1"/>
+  <text x="130" y="334" font-size="12" fill="#1e293b" text-anchor="middle">Small (64)</text>
+  <text x="260" y="334" font-size="12" fill="#1e293b" text-anchor="middle">More (frequent I/O)</text>
+  <text x="390" y="334" font-size="12" fill="#1e293b" text-anchor="middle">Low</text>
+
+  <!-- 行2 -->
+  <line x1="60" y1="346" x2="460" y2="346" stroke="#e2e8f0" stroke-width="1"/>
+  <text x="130" y="364" font-size="12" fill="#1e293b" text-anchor="middle">Large (128)</text>
+  <text x="260" y="364" font-size="12" fill="#1e293b" text-anchor="middle">Fewer (less I/O)</text>
+  <text x="390" y="364" font-size="12" fill="#1e293b" text-anchor="middle">High (spill risk)</text>
+
+  <!-- 行3 -->
+  <line x1="60" y1="376" x2="460" y2="376" stroke="#e2e8f0" stroke-width="1"/>
+  <text x="130" y="394" font-size="12" fill="#1e293b" text-anchor="middle">Too large (&gt;128)</text>
+  <text x="260" y="394" font-size="12" fill="#64748b" text-anchor="middle">Minimal</text>
+  <text x="390" y="394" font-size="12" fill="#64748b" text-anchor="middle">Overflow (invalid)</text>
+
+  <!-- 右侧：分块映射与二部图 -->
+  <rect x="500" y="208" width="420" height="240" rx="4" fill="#f8fafc" stroke="#e2e8f0" stroke-width="1"/>
+  <text x="710" y="234" font-size="14" font-weight="700" fill="#1e293b" text-anchor="middle">Mapping: Q Blocks &#8594; K/V Blocks</text>
+
+  <!-- 二部图：左侧Q块，右侧K/V块 -->
+  <!-- Q块节点 -->
+  <circle cx="580" cy="280" r="14" fill="#eef2ff" stroke="#6366f1" stroke-width="1.5"/>
+  <text x="580" y="284" font-size="11" fill="#3730a3" text-anchor="middle" font-weight="600">Q<tspan baseline-shift="sub" font-size="75%">0</tspan></text>
+  <circle cx="580" cy="330" r="14" fill="#eef2ff" stroke="#6366f1" stroke-width="1.5"/>
+  <text x="580" y="334" font-size="11" fill="#3730a3" text-anchor="middle" font-weight="600">Q<tspan baseline-shift="sub" font-size="75%">1</tspan></text>
+  <circle cx="580" cy="380" r="14" fill="#eef2ff" stroke="#6366f1" stroke-width="1.5"/>
+  <text x="580" y="384" font-size="11" fill="#3730a3" text-anchor="middle" font-weight="600">Q<tspan baseline-shift="sub" font-size="75%">2</tspan></text>
+
+  <!-- K/V块节点 -->
+  <circle cx="840" cy="260" r="14" fill="#f1f5f9" stroke="#475569" stroke-width="1.5"/>
+  <text x="840" y="264" font-size="11" fill="#1e293b" text-anchor="middle" font-weight="600">K<tspan baseline-shift="sub" font-size="75%">0</tspan></text>
+  <circle cx="840" cy="310" r="14" fill="#f1f5f9" stroke="#475569" stroke-width="1.5"/>
+  <text x="840" y="314" font-size="11" fill="#1e293b" text-anchor="middle" font-weight="600">K<tspan baseline-shift="sub" font-size="75%">1</tspan></text>
+  <circle cx="840" cy="360" r="14" fill="#f1f5f9" stroke="#475569" stroke-width="1.5"/>
+  <text x="840" y="364" font-size="11" fill="#1e293b" text-anchor="middle" font-weight="600">K<tspan baseline-shift="sub" font-size="75%">2</tspan></text>
+  <circle cx="840" cy="410" r="14" fill="#f1f5f9" stroke="#475569" stroke-width="1.5"/>
+  <text x="840" y="414" font-size="11" fill="#1e293b" text-anchor="middle" font-weight="600">K<tspan baseline-shift="sub" font-size="75%">3</tspan></text>
+
+  <!-- 连边：Q0连K0,K1,K2,K3 -->
+  <line x1="594" y1="280" x2="826" y2="260" stroke="#94a3b8" stroke-width="1"/>
+  <line x1="594" y1="280" x2="826" y2="310" stroke="#94a3b8" stroke-width="1"/>
+  <line x1="594" y1="280" x2="826" y2="360" stroke="#94a3b8" stroke-width="1"/>
+  <line x1="594" y1="280" x2="826" y2="410" stroke="#94a3b8" stroke-width="1"/>
+
+  <!-- Q1连K0,K1,K2,K3（强调色加粗） -->
+  <line x1="594" y1="330" x2="826" y2="260" stroke="#6366f1" stroke-width="2.5"/>
+  <line x1="594" y1="330" x2="826" y2="310" stroke="#6366f1" stroke-width="2.5"/>
+  <line x1="594" y1="330" x2="826" y2="360" stroke="#6366f1" stroke-width="2.5"/>
+  <line x1="594" y1="330" x2="826" y2="410" stroke="#6366f1" stroke-width="2.5"/>
+
+  <!-- Q2连K0,K1,K2,K3 -->
+  <line x1="594" y1="380" x2="826" y2="260" stroke="#94a3b8" stroke-width="1"/>
+  <line x1="594" y1="380" x2="826" y2="310" stroke="#94a3b8" stroke-width="1"/>
+  <line x1="594" y1="380" x2="826" y2="360" stroke="#94a3b8" stroke-width="1"/>
+  <line x1="594" y1="380" x2="826" y2="410" stroke="#94a3b8" stroke-width="1"/>
+
+  <!-- 图注 -->
+  <text x="710" y="440" font-size="11" fill="#64748b" text-anchor="middle">Each Q block attends to all K/V blocks (full attention)</text>
+
+  <!-- 底部：手动调谐流程 -->
+  <rect x="40" y="468" width="880" height="140" rx="4" fill="#f1f5f9" stroke="#e2e8f0" stroke-width="1"/>
+  <text x="480" y="494" font-size="14" font-weight="700" fill="#1e293b" text-anchor="middle">Manual Tuning Procedure (per head dimension d)</text>
+
+  <!-- 流程步骤 -->
+  <rect x="70" y="512" width="160" height="44" rx="4" fill="#ffffff" stroke="#475569" stroke-width="1"/>
+  <text x="150" y="532" font-size="12" fill="#1e293b" text-anchor="middle">1. Set candidate</text>
+  <text x="150" y="548" font-size="12" fill="#1e293b" text-anchor="middle">B<tspan baseline-shift="sub" font-size="75%">r</tspan>, B<tspan baseline-shift="sub" font-size="75%">c</tspan> &#8712; {64, 128}</text>
+
+  <!-- 箭头1 -->
+  <line x1="230" y1="534" x2="270" y2="534" stroke="#475569" stroke-width="1.5"/>
+  <polygon points="270,530 280,534 270,538" fill="#475569"/>
+
+  <rect x="280" y="512" width="160" height="44" rx="4" fill="#ffffff" stroke="#475569" stroke-width="1"/>
+  <text x="360" y="532" font-size="12" fill="#1e293b" text-anchor="middle">2. Profile runtime</text>
+  <text x="360" y="548" font-size="12" fill="#1e293b" text-anchor="middle">&amp; memory usage</text>
+
+  <!-- 箭头2 -->
+  <line x1="440" y1="534" x2="480" y2="534" stroke="#475569" stroke-width="1.5"/>
+  <polygon points="480,530 490,534 480,538" fill="#475569"/>
+
+  <rect x="490" y="512" width="160" height="44" rx="4" fill="#ffffff" stroke="#475569" stroke-width="1"/>
+  <text x="570" y="532" font-size="12" fill="#1e293b" text-anchor="middle">3. Check register</text>
+  <text x="570" y="548" font-size="12" fill="#1e293b" text-anchor="middle">spill / overflow</text>
+
+  <!-- 箭头3 -->
+  <line x1="650" y1="534" x2="690" y2="534" stroke="#475569" stroke-width="1.5"/>
+  <polygon points="690,530 700,534 690,538" fill="#475569"/>
+
+  <rect x="700" y="512" width="160" height="44" rx="4" fill="#eef2ff" stroke="#6366f1" stroke-width="2"/>
+  <text x="780" y="532" font-size="12" fill="#3730a3" font-weight="600" text-anchor="middle">4. Select best</text>
+  <text x="780" y="548" font-size="12" fill="#3730a3" font-weight="600" text-anchor="middle">(min runtime)</text>
+
+  <!-- 图例 -->
+  <rect x="40" y="628" width="880" height="36" rx="2" fill="#f8fafc" stroke="#e2e8f0" stroke-width="1"/>
+  <text x="60" y="650" font-size="11" fill="#64748b">Legend:</text>
+  <line x1="120" y1="646" x2="150" y2="646" stroke="#94a3b8" stroke-width="1"/>
+  <text x="155" y="650" font-size="11" fill="#64748b">Default mapping</text>
+  <line x1="250" y1="646" x2="280" y2="646" stroke="#6366f1" stroke-width="2.5"/>
+  <text x="285" y="650" font-size="11" fill="#64748b">Selected block (Q<tspan baseline-shift="sub" font-size="75%">1</tspan>)</text>
+  <text x="430" y="650" font-size="11" fill="#64748b">|  B<tspan baseline-shift="sub" font-size="75%">r</tspan>, B<tspan baseline-shift="sub" font-size="75%">c</tspan> &#8712; {64, 128}  |  d = head dimension</text>
+</svg>

@@ -13,7 +13,7 @@
 -->
 <p align="center">
   <a href="examples/transformer.md"><b>▶ 看真实样例报告</b></a> ·
-  <a href="examples/README.md">Gallery</a>（GitHub 直接渲染，含 Mermaid 图）
+  <a href="examples/README.md">Gallery</a>（GitHub 直接渲染，含论文式示意图与读图讲解）
 </p>
 
 ## 三种用法，挑最方便的
