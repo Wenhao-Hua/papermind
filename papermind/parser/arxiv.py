@@ -267,14 +267,31 @@ def _fetch_arxiv_metadata(arxiv_id: str) -> PaperMeta:
 def _download_pdf(url: str, dest: Path) -> None:
     import httpx
 
+    from papermind.net import MAX_DOWNLOAD_BYTES, BlockedURLError, safe_stream
+
+    cap_mb = MAX_DOWNLOAD_BYTES // (1024 * 1024)
     try:
-        with httpx.stream(
-            "GET", url, headers={"User-Agent": USER_AGENT}, timeout=60.0, follow_redirects=True
-        ) as resp:
+        with safe_stream("GET", url, headers={"User-Agent": USER_AGENT}, timeout=60.0) as resp:
             resp.raise_for_status()
+            clen = resp.headers.get("content-length", "")
+            if clen.isdigit() and int(clen) > MAX_DOWNLOAD_BYTES:
+                raise SourceError(f"{url} 的 PDF 过大（>{cap_mb}MB），拒绝下载。")
+            total, first = 0, True
             with open(dest, "wb") as fh:
                 for chunk in resp.iter_bytes(chunk_size=65536):
+                    if first and chunk and not chunk.startswith(b"%PDF"):
+                        raise SourceError(f"{url} 看起来不是 PDF（可能是网页）。请提供 PDF 直链或 arXiv 链接。")
+                    first = False
+                    total += len(chunk)
+                    if total > MAX_DOWNLOAD_BYTES:
+                        raise SourceError(f"{url} 的 PDF 过大（>{cap_mb}MB），已中断下载。")
                     fh.write(chunk)
+    except SourceError:
+        dest.unlink(missing_ok=True)
+        raise
+    except BlockedURLError as exc:
+        dest.unlink(missing_ok=True)
+        raise SourceError(str(exc)) from exc
     except httpx.HTTPError as exc:
         dest.unlink(missing_ok=True)
         raise SourceError(f"从 {url} 下载 PDF 失败：{exc}") from exc

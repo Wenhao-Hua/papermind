@@ -185,10 +185,19 @@ class LLMClient:
         if url:
             import httpx
 
+            from papermind.net import MAX_DOWNLOAD_BYTES, BlockedURLError, safe_stream
+
             try:
-                r = httpx.get(url, timeout=60.0, follow_redirects=True)
-                r.raise_for_status()
-                return r.content
+                with safe_stream("GET", url, timeout=60.0) as r:
+                    r.raise_for_status()
+                    data = b""
+                    for chunk in r.iter_bytes(chunk_size=65536):
+                        data += chunk
+                        if len(data) > MAX_DOWNLOAD_BYTES:
+                            raise LLMError("Generated image is too large to download.")
+                    return data
+            except BlockedURLError as exc:
+                raise LLMError(f"Refused to download image from a blocked URL: {exc}") from exc
             except httpx.HTTPError as exc:
                 raise LLMError(f"Failed to download generated image: {exc}") from exc
         raise LLMError(f"Image response from {model!r} had neither b64_json nor url.")

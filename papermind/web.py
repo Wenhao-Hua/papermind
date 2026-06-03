@@ -15,12 +15,19 @@ picker — the active model is shown subtly in the footer.
 from __future__ import annotations
 
 import html as _html
+import os
 import secrets
 import threading
 import time
 from typing import Optional
 
-from papermind.errors import PaperMindError
+from papermind.errors import PaperMindError, SourceError
+
+# X-Forwarded-For / X-Real-IP are appended by the client and trivially forged, so
+# trusting them would let anyone reset their per-IP quota. Only cf-connecting-ip
+# (set and overwritten by Cloudflare) is trustworthy, and only when we're actually
+# deployed behind it — opt in with PAPERMIND_TRUST_PROXY=1.
+_TRUST_PROXY = os.getenv("PAPERMIND_TRUST_PROXY", "").strip().lower() in ("1", "true", "yes", "on")
 
 try:  # so route annotations (e.g. UploadFile) resolve under `from __future__ import annotations`
     from fastapi import Cookie, File, Form, Request, UploadFile  # noqa: F401
@@ -100,10 +107,10 @@ class RateLimiter:
 
 
 def _client_ip(request) -> str:
-    for header in ("cf-connecting-ip", "x-real-ip", "x-forwarded-for"):
-        value = request.headers.get(header)
-        if value:
-            return value.split(",")[0].strip()
+    if _TRUST_PROXY:
+        cf = request.headers.get("cf-connecting-ip")
+        if cf:
+            return cf.split(",")[0].strip()
     return request.client.host if getattr(request, "client", None) else "unknown"
 
 
@@ -258,7 +265,10 @@ def create_app(live: bool = False, rate_per_ip: int = 8, rate_global: int = 300,
     @app.post("/analyze", response_class=HTMLResponse)
     def analyze_route(request: Request, source: str = Form(""), model: str = Form(""),
                       refresh: str = Form(""), file: Optional[UploadFile] = File(None)):
-        src = _resolve_upload(source, file)
+        try:
+            src = _resolve_upload(source, file)
+        except PaperMindError as exc:
+            return _page("/", _analyze_form(live, str(exc)), live)
         if not src:
             return _page("/", _analyze_form(live, "请填入论文 URL（arXiv 链接或 PDF 直链），或上传 PDF。"), live)
         if not live:  # demo: only already-cached reports; never runs a model or hits the network
@@ -520,16 +530,28 @@ def _with_session(response, sid: str):
 
 
 def _resolve_upload(source: str, file) -> Optional[str]:
-    """An uploaded PDF (saved to a temp file) wins; otherwise the pasted id/URL."""
+    """An uploaded PDF (saved to a temp file) wins; otherwise the pasted id/URL.
+
+    The client-supplied ``file.filename`` is never used to build the path — it is
+    attacker-controlled (path traversal: ``../../x``) and collides across users
+    (two ``paper.pdf`` uploads would share a cache key and leak reports). We write
+    to a fresh random temp file and validate size + PDF magic first.
+    """
     if file is not None and getattr(file, "filename", ""):
-        import pathlib
         import tempfile
 
-        data = file.file.read()
+        from papermind.net import MAX_DOWNLOAD_BYTES
+
+        data = file.file.read(MAX_DOWNLOAD_BYTES + 1)
+        if len(data) > MAX_DOWNLOAD_BYTES:
+            raise SourceError(f"上传的 PDF 过大（>{MAX_DOWNLOAD_BYTES // (1024 * 1024)}MB）。")
         if data:
-            tmp = pathlib.Path(tempfile.gettempdir()) / f"papermind_{file.filename}"
-            tmp.write_bytes(data)
-            return str(tmp)
+            if not data.startswith(b"%PDF"):
+                raise SourceError("上传的文件不是 PDF。")
+            fd, tmp = tempfile.mkstemp(prefix="papermind_", suffix=".pdf")
+            with os.fdopen(fd, "wb") as fh:
+                fh.write(data)
+            return tmp
     return (source or "").strip() or None
 
 
