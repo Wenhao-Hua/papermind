@@ -159,9 +159,13 @@ def _get_job(jid: str):
         return dict(_JOBS[jid]) if jid in _JOBS else None
 
 
-def _start_job(work) -> str:
-    """Run ``work(job_id) -> html`` in a daemon thread; store result/error on the job."""
+def _start_job(work, kind: str = "analyze") -> str:
+    """Run ``work(job_id) -> html`` in a daemon thread; store result/error on the job.
+
+    ``kind`` ("analyze" | "ask") tells /result which tab/retry-form to render.
+    """
     jid = _new_job()
+    _set_job(jid, kind=kind)
 
     def run():
         try:
@@ -295,14 +299,17 @@ def create_app(live: bool = False, rate_per_ip: int = 8, rate_global: int = 300,
     @app.get("/result/{job_id}", response_class=HTMLResponse)
     def job_result(job_id: str):
         job = _get_job(job_id)
+        kind = (job or {}).get("kind", "analyze")
+        tab = "/ask" if kind == "ask" else "/"
+        form = _ask_form if kind == "ask" else _analyze_form
         if job is None:
             # job lost (server restarted / expired) -> give back a usable retry form
-            return _page("/", _analyze_form(live, "结果已过期或服务刚更新过，请重新分析。"), live)
+            return _page(tab, form(live, "结果已过期或服务刚更新过，请重新提交。"), live)
         if job["status"] == "done":
             return job["html"]
         if job["status"] == "error":
-            return _page("/", _analyze_form(live, job["error"]), live)
-        return _job_page(job_id, live, "/")  # still running -> keep polling
+            return _page(tab, form(live, job["error"]), live)
+        return _job_page(job_id, live, tab)  # still running -> keep polling
 
     # -- ask (multi-turn grounded Q&A) --------------------------------------- #
     @app.get("/ask", response_class=HTMLResponse)
@@ -323,8 +330,7 @@ def create_app(live: bool = False, rate_per_ip: int = 8, rate_global: int = 300,
         if not live:
             return _page("/ask", _ask_form(live, "演示模式不支持问答（需调用模型）。请以 --live 启动。"), live)
 
-        sid = pm_sid
-        sess = _session_for(sid)
+        sess = _session_for(pm_sid)
         prior = _chat_log_html(sess["log"]) if sess and sess.get("log") else ""
         if not source.strip() or not question.strip():
             return _page("/ask", prior + _ask_form(live, "请填写论文和问题。"), live)
@@ -333,28 +339,29 @@ def create_app(live: bool = False, rate_per_ip: int = 8, rate_global: int = 300,
         if blocked:
             return _page("/ask", prior + _ask_form(live, blocked), live)
 
-        from papermind.qa.chat import PaperChat
+        # Building the chat (download + parse + index) and answering can take tens of
+        # seconds on a fresh paper, which would blow Cloudflare's 100s origin timeout
+        # (524). Run it in a background job and return a polling page at once, like the
+        # other tabs. The result/error is rendered by /result (kind="ask").
+        sid = pm_sid or secrets.token_hex(8)
+        paper, q, md, mdl = source.strip(), question.strip(), mode, (model or None)
 
-        sid = sid or secrets.token_hex(8)
-        paper = source.strip()
-        if sess is None or sess.get("paper") != paper:
-            try:
-                sess = {"paper": paper, "chat": PaperChat(paper, model=(model or None), mode=mode), "log": []}
-            except PaperMindError as exc:
-                return _page("/ask", _ask_form(live, str(exc)), live)
-            prior = ""  # new paper -> fresh conversation
-        sess["chat"].mode = mode  # honor a mode change between turns
-        try:
-            answer = sess["chat"].ask(question.strip())
-        except PaperMindError as exc:
-            _store_session(sid, sess)
-            body = _chat_log_html(sess["log"]) + _ask_form(live, str(exc))
-            return _with_session(HTMLResponse(_page("/ask", body, live)), sid)
+        def work(jid):
+            from papermind.qa.chat import PaperChat
 
-        sess["log"].append((question.strip(), answer))
-        _store_session(sid, sess)
-        body = _chat_log_html(sess["log"]) + _ask_form(live)
-        return _with_session(HTMLResponse(_page("/ask", body, live)), sid)
+            sess2 = _session_for(sid)
+            if sess2 is None or sess2.get("paper") != paper:
+                _set_job(jid, step="下载并解析论文、建立索引…")
+                sess2 = {"paper": paper, "chat": PaperChat(paper, model=mdl, mode=md), "log": []}
+            sess2["chat"].mode = md  # honor a mode change between turns
+            _set_job(jid, step="检索原文并生成回答…")
+            answer = sess2["chat"].ask(q)
+            sess2["log"].append((q, answer))
+            _store_session(sid, sess2)
+            return _page("/ask", _chat_log_html(sess2["log"]) + _ask_form(live), live)
+
+        jid = _start_job(work, kind="ask")
+        return _with_session(HTMLResponse(_job_page(jid, live, "/ask")), sid)
 
     # -- summary -------------------------------------------------------------- #
     @app.get("/summary", response_class=HTMLResponse)

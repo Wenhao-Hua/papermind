@@ -218,6 +218,36 @@ def test_analyze_get_runs_async(monkeypatch):
     assert "GetPaper" in c.get(f"/result/{m.group(1)}").text
 
 
+def test_ask_live_runs_async_and_polls(monkeypatch):
+    import re
+
+    import papermind.qa.chat as chat_mod
+    from papermind.demo import build_demo_answer
+
+    class FakeChat:  # stands in for PaperChat (no download / parse / index / model)
+        def __init__(self, paper, model=None, mode="balanced"):
+            self.mode = mode
+
+        def ask(self, q):
+            return build_demo_answer()
+
+    monkeypatch.setattr(chat_mod, "PaperChat", FakeChat)
+    c = TestClient(create_app(live=True))
+
+    r = c.post("/ask", data={"source": "https://arxiv.org/abs/1706.03762",
+                             "question": "why scale by sqrt d_k?", "model": "", "mode": "balanced"})
+    assert r.status_code == 200
+    m = re.search(r"/job/([0-9a-f]+)", r.text)
+    assert m and "分析中" in r.text  # a polling page, NOT a blocking synchronous answer
+
+    jid = m.group(1)
+    assert _await_job(lambda j: c.get(f"/job/{j}").json(), jid)["status"] == "done"
+    res = c.get(f"/result/{jid}")
+    assert res.status_code == 200
+    assert "why scale by sqrt d_k?" in res.text  # the chat log (with our question) rendered
+    assert "action='/ask'" in res.text           # within the 问答 tab, ready for the next turn
+
+
 def test_async_analyze_gated_over_quota(monkeypatch):
     import papermind.analyze as analyze_mod
     from papermind.output.schema import PaperMeta, Report
