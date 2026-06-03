@@ -66,6 +66,12 @@ papermind = "papermind.cli:app"
 packages = ["papermind"]
 artifacts = ["papermind/assets/*.svg"]  # bundle the homepage hero figure into the wheel
 
+[tool.hatch.build.targets.sdist]
+# Keep the sdist lean. The gallery (examples/) is ~18 MB of original-paper images —
+# repo showcase, not package content; the wheel already ships only the papermind
+# package (+ assets/hero.svg). Tests + their helper packages stay in the sdist.
+exclude = ["examples", "docs", "/data", "/report", ".github"]
+
 [tool.pytest.ini_options]
 testpaths = ["tests"]
 addopts = "-q"
