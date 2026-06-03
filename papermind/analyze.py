@@ -118,12 +118,20 @@ def analyze(
                 # a generic candy-colored flowchart. A separate (typically fast, non-thinking)
                 # figure model can be configured to speed this up, at some cost to layout polish.
                 if config.figure_model:
+                    # A configured (typically fast, non-thinking) figure model: no reasoning, modest budget.
                     fig_client = LLMClient(model=config.figure_model, config=config, on_notice=notice)
                     generate_svg_diagrams(
-                        report.technical.details, fig_client, context, on_notice=notice, reasoning_effort=None
+                        report.technical.details, fig_client, context, on_notice=notice,
+                        reasoning_effort=None, max_tokens=18000,
                     )
                 else:
-                    generate_svg_diagrams(report.technical.details, client, context, on_notice=notice)
+                    # Default = the main model, usually a thinking model: keep reasoning minimal (else it
+                    # spends the whole budget deliberating over the layout rules and starves the SVG) and
+                    # give it ample headroom for reasoning + the SVG body.
+                    generate_svg_diagrams(
+                        report.technical.details, client, context, on_notice=notice,
+                        reasoning_effort="minimal", max_tokens=32000,
+                    )
             else:
                 # Legacy path (only when SVGs aren't requested): Mermaid fills any gap.
                 generate_diagrams(report.technical.details, client)

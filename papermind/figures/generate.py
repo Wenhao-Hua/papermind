@@ -74,7 +74,7 @@ def generate_image_diagrams(
 
 def generate_svg_diagrams(
     points: List[TechnicalPoint], client: LLMClient, context: str, on_notice=None,
-    reasoning_effort: Optional[str] = "low",
+    reasoning_effort: Optional[str] = "low", max_tokens: int = 18000,
 ) -> None:
     """Generate a self-contained, architecture-faithful teaching SVG per point.
 
@@ -94,8 +94,8 @@ def generate_svg_diagrams(
             raw = client.complete(
                 SVG_FIGURE_SYSTEM,
                 svg_figure_user(point.name, point.explanation, point.formula, ctx),
-                max_tokens=18000,  # headroom: a complete definition-forward SVG can run ~14k chars
-                reasoning_effort=reasoning_effort,  # "low" for thinking models; None for fast non-thinking ones
+                max_tokens=max_tokens,  # thinking models need more headroom (reasoning + the SVG body)
+                reasoning_effort=reasoning_effort,  # "minimal" for thinking models; None for fast non-thinking ones
             )
         except LLMError:
             return None
