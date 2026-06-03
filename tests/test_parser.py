@@ -165,3 +165,30 @@ def test_parse_pdf_dehyphenates_and_infers_title(monkeypatch, tmp_path):
     assert "attention" in joined and "atten- tion" not in joined  # hyphenated line-break merged
     assert "longrange" in joined                                  # second hyphenation merged
     assert parsed.meta.title == "A Great Title"                   # 'paper' placeholder -> inferred title
+
+
+def test_detect_heading_numbered_with_trailing_period():
+    from papermind.parser.pdf import _detect_heading
+
+    # PDF extraction often leaves a trailing period on a numbered heading line.
+    assert _detect_heading("3.1 Experiments.") == ("3.1", "Experiments")
+    assert _detect_heading("3.1 Experiments") == ("3.1", "Experiments")
+    assert _detect_heading("Abstract") == (None, "Abstract")
+    assert _detect_heading("We propose a transformer that does many useful things in this long sentence") is None
+
+
+def test_figures_digest_only_with_image_filters_caption_only():
+    from pathlib import Path
+
+    from papermind.output.schema import PaperMeta
+    from papermind.parser.pdf import ExtractedFigure, ParsedPaper
+
+    figs = [
+        ExtractedFigure(label="Figure 1", caption="has image", page=1, image_path="/tmp/a.png"),
+        ExtractedFigure(label="Figure 2", caption="caption only", page=2, image_path=None),
+    ]
+    parsed = ParsedPaper(meta=PaperMeta(title="T"), pages=["p"], blocks=[], sections=[],
+                         figures=figs, cache_dir=Path("."))
+    assert "Figure 1" in parsed.figures_digest() and "Figure 2" in parsed.figures_digest()
+    only = parsed.figures_digest(only_with_image=True)
+    assert "Figure 1" in only and "Figure 2" not in only  # caption-only figure excluded from matching

@@ -106,6 +106,15 @@ class RateLimiter:
             self._global += 1
             return True, ""
 
+    def release(self, ip: str) -> None:
+        """Give a slot back (a reserved request failed before producing any model output).
+        Guarded so a window rollover between take/release can't drive a counter negative."""
+        with self._lock:
+            if self._ip.get(ip, 0) > 0:
+                self._ip[ip] -= 1
+            if self._global > 0:
+                self._global -= 1
+
 
 def _client_ip(request) -> str:
     if _TRUST_PROXY:
@@ -355,18 +364,23 @@ def create_app(live: bool = False, rate_per_ip: int = 8, rate_global: int = 300,
         # (524). Run it in a background job and return a polling page at once, like the
         # other tabs. The result/error is rendered by /result (kind="ask").
         sid = pm_sid or secrets.token_hex(8)
+        ip = _client_ip(request)
         paper, q, md, mdl = source.strip(), question.strip(), mode, (model or None)
 
         def work(jid):
             from papermind.qa.chat import PaperChat
 
-            sess2 = _session_for(sid)
-            if sess2 is None or sess2.get("paper") != paper:
-                _set_job(jid, step="下载并解析论文、建立索引…")
-                sess2 = {"paper": paper, "chat": PaperChat(paper, model=mdl, mode=md), "log": []}
-            sess2["chat"].mode = md  # honor a mode change between turns
-            _set_job(jid, step="检索原文并生成回答…")
-            answer = sess2["chat"].ask(q)
+            try:
+                sess2 = _session_for(sid)
+                if sess2 is None or sess2.get("paper") != paper:
+                    _set_job(jid, step="下载并解析论文、建立索引…")
+                    sess2 = {"paper": paper, "chat": PaperChat(paper, model=mdl, mode=md), "log": []}
+                sess2["chat"].mode = md  # honor a mode change between turns
+                _set_job(jid, step="检索原文并生成回答…")
+                answer = sess2["chat"].ask(q)
+            except PaperMindError:
+                limiter.release(ip)  # the user got no answer -> refund their daily quota slot
+                raise
             sess2["log"].append((q, answer))
             _store_session(sid, sess2)
             return _page("/ask", _chat_log_html(sess2["log"]) + _ask_form(live), live)

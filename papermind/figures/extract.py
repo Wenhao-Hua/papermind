@@ -27,7 +27,7 @@ def match_original_figures(
     try:
         data = client.complete_json(
             FIGURE_MATCH_SYSTEM,
-            figure_match_user([p.name for p in points], parsed.figures_digest()),
+            figure_match_user([p.name for p in points], parsed.figures_digest(only_with_image=True)),
         )
     except LLMError:
         return

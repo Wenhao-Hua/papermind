@@ -73,11 +73,14 @@ class ParsedPaper:
             lines.append(f"- {prefix}{sec.title} (p.{sec.page})")
         return "\n".join(lines)
 
-    def figures_digest(self) -> str:
-        """One line per figure with its caption, for figure-matching prompts."""
-        return "\n".join(
-            f"- {fig.label} (p.{fig.page}): {fig.caption[:200]}" for fig in self.figures
-        )
+    def figures_digest(self, only_with_image: bool = False) -> str:
+        """One line per figure with its caption, for figure-matching prompts.
+
+        With ``only_with_image`` the digest lists only figures that have a saved image —
+        the only ones the matcher can actually attach. Otherwise the model may match a
+        point to a caption-only figure, which is then silently dropped (no figure at all)."""
+        figs = [f for f in self.figures if f.image_path] if only_with_image else self.figures
+        return "\n".join(f"- {fig.label} (p.{fig.page}): {fig.caption[:200]}" for fig in figs)
 
 
 def parse_pdf(
@@ -176,17 +179,15 @@ def _sorted_text_blocks(page) -> List[str]:
 
 def _detect_heading(text: str):
     """Return (number, title) if a block looks like a section heading, else None."""
-    # Headings are short single lines; skip long paragraphs.
-    if len(text) > 90 or text.endswith("."):
-        # A named heading can still be a short standalone line ending without a period.
-        named = _NAMED_HEADING.match(text)
-        if named and len(text) <= 90:
-            return (None, named.group(1).strip())
+    if len(text) > 90:  # headings are short single lines; skip long paragraphs
         return None
-    m = _NUMBERED_HEADING.match(text)
+    # PDF extraction sometimes appends a trailing period to a heading line
+    # ("3.1 Experiments."); strip one before matching so it isn't missed.
+    candidate = text[:-1] if text.endswith(".") else text
+    m = _NUMBERED_HEADING.match(candidate)
     if m:
         return (m.group(1), m.group(2).strip())
-    named = _NAMED_HEADING.match(text)
+    named = _NAMED_HEADING.match(candidate)
     if named:
         return (None, named.group(1).strip())
     return None

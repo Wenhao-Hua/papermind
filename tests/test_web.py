@@ -102,6 +102,18 @@ def test_rate_limiter_zero_means_unlimited_and_rollover():
     assert rl.take("a")[0] is True
 
 
+def test_rate_limiter_release_refunds_a_slot():
+    from papermind.web import RateLimiter
+
+    rl = RateLimiter(per_ip=1, global_max=10, window=9999)
+    assert rl.take("a")[0] is True
+    assert rl.take("a") == (False, "ip")  # quota used up
+    rl.release("a")                        # request failed before output -> refund
+    assert rl.take("a")[0] is True         # slot is available again
+    rl.release("a"); rl.release("a"); rl.release("a")  # never drives the counter negative
+    assert rl.take("a")[0] is True
+
+
 def _await_job(get_status, jid, tries=80):
     import time
 

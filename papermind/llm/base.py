@@ -308,9 +308,11 @@ class LLMClient:
                     on_delta(delta)
         except Exception as exc:  # noqa: BLE001
             if json_mode and "response_format" in stream_kwargs:
-                # Provider rejected json response_format under streaming; fall back.
+                # Provider rejected json response_format under streaming; fall back — but keep
+                # reasoning_effort, else a thinking model may burn the whole budget reasoning.
                 return self._call(
-                    kwargs["messages"], kwargs.get("temperature"), kwargs.get("max_tokens"), json_mode=False
+                    kwargs["messages"], kwargs.get("temperature"), kwargs.get("max_tokens"),
+                    json_mode=False, reasoning_effort=kwargs.get("reasoning_effort"),
                 )
             raise _wrap_llm_error(exc, self.model) from exc
 

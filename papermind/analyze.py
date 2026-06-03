@@ -58,7 +58,11 @@ def analyze(
     client = LLMClient(model=model, config=config, on_notice=notice)
 
     resolved = resolve(source, config)
-    fig_mode = ("svg" if svg_figures else "image" if image_figures else "mermaid") if with_figures else "off"
+    # image_figures and svg_figures aren't mutually exclusive (svg defaults on), so decide a
+    # single mode: image wins when usable, else svg, else mermaid. This keeps the cache key
+    # honest (an image run and an svg run don't collide on fig=svg) and avoids running both.
+    use_image = bool(image_figures and config.image_model)
+    fig_mode = ("off" if not with_figures else "image" if use_image else "svg" if svg_figures else "mermaid")
     cache_path = report_cache_path(resolved.cache_dir, client.model, modules, fig_mode)
     if not refresh:
         cached = load_cached_report(cache_path)
@@ -108,11 +112,11 @@ def analyze(
             from papermind.figures.generate import generate_diagrams, generate_image_diagrams, generate_svg_diagrams
 
             match_original_figures(report.technical.details, parsed, client)
-            if image_figures and config.image_model:
+            if use_image:
                 generate_image_diagrams(
                     report.technical.details, client, parsed.cache_dir, config.image_model, on_notice=notice
                 )
-            if svg_figures:
+            elif svg_figures:
                 # Architecture-faithful teaching SVGs, conditioned on the paper context.
                 # No Mermaid fallback here: with SVGs on we'd rather show no figure than
                 # a generic candy-colored flowchart. A separate (typically fast, non-thinking)

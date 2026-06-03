@@ -121,3 +121,18 @@ def test_pack_windows_bounds_size_and_splits_big_section():
     windows = _pack_windows([("BIG", "a" * 3500), ("small", "b" * 100)], budget=1000)
     assert all(len(text) <= 1000 for _, text in windows)
     assert len(windows) >= 4  # the oversized section is split into budget-sized pieces
+
+
+def test_verify_clears_out_of_range_technical_page():
+    from papermind.analyze import _verify_citations
+    from papermind.output.schema import TechnicalPoint, TechnicalSection
+
+    parsed = ParsedPaper(meta=PaperMeta(title="T"), pages=["p1", "p2"], blocks=[],
+                         sections=[], figures=[], cache_dir=Path("."))
+    report = Report(paper=parsed.meta, technical=TechnicalSection(details=[
+        TechnicalPoint(name="A", explanation="e", page=999),  # beyond the 2-page paper
+        TechnicalPoint(name="B", explanation="e", page=2),     # valid
+    ]))
+    _verify_citations(report, parsed)
+    assert report.technical.details[0].page is None  # out-of-range page cleared (no #page=999 deep link)
+    assert report.technical.details[1].page == 2      # valid page kept
