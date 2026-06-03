@@ -7,6 +7,7 @@ deterministic and offline.
 
 from __future__ import annotations
 
+import contextlib
 import io
 
 import pytest
@@ -147,3 +148,59 @@ def test_client_ip_trusts_only_cf_when_enabled(monkeypatch):
     # ...but a spoofable XFF alone is still ignored.
     req2 = _FakeRequest({"x-forwarded-for": "1.2.3.4"})
     assert web._client_ip(req2) == "203.0.113.9"
+
+
+# --------------------------------------------------------------------------- #
+# PDF download: atomic write, size cap, PDF-magic check (safe_stream stubbed)
+# --------------------------------------------------------------------------- #
+def _fake_stream(chunks, headers=None):
+    hdrs = headers or {}
+
+    @contextlib.contextmanager
+    def cm(method, url, **kw):
+        class _Resp:
+            def __init__(self):
+                self.headers = hdrs
+
+            def raise_for_status(self):
+                pass
+
+            def iter_bytes(self, chunk_size=65536):
+                yield from chunks
+
+        yield _Resp()
+
+    return cm
+
+
+def test_download_pdf_success_writes_atomically(monkeypatch, tmp_path):
+    from papermind.parser.arxiv import _download_pdf
+
+    monkeypatch.setattr(net, "safe_stream", _fake_stream([b"%PDF-1.4 ", b"rest of pdf"]))
+    dest = tmp_path / "paper.pdf"
+    _download_pdf("https://example.com/y.pdf", dest)
+    assert dest.read_bytes() == b"%PDF-1.4 rest of pdf"
+    assert not (tmp_path / "paper.pdf.part").exists()  # temp renamed away, nothing left behind
+
+
+def test_download_pdf_non_pdf_leaves_no_file(monkeypatch, tmp_path):
+    # A truncated/garbage download must NOT leave a paper.pdf that the size>0 / %PDF
+    # reuse checks would accept and feed to the parser.
+    from papermind.parser.arxiv import _download_pdf
+
+    monkeypatch.setattr(net, "safe_stream", _fake_stream([b"<html>not a pdf</html>"]))
+    dest = tmp_path / "paper.pdf"
+    with pytest.raises(SourceError):
+        _download_pdf("https://example.com/y.pdf", dest)
+    assert not dest.exists() and not (tmp_path / "paper.pdf.part").exists()
+
+
+def test_download_pdf_oversize_rejected(monkeypatch, tmp_path):
+    from papermind.parser.arxiv import _download_pdf
+
+    big = b"%PDF-1.4 " + b"x" * (net.MAX_DOWNLOAD_BYTES + 100)
+    monkeypatch.setattr(net, "safe_stream", _fake_stream([big]))
+    dest = tmp_path / "paper.pdf"
+    with pytest.raises(SourceError):
+        _download_pdf("https://example.com/y.pdf", dest)
+    assert not dest.exists()

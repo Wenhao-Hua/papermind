@@ -82,13 +82,20 @@ def _compared(r: Report) -> ComparedPaper:
     )
 
 
+def _has_compare_modules(r: Report) -> bool:
+    """Reuse a cached report for comparison only if it actually has the modules compare
+    reads. A partial run (e.g. `analyze --only contributions`) leaves reproduction/technical
+    empty, which would silently blank out the comparison's method/benchmark/hardware columns."""
+    return bool(r.contributions and r.technical and r.technical.details and r.reproduction)
+
+
 def _report_for(source: str, model: Optional[str], refresh: bool, console, config: Config) -> Report:
     resolved = resolve(source, config)
     if not refresh:
         report_path = latest_report_path(resolved.cache_dir)
         if report_path is not None:
             cached = load_cached_report(report_path)
-            if cached is not None and cached.contributions is not None:
+            if cached is not None and _has_compare_modules(cached):
                 return cached
 
     from papermind.analyze import analyze as run_analyze

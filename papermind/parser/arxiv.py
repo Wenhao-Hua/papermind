@@ -80,7 +80,9 @@ def search_arxiv(query: str, max_results: int = 10):
         if id_node is None or not id_node.text:
             continue
         m = re.search(r"abs/(.+)$", id_node.text.strip())
-        arxiv_id = m.group(1) if m else None
+        if not m:
+            continue  # non-standard <id> (no abs/ form) -> skip; else the web renders an abs/None dead link
+        arxiv_id = m.group(1)
         published = _text(entry.find("atom:published", ARXIV_ATOM_NS))
         year = int(published[:4]) if published[:4].isdigit() else None
         authors = [_text(a.find("atom:name", ARXIV_ATOM_NS)) for a in entry.findall("atom:author", ARXIV_ATOM_NS)]
@@ -90,7 +92,7 @@ def search_arxiv(query: str, max_results: int = 10):
                 arxiv_id=arxiv_id,
                 authors=[a for a in authors if a],
                 year=year,
-                pdf_url=f"https://arxiv.org/pdf/{arxiv_id}.pdf" if arxiv_id else None,
+                pdf_url=f"https://arxiv.org/pdf/{arxiv_id}.pdf",
             )
         )
     return results
@@ -270,6 +272,11 @@ def _download_pdf(url: str, dest: Path) -> None:
     from papermind.net import MAX_DOWNLOAD_BYTES, BlockedURLError, safe_stream
 
     cap_mb = MAX_DOWNLOAD_BYTES // (1024 * 1024)
+    # Download to a sibling .part and atomically rename on success: an interrupted
+    # download then leaves only the .part (never a truncated paper.pdf that the
+    # size>0 / %PDF-prefix reuse checks would accept and feed to the parser).
+    part = dest.with_name(dest.name + ".part")
+    part.unlink(missing_ok=True)  # clear any leftover from a previously interrupted run
     try:
         with safe_stream("GET", url, headers={"User-Agent": USER_AGENT}, timeout=60.0) as resp:
             resp.raise_for_status()
@@ -277,7 +284,7 @@ def _download_pdf(url: str, dest: Path) -> None:
             if clen.isdigit() and int(clen) > MAX_DOWNLOAD_BYTES:
                 raise SourceError(f"{url} 的 PDF 过大（>{cap_mb}MB），拒绝下载。")
             total, first = 0, True
-            with open(dest, "wb") as fh:
+            with open(part, "wb") as fh:
                 for chunk in resp.iter_bytes(chunk_size=65536):
                     if first and chunk and not chunk.startswith(b"%PDF"):
                         raise SourceError(f"{url} 看起来不是 PDF（可能是网页）。请提供 PDF 直链或 arXiv 链接。")
@@ -286,19 +293,18 @@ def _download_pdf(url: str, dest: Path) -> None:
                     if total > MAX_DOWNLOAD_BYTES:
                         raise SourceError(f"{url} 的 PDF 过大（>{cap_mb}MB），已中断下载。")
                     fh.write(chunk)
+        if part.stat().st_size == 0:
+            raise SourceError(f"从 {url} 下载到的是空 PDF。")
+        part.replace(dest)  # atomic on the same filesystem
     except SourceError:
-        dest.unlink(missing_ok=True)
+        part.unlink(missing_ok=True)
         raise
     except BlockedURLError as exc:
-        dest.unlink(missing_ok=True)
+        part.unlink(missing_ok=True)
         raise SourceError(str(exc)) from exc
     except httpx.HTTPError as exc:
-        dest.unlink(missing_ok=True)
+        part.unlink(missing_ok=True)
         raise SourceError(f"从 {url} 下载 PDF 失败：{exc}") from exc
-
-    if dest.stat().st_size == 0:
-        dest.unlink(missing_ok=True)
-        raise SourceError(f"从 {url} 下载到的是空 PDF。")
 
 
 def _text(node: Optional[ET.Element]) -> str:

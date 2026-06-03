@@ -69,6 +69,15 @@ def test_comparison_json_round_trip():
     assert "usage" not in data  # usage excluded from export
 
 
+def test_has_compare_modules_rejects_partial_report():
+    full = _report("F", "1", "c", "M", "2x")  # contributions + technical + reproduction
+    assert compare_mod._has_compare_modules(full) is True
+    # a partial `analyze --only contributions` cache would blank out method/benchmark/hardware
+    partial = Report(paper=PaperMeta(title="P", arxiv_id="2"),
+                     contributions=Contributions(main_contribution="c", novelty="n"))
+    assert compare_mod._has_compare_modules(partial) is False
+
+
 def test_compare_orchestration_reuses_mocked_analyze(monkeypatch):
     reports = {
         "arxiv:2307.08691": _report("FlashAttention-2", "2307.08691", "faster", "Tiling", "2.0x"),

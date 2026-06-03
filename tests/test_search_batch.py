@@ -50,6 +50,33 @@ def test_search_arxiv_parses_entries(monkeypatch):
     assert results[1].authors == ["Ashish Vaswani", "Noam Shazeer"]
 
 
+_ATOM_BAD_ID = """<?xml version="1.0" encoding="UTF-8"?>
+<feed xmlns="http://www.w3.org/2005/Atom">
+  <entry>
+    <id>http://arxiv.org/abs/2307.08691v1</id>
+    <title>Good Entry</title>
+    <published>2023-07-17T00:00:00Z</published>
+  </entry>
+  <entry>
+    <id>http://example.org/weird-nonstandard</id>
+    <title>No Abs Id</title>
+    <published>2020-01-01T00:00:00Z</published>
+  </entry>
+</feed>"""
+
+
+def test_search_arxiv_skips_entries_without_abs_id(monkeypatch):
+    from papermind.parser.arxiv import search_arxiv
+
+    class _R(_FakeResp):
+        text = _ATOM_BAD_ID
+
+    monkeypatch.setattr(httpx, "get", lambda *a, **k: _R())
+    results = search_arxiv("x")
+    assert [r.arxiv_id for r in results] == ["2307.08691v1"]  # the no-abs/ entry is dropped
+    assert all(r.pdf_url and "None" not in r.pdf_url for r in results)  # no abs/None dead link
+
+
 def test_search_command(monkeypatch):
     monkeypatch.setattr(httpx, "get", lambda *a, **k: _FakeResp())
     result = runner.invoke(app, ["search", "attention", "-n", "5"])
