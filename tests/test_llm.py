@@ -201,3 +201,11 @@ def test_wrap_error_install_hint_uses_pypi_name():
     msg = str(_wrap_llm_error(Exception("Invalid api key provided"), "gpt-4o"))
     assert "paper-mind[local-embeddings]" in msg
     assert "papermind[local-embeddings]" not in msg
+
+
+def test_wrap_error_redacts_leaked_api_key():
+    # A provider that echoes the offending key in its auth error must not leak it
+    # through our message (these errors are shown on the public web too).
+    leaked = "Incorrect API key provided: sk-abcd1234efgh5678ijkl. Check your key."
+    msg = str(_wrap_llm_error(Exception(leaked), "gpt-4o"))
+    assert "sk-abcd1234efgh5678ijkl" not in msg and "[REDACTED]" in msg

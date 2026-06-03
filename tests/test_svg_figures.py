@@ -31,6 +31,38 @@ def test_clean_svg_strips_external_refs():
     assert "href" not in out and "<rect" in out  # safe content survives
 
 
+def test_clean_svg_strips_foreignobject_keeps_sibling():
+    # <foreignObject> embeds XHTML that the browser parses as HTML -> stored injection.
+    # It must be removed, while a sibling safe element still renders.
+    out = _clean_svg(
+        "<svg viewBox='0 0 10 10'><rect width='10' height='10'/>"
+        "<foreignObject width='10' height='10'>"
+        "<div xmlns='http://www.w3.org/1999/xhtml'><iframe src='https://evil'></iframe></div>"
+        "</foreignObject></svg>"
+    )
+    assert out and "<rect" in out
+    assert "foreignObject" not in out.lower() and "<iframe" not in out and "<div" not in out
+
+
+def test_clean_svg_strips_style_block():
+    out = _clean_svg("<svg viewBox='0 0 10 10'><style>* {x:url(javascript:alert(1))}</style><rect/></svg>")
+    assert out and "<style" not in out.lower() and "<rect" in out
+
+
+def test_clean_svg_rejects_figure_when_breakout_survives_nesting():
+    # Nested tags defeat a single non-greedy regex strip; the parse-tree check must then
+    # drop the WHOLE figure rather than emit a partially-stripped one with live markup.
+    nested = (
+        "<svg viewBox='0 0 10 10'><rect/>"
+        "<foreignObject><foreignObject><div xmlns='http://www.w3.org/1999/xhtml'>x</div>"
+        "</foreignObject></foreignObject></svg>"
+    )
+    out = _clean_svg(nested)
+    assert out == "" or "foreignObject" not in out  # never ship surviving breakout markup
+    # the robust outcome is a full drop:
+    assert _clean_svg(nested) == ""
+
+
 def test_clean_svg_converts_html_sub_sup_to_tspan():
     # HTML <sub>/<sup> are "breakout" tags: in an inline <svg> the browser's HTML parser
     # closes the SVG early and the rest of the figure spills out as text. Convert to <tspan>.

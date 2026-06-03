@@ -185,6 +185,19 @@ def _clean_mermaid(value) -> str:
     return text
 
 
+# SVG elements that can execute script or break out into HTML when the figure is
+# inlined into the shared report — none are used by the teaching SVGs.
+_SVG_FORBIDDEN_TAGS = {
+    "script", "foreignobject", "style", "animate", "animatetransform",
+    "animatemotion", "set", "image", "use", "iframe", "object", "embed", "handler",
+}
+
+
+def _local_name(tag: str) -> str:
+    """Strip an XML namespace ('{ns}rect' -> 'rect') and lowercase."""
+    return tag.rsplit("}", 1)[-1].lower()
+
+
 def _clean_svg(value) -> str:
     """Extract a single <svg> element, strip scripts/handlers/external refs, and
     require it to be well-formed XML. Returns '' if anything is off."""
@@ -202,6 +215,11 @@ def _clean_svg(value) -> str:
     svg = re.sub(r"<script\b.*?</script>", "", svg, flags=re.DOTALL | re.IGNORECASE)
     svg = re.sub(r"<image\b.*?(?:/>|</image>)", "", svg, flags=re.DOTALL | re.IGNORECASE)
     svg = re.sub(r"<use\b.*?(?:/>|</use>)", "", svg, flags=re.DOTALL | re.IGNORECASE)
+    # <foreignObject> embeds XHTML the browser parses as HTML (arbitrary-markup injection in a
+    # shared/online report); <style> injects page-wide CSS. Neither is used by the teaching SVGs
+    # — strip them (the parse-tree check below rejects any that survive via nesting tricks).
+    svg = re.sub(r"<foreignObject\b.*?</foreignObject>", "", svg, flags=re.DOTALL | re.IGNORECASE)
+    svg = re.sub(r"<style\b.*?</style>", "", svg, flags=re.DOTALL | re.IGNORECASE)
     svg = re.sub(r"""\son\w+\s*=\s*(["']).*?\1""", "", svg, flags=re.IGNORECASE | re.DOTALL)
     # The teaching-SVG spec uses no href at all, so drop every href/xlink:href.
     svg = re.sub(r"""\s(?:xlink:)?href\s*=\s*(["']).*?\1""", "", svg, flags=re.IGNORECASE | re.DOTALL)
@@ -222,9 +240,17 @@ def _clean_svg(value) -> str:
     try:
         import xml.etree.ElementTree as ET
 
-        ET.fromstring(svg)  # must be well-formed
+        root = ET.fromstring(svg)  # must be well-formed
     except Exception:  # noqa: BLE001
         return ""
+    # Defense in depth: if any executable/breakout element or event/href attribute survived the
+    # strips above (e.g. via nested tags that defeat a non-greedy regex), drop the whole figure
+    # rather than risk injecting it into the shared report HTML.
+    for el in root.iter():
+        if _local_name(el.tag) in _SVG_FORBIDDEN_TAGS:
+            return ""
+        if any(_local_name(a).startswith("on") or _local_name(a) == "href" for a in el.attrib):
+            return ""
     # Give the root explicit width/height (from viewBox). Without them a browser renders
     # the SVG at a tiny default size when it's an <img>/standalone file (e.g. the relative
     # SVGs in examples/ on GitHub). Inline in the report it stays responsive (CSS sets

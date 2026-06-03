@@ -148,14 +148,17 @@ def test_analyze_live_runs_async_and_polls(monkeypatch):
     assert "FakePaper" in client.get(f"/result/{jid}").text
 
 
-def test_start_job_generic_exception_is_prefixed():
+def test_start_job_generic_exception_is_not_leaked():
     from papermind.web import _get_job, _start_job
 
     def boom(j):
-        raise ValueError("kaboom")
+        raise ValueError("C:/Users/x/.papermind secret-internal kaboom")
 
     j = _await_job(_get_job, _start_job(boom))
-    assert j["status"] == "error" and j["error"].startswith("分析出错") and "kaboom" in j["error"]
+    assert j["status"] == "error"
+    # an unexpected error's internals (paths/URLs/etc.) must NOT reach the public page
+    assert "kaboom" not in j["error"] and "secret-internal" not in j["error"]
+    assert "请稍后重试" in j["error"]  # a fixed, safe message instead
 
 
 def test_eviction_keeps_running_drops_finished():
@@ -171,6 +174,65 @@ def test_eviction_keeps_running_drops_finished():
         assert web._get_job(run_ids[0]) is None
         assert all(web._get_job(i) is not None for i in run_ids[1:])
         assert web._get_job(extra) is not None
+    finally:
+        with web._JOBS_LOCK:
+            web._JOBS.clear()
+            web._JOBS.update(saved)
+
+
+def test_job_ts_refreshed_on_completion_so_ttl_counts_from_done():
+    import time
+
+    import papermind.web as web
+
+    with web._JOBS_LOCK:
+        saved = dict(web._JOBS)
+        web._JOBS.clear()
+    try:
+        jid = web._new_job()
+        with web._JOBS_LOCK:
+            web._JOBS[jid]["ts"] = time.time() - 10_000  # pretend it was created long ago
+        web._set_job(jid, status="done", html="<x>")  # completion must refresh ts
+        web._new_job()  # triggers the reclaim sweep
+        assert web._get_job(jid) is not None  # survives: TTL is measured from completion, not creation
+    finally:
+        with web._JOBS_LOCK:
+            web._JOBS.clear()
+            web._JOBS.update(saved)
+
+
+def test_hung_running_job_is_timed_out():
+    import time
+
+    import papermind.web as web
+
+    with web._JOBS_LOCK:
+        saved = dict(web._JOBS)
+        web._JOBS.clear()
+    try:
+        jid = web._new_job()
+        with web._JOBS_LOCK:
+            web._JOBS[jid]["ts"] = time.time() - (web._JOBS_RUNNING_MAX + 60)  # stuck running too long
+        web._new_job()  # the sweep marks the hung job as timed out (now reclaimable)
+        j = web._get_job(jid)
+        assert j["status"] == "error" and "超时" in j["error"]
+    finally:
+        with web._JOBS_LOCK:
+            web._JOBS.clear()
+            web._JOBS.update(saved)
+
+
+def test_jobs_bounded_even_when_all_running():
+    import papermind.web as web
+
+    with web._JOBS_LOCK:
+        saved = dict(web._JOBS)
+        web._JOBS.clear()
+    try:
+        for _ in range(web._JOBS_MAX + 5):  # all fresh/running, well over capacity
+            web._new_job()
+        with web._JOBS_LOCK:
+            assert len(web._JOBS) <= web._JOBS_MAX  # bounded: oldest running is dropped, never unbounded
     finally:
         with web._JOBS_LOCK:
             web._JOBS.clear()

@@ -17,6 +17,7 @@ from __future__ import annotations
 import html as _html
 import os
 import secrets
+import sys
 import threading
 import time
 from typing import Optional
@@ -128,29 +129,38 @@ def _quota_msg(scope: str, limiter: "RateLimiter") -> str:
 _JOBS: dict = {}
 _JOBS_LOCK = threading.Lock()
 _JOBS_MAX = 64
-_JOBS_TTL = 1800  # keep a finished job's result reachable for 30 min
+_JOBS_TTL = 1800  # keep a finished job's result reachable for 30 min (counted from completion)
+_JOBS_RUNNING_MAX = 900  # a job still "running" after 15 min is treated as hung -> timed out
 
 
 def _new_job() -> str:
     jid = secrets.token_hex(8)
     with _JOBS_LOCK:
         now = time.time()
-        # reclaim finished jobs past their TTL (never touch running ones)
-        for k in [k for k, v in _JOBS.items() if v["status"] in ("done", "error") and now - v["ts"] > _JOBS_TTL]:
-            _JOBS.pop(k, None)
-        _JOBS[jid] = {"status": "running", "step": "开始", "html": "", "error": "", "ts": now}
-        # over capacity: evict the oldest FINISHED job only — never drop an in-flight analysis
+        for k, v in list(_JOBS.items()):
+            age = now - v["ts"]
+            if v["status"] in ("done", "error"):
+                if age > _JOBS_TTL:  # result expired -> reclaim
+                    _JOBS.pop(k, None)
+            elif age > _JOBS_RUNNING_MAX:  # stuck running far too long -> mark timed out (now evictable)
+                v.update(status="error", error="分析超时，请稍后重试，或本地运行（pip install paper-mind）。", ts=now)
+        _JOBS[jid] = {"status": "running", "step": "开始", "html": "", "error": "", "kind": "analyze", "ts": now}
+        # over capacity: drop the oldest finished job; only if there are none (sustained overload)
+        # fall back to dropping the oldest running job, so _JOBS can never grow without bound.
         while len(_JOBS) > _JOBS_MAX:
-            victim = next((k for k, v in _JOBS.items() if v["status"] in ("done", "error")), None)
-            if victim is None:
+            finished = [(k, v["ts"]) for k, v in _JOBS.items() if v["status"] in ("done", "error")]
+            pool = finished or [(k, v["ts"]) for k, v in _JOBS.items() if k != jid]
+            if not pool:
                 break
-            _JOBS.pop(victim)
+            _JOBS.pop(min(pool, key=lambda kv: kv[1])[0], None)
     return jid
 
 
 def _set_job(jid: str, **kw) -> None:
     with _JOBS_LOCK:
         if jid in _JOBS:
+            if kw.get("status") in ("done", "error"):
+                kw.setdefault("ts", time.time())  # TTL is measured from completion, not creation
             _JOBS[jid].update(kw)
 
 
@@ -171,9 +181,10 @@ def _start_job(work, kind: str = "analyze") -> str:
         try:
             _set_job(jid, status="done", html=work(jid))
         except PaperMindError as exc:
-            _set_job(jid, status="error", error=str(exc))
-        except Exception as exc:  # noqa: BLE001 - surface any failure to the poller
-            _set_job(jid, status="error", error=f"分析出错：{exc}")
+            _set_job(jid, status="error", error=str(exc))  # curated, user-facing message
+        except Exception as exc:  # noqa: BLE001 - unexpected: log internally, never echo to the public page
+            print(f"[papermind] job {jid} ({kind}) failed: {exc!r}", file=sys.stderr)
+            _set_job(jid, status="error", error="分析失败，请稍后重试，或本地运行（pip install paper-mind）。")
 
     threading.Thread(target=run, daemon=True).start()
     return jid

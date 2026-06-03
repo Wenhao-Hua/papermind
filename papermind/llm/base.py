@@ -475,8 +475,17 @@ def _extract(text: str, pattern: re.Pattern) -> Optional[str]:
     return m.group(0) if m else None
 
 
+# Some providers echo the offending API key / bearer token in an auth error; never
+# let that reach a user-facing message (these errors are shown on the public web too).
+_SECRET_RE = re.compile(r"\b(?:sk|pk|rk)[-_][A-Za-z0-9]{12,}\b|\bBearer\s+[A-Za-z0-9._-]{12,}\b", re.IGNORECASE)
+
+
+def _redact_secrets(s: str) -> str:
+    return _SECRET_RE.sub("[REDACTED]", s)
+
+
 def _wrap_llm_error(exc: Exception, model: str) -> LLMError:
-    msg = str(exc)
+    msg = _redact_secrets(str(exc))
     low = msg.lower()
     if model.lower().startswith(_KEYLESS_PREFIXES):  # local / Ollama
         if any(s in low for s in ("connection", "connect", "refused", "max retries", "timed out", "timeout")):
