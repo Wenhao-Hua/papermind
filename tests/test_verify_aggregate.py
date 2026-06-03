@@ -34,6 +34,22 @@ def test_verify_items_flags_and_snaps_sources():
     assert not fabricated.verified
 
 
+def test_fabricated_quote_from_paper_vocabulary_is_not_verified():
+    # The trust-critical case: a hallucinated sentence built from the paper's OWN
+    # words must NOT be marked verified. An unordered word-overlap match false-
+    # positived here; the order-aware contiguous match rejects it.
+    chunks = [Chunk(
+        idx=0,
+        text="we propose the transformer based solely on attention mechanisms dispensing with recurrence and convolutions",
+        section="1", page=1,
+    )]
+    fake = Source(text="the transformer applies a convolutional recurrence module before the attention mechanism for speed")
+    real = Source(text="based solely on attention mechanisms dispensing with recurrence")
+    verify_items([fake, real], chunks)
+    assert not fake.verified   # reuses 'transformer/attention/convolution/recurrence' but is absent -> must fail
+    assert real.verified       # a genuine contiguous quote still verifies
+
+
 def test_verify_citations_runs_over_report():
     from papermind.analyze import _verify_citations
 
