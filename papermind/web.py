@@ -263,7 +263,7 @@ def create_app(live: bool = False, rate_per_ip: int = 8, rate_global: int = 300,
     # -- analyze -------------------------------------------------------------- #
     @app.get("/", response_class=HTMLResponse)
     def index():
-        return _page("/", _analyze_form(live), live)
+        return _page("/", _hero() + _analyze_form(live), live)
 
     def _analyze_async(request, src, model, refresh):
         """Live analysis -> background job + polling page (avoids the 100s timeout).
@@ -551,6 +551,7 @@ def _session_for(sid: Optional[str]):
 
 def _store_session(sid: str, sess: dict) -> None:
     with _ASK_LOCK:
+        _ASK_SESSIONS.pop(sid, None)  # re-insert at the end: evict by least-recently-stored, not creation order
         _ASK_SESSIONS[sid] = sess
         while len(_ASK_SESSIONS) > _ASK_MAX_SESSIONS:
             _ASK_SESSIONS.pop(next(iter(_ASK_SESSIONS)))
@@ -616,6 +617,17 @@ body{margin:0;background:var(--paper);color:var(--ink);font:16px/1.7 var(--sans)
   padding-bottom:13px;border-bottom:2px solid transparent;transition:color .15s,border-color .15s}
 .pm-nav a:hover{color:var(--ink)}
 .pm-nav a.on{color:var(--accent);border-bottom-color:var(--accent)}
+.hero{padding:6px 0 22px}
+.hero-h{font:600 2.6rem/1.12 var(--serif);letter-spacing:-.02em;margin:.1em 0 .32em}
+.hero-sub{color:var(--soft);font-size:1.05rem;max-width:58ch;margin:0 0 18px}
+.hero-mods{display:flex;flex-wrap:wrap;gap:9px;margin:0 0 22px}
+.hero-mods span{font-size:.85rem;background:var(--accent-soft);border:1px solid var(--line);
+  border-radius:999px;padding:5px 13px}
+.hero-fig{margin:0;background:var(--surface);border:1px solid var(--line);border-radius:var(--rp);
+  padding:18px 20px;box-shadow:0 1px 2px rgba(33,31,27,.04),0 10px 28px rgba(33,31,27,.05)}
+.hero-fig svg{max-width:100%;height:auto;display:block;margin:0 auto}
+.hero-fig figcaption{margin-top:12px;color:var(--soft);font-size:.84rem;text-align:center}
+@media(max-width:640px){.hero-h{font-size:2rem}}
 .panel{background:var(--surface);border:1px solid var(--line);border-radius:var(--rp);
   padding:26px 28px;margin:18px 0;box-shadow:0 1px 2px rgba(33,31,27,.04),0 10px 28px rgba(33,31,27,.05)}
 h1,h2,h3{font-family:var(--serif);font-weight:600;letter-spacing:-.01em;line-height:1.25}
@@ -740,6 +752,41 @@ _EXAMPLES = [("https://arxiv.org/abs/1706.03762", "Transformer"), ("https://arxi
 def _examples_row() -> str:
     chips = "".join(f"<a href='#' data-id='{_e(i)}'>{_e(name)}</a>" for i, name in _EXAMPLES)
     return f"<p class='ex'>没有目标？试试 {chips}</p>"
+
+
+def _load_hero_svg(name: str = "hero.svg") -> str:
+    """The homepage hero figure. Bundled at ``papermind/assets/`` so it ships in the wheel
+    (a pip-installed ``papermind serve`` shows it too); falls back to the repo's examples
+    during local development. Absent entirely -> the hero renders without a figure."""
+    import pathlib
+
+    here = pathlib.Path(__file__).resolve().parent
+    for path in (here / "assets" / name, here.parent / "examples" / "figures" / "transformer-fig2.svg"):
+        try:
+            return path.read_text(encoding="utf-8")
+        except Exception:  # noqa: BLE001
+            continue
+    return ""
+
+
+_HERO_SVG = _load_hero_svg()
+
+
+def _hero() -> str:
+    fig = (
+        f"<figure class='hero-fig'>{_HERO_SVG}"
+        "<figcaption>↑ PaperMind 为论文技术点自动生成的论文式教学示意图 · "
+        "<a href='/demo'>看一份完整示例报告 →</a></figcaption></figure>"
+    ) if _HERO_SVG else ""
+    return (
+        "<section class='hero'>"
+        "<h1 class='hero-h'>把任意论文，读懂到能复现。</h1>"
+        "<p class='hero-sub'>结构化分析 · 带原文出处并自动核验的问答 · 复现接论文的真实代码仓库。"
+        "粘贴 arXiv 链接或 PDF 直链即可开始。</p>"
+        "<div class='hero-mods'><span>🎯 核心贡献</span><span>🔬 技术细节 + 教学示意图</span>"
+        "<span>🔗 知识关联</span><span>🛠️ 复现指南</span></div>"
+        f"{fig}</section>"
+    )
 
 
 def _analyze_form(live: bool, error: str = "") -> str:

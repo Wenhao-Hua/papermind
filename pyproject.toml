@@ -12,7 +12,11 @@ readme = "README.md"
 license = { text = "MIT" }
 requires-python = ">=3.9"
 authors = [{ name = "PaperMind contributors" }]
-keywords = ["arxiv", "llm", "rag", "research", "paper", "reproduction", "cli"]
+keywords = [
+    "arxiv", "llm", "rag", "research", "paper", "reproduction", "cli",
+    "cross-encoder", "reranker", "grounded-qa", "citation", "reproducibility",
+    "scientific-papers", "litellm", "paper-reading",
+]
 classifiers = [
     "Development Status :: 3 - Alpha",
     "Environment :: Console",
@@ -31,7 +35,7 @@ dependencies = [
     "rich>=13.0.0",
     "pydantic>=2.0.0",
     "pymupdf>=1.23.0",
-    "litellm>=1.40.0",
+    "litellm>=1.40.0,<2.0",
     "faiss-cpu>=1.7.4",
     "numpy>=1.24.0",
     "httpx>=0.24.0",
@@ -40,7 +44,7 @@ dependencies = [
 [project.optional-dependencies]
 local-embeddings = ["sentence-transformers>=2.2.0"]
 web = ["fastapi>=0.110.0", "uvicorn>=0.27.0", "python-multipart>=0.0.9"]
-ui = ["fastapi>=0.110.0", "uvicorn>=0.27.0", "python-multipart>=0.0.9"]
+ui = ["paper-mind[web]"]  # alias: the web UI ships the same server deps
 # Research / training extras. torch is intentionally NOT pinned here — install the
 # CUDA build for your machine (on AutoDL/Colab it's usually preinstalled).
 # QASPER is downloaded as raw JSON via httpx (a core dep), so `datasets` isn't needed.
@@ -60,6 +64,7 @@ papermind = "papermind.cli:app"
 
 [tool.hatch.build.targets.wheel]
 packages = ["papermind"]
+artifacts = ["papermind/assets/*.svg"]  # bundle the homepage hero figure into the wheel
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]

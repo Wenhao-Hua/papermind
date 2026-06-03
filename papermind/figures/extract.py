@@ -37,6 +37,7 @@ def match_original_figures(
         return
 
     point_by_name = {p.name.strip().lower(): p for p in points}
+    used: set = set()  # one original figure -> at most one point (else the same image shows twice)
     for m in matches:
         if not isinstance(m, dict):
             continue
@@ -45,8 +46,9 @@ def match_original_figures(
         if point is None or not label:
             continue
         fig = fig_by_label.get(str(label).strip())
-        if fig is None:
-            continue
+        if fig is None or fig.image_path in used:
+            continue  # missing, or this figure is already attached to another point
+        used.add(fig.image_path)
         point.figure = Figure(
             type="original",
             image_path=fig.image_path,

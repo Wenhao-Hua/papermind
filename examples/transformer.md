@@ -1,5 +1,3 @@
-<!-- PaperMind 示例输出（illustrative sample）。运行 `papermind analyze https://arxiv.org/abs/1706.03762` 可生成你自己的版本。-->
-
 # Attention Is All You Need
 
 **Authors:** Ashish Vaswani, Noam Shazeer, Niki Parmar, Jakob Uszkoreit, Llion Jones, Aidan N. Gomez et al.  •  **Year:** 2017  •  **arXiv:** [1706.03762](https://arxiv.org/abs/1706.03762)  •  [PDF](https://arxiv.org/pdf/1706.03762.pdf)
@@ -13,134 +11,137 @@
 
 ## 🎯 贡献与创新点
 
-**核心贡献:** 提出了一种全新的序列转导模型Transformer，完全基于注意力机制，摒弃了循环和卷积。
+**核心贡献:** 提出了完全基于注意力机制的Transformer架构，摒弃了循环和卷积。
 
-**新颖之处:** 首次完全使用自注意力计算输入和输出的表示，不依赖任何序列对齐的RNN或卷积。
+**新颖之处:** 第一个完全依赖自注意力计算输入输出表示、不采用序列对齐RNN或卷积的转导模型。
 
-**解决的问题:** 解决了循环网络因顺序计算导致的训练并行化困难，以及长距离依赖学习中路径过长的问题。
+**解决的问题:** 克服了循环神经网络顺序计算导致的训练并行化限制和长距离依赖学习困难。
 
 > **原文出处:**
 > - [Frontmatter (p.1)](https://arxiv.org/pdf/1706.03762.pdf#page=1): We propose a new simple network architecture, the Transformer, based solely on attention mechanisms, dispensing with recurrence and convolutions entirely.
-> - [1 Introduction (p.2)](https://arxiv.org/pdf/1706.03762.pdf#page=2): The Transformer allows for significantly more parallelization and can reach a new state of the art in translation quality after being trained for as little as twelve hours on eight P100 GPUs.
-> - [2 Background (p.2)](https://arxiv.org/pdf/1706.03762.pdf#page=2): To the best of our knowledge, however, the Transformer is the first transduction model relying entirely on self-attention to compute representations of its input and output without using sequence-aligned RNNs or convolution.
-> - [1 Introduction (p.2)](https://arxiv.org/pdf/1706.03762.pdf#page=2): This inherently sequential nature precludes parallelization within training examples, which becomes critical at longer sequence lengths, as memory constraints limit batching across examples.
+> - [2 Background (p.2)](https://arxiv.org/pdf/1706.03762.pdf#page=2): the Transformer is the first transduction model relying entirely on self-attention to compute representations of its input and output without using sequence-aligned RNNs or convolution.
+> - [1 Introduction (p.2)](https://arxiv.org/pdf/1706.03762.pdf#page=2): Recurrent models typically factor computation along the symbol positions of the input and output sequences. Aligning the positions to steps in computation time, they generate a sequence of hidden states ht, as a function of the previous hidden state ht−1 and the input for position t. This inherently sequential nature precludes parallelization within training examples.
+> - [4 Why Self-Attention (p.6)](https://arxiv.org/pdf/1706.03762.pdf#page=6): As noted in Table 1, a self-attention layer connects all positions with a constant number of sequentially executed operations, whereas a recurrent layer requires O(n) sequential operations.
 
 <a id="technical"></a>
 
 ## 🔬 技术细节解释
 
-### 1. Scaled Dot-Product Attention（缩放因子）  `🔴 high`
+### 1. Multi-Head Attention  `🔴 high`
 
-当查询和键的维度 $d_k$ 很大时，点积 $QK^\top$ 的方差会增大，导致 softmax 的输出接近独热分布，梯度极小。除以 $\sqrt{d_k}$ 将方差缩回到 1，使 softmax 梯度保持在合理区间，训练更稳定。
-
-$$
-\text{Attention}(Q,K,V)=\text{softmax}(\frac{QK^\top}{\sqrt{d_k}})V
-$$
-
-> 💡 **类比:** 就像考试分数膨胀，如果所有分数都乘以一个大因子，高分和低分的差距被放大，导致排名几乎只取最高分，其他都忽略；缩放后差距回归正常，排名分布更平滑。
-
-📍 出处: [Section 3.2.1 (p.4)](https://arxiv.org/pdf/1706.03762.pdf#page=4)
-
-![Figure 2: (left) Scaled Dot-Product Attention. (right) Multi-Head Attention consists of several attention layers running in parallel.](C:\Users\25343\.papermind\cache\1706.03762\figures\p4_figure2_x183.png)
-*Figure 2: (left) Scaled Dot-Product Attention. (right) Multi-Head Attention consists of several attention layers running in parallel. (论文原图)*
-
-### 2. Sinusoidal Positional Encoding  `🔴 high`
-
-使用不同频率的正弦和余弦函数为每个位置生成独特的编码，维度为 $d_{model}$。对于固定偏移 $k$，位置 $pos+k$ 的编码可由 $pos$ 的编码线性表示，使模型能学习相对位置关系。并且函数有界，便于外推到更长序列。
+Instead of performing a single attention function, the model linearly projects queries, keys and values $h$ times with different learned projections to dimensions $d_k$, $d_k$ and $d_v$. Attention is computed in parallel on each projected version, and the outputs are concatenated and projected again. This allows the model to jointly attend to information from different representation subspaces at different positions, avoiding the averaging effect of a single head.
 
 $$
-PE_{(pos,2i)}=\sin(pos/10000^{2i/d_{\text{model}}})\PE_{(pos,2i+1)}=\cos(pos/10000^{2i/d_{\text{model}}})
+MultiHead(Q,K,V) = Concat(head_1,\dots,head_h)W^O \\ \text{where } head_i = Attention(QW_i^Q, KW_i^K, VW_i^V)
 $$
 
-> 💡 **类比:** 就像用多个不同快慢的时钟指针来唯一表示一天中的每个时刻，指针的位置（正弦/余弦值）组合可以区分时间点，而且能推断两个时刻的间隔。
-
-📍 出处: [Section 3.5 (p.6)](https://arxiv.org/pdf/1706.03762.pdf#page=6)
-
-![教学示意图：Sinusoidal Positional Encoding](figures/transformer-fig1.svg)
-*教学示意图：Sinusoidal Positional Encoding（教学示意图）*
-
-> **读图**：用正弦余弦函数为序列位置生成独特编码
->
-> - PE(pos,2i)=sin(pos/10000^(2i/d_model))
-> - PE(pos,2i+1)=cos(pos/10000^(2i/d_model))
-> - pos:位置索引; i:维度索引; d_model:模型维度
-> - 编码有界、可外推，支持相对位置表示
->
-> **关键**：不同维度频率递减，编码唯一且可线性表示相对位置
-
-### 3. Multi-Head Attention  `🟡 mid`
-
-将查询、键、值线性投影到 $h$ 个不同的低维子空间，在每个子空间独立计算缩放点积注意力，然后将输出拼接并再次投影。这样可以让模型同时关注来自不同表示子空间的信息，避免平均化。总计算量与单头全维度注意力相似。
-
-$$
-\text{MultiHead}(Q,K,V)=\text{Concat}(\text{head}_1,\dots,\text{head}_h)W^O\ \text{head}_i=\text{Attention}(QW_i^Q,KW_i^K,VW_i^V)
-$$
-
-> 💡 **类比:** 就像一群专家独立观察同一幅画的局部细节，然后综合所有专家的意见，从而比单人观察更全面。
+> 💡 **类比:** Like having multiple detectives examining different aspects of a case simultaneously, then combining their insights to form a complete picture.
 
 📍 出处: [Section 3.2.2 (p.4)](https://arxiv.org/pdf/1706.03762.pdf#page=4)
 
-![Figure 2: (left) Scaled Dot-Product Attention. (right) Multi-Head Attention consists of several attention layers running in parallel.](C:\Users\25343\.papermind\cache\1706.03762\figures\p4_figure2_x183.png)
+![Figure 2: (left) Scaled Dot-Product Attention. (right) Multi-Head Attention consists of several attention layers running in parallel.](figures/transformer-orig1.png)
 *Figure 2: (left) Scaled Dot-Product Attention. (right) Multi-Head Attention consists of several attention layers running in parallel. (论文原图)*
 
-### 4. Self-Attention 的短路径长度  `🟡 mid`
+### 2. Scaled Dot-Product Attention  `🟡 mid`
 
-自注意力层中，任意两个位置之间的信息传播只需常数 $O(1)$ 步，而 RNN 需要 $O(n)$ 步，CNN 需要 $O(\log_k n)$ 步。较短的信号路径使得网络更容易学习长距离依赖，因为梯度在反向传播时衰减更小。
-
-> 💡 **类比:** 传统 RNN 像传话游戏，消息必须依次经过每个人，耗时且容易走样；自注意力像所有人同时坐在圆桌旁，可以直接听到任何人的发言，沟通高效。
-
-📍 出处: [Section 4 (p.6)](https://arxiv.org/pdf/1706.03762.pdf#page=6)
-
-![教学示意图：Self-Attention 的短路径长度](figures/transformer-fig2.svg)
-*教学示意图：Self-Attention 的短路径长度（教学示意图）*
-
-> **读图**：自注意力路径长度O(1)，远优于RNN的O(n)和CNN的O(logₖ n)。
->
-> - 自注意力任意两位置直接连接，路径长度恒为1步。
-> - RNN需顺序传播，n=5时路径长度为4步。
-> - CNN通过层级卷积，n=5时路径长度为2步。
-> - 路径越短，梯度衰减越小，越易学习长距离依赖。
->
-> **关键**：路径长度越短，长距离依赖学习越容易。
-
-### 5. Residual Connections & Layer Normalization  `🟢 low`
-
-每个子层输出为 $\text{LayerNorm}(x + \text{Sublayer}(x))$。残差连接提供了一条身份映射路径，让梯度直接反向传播，避免深层网络的梯度消失问题。层归一化对每层输出进行归一化，稳定训练动态，加速收敛。
+The core attention mechanism computes the dot products of queries with all keys, divides by $\sqrt{d_k}$ to scale, then applies softmax to obtain weights. The output is a weighted sum of the values. Scaling prevents the dot products from growing too large in magnitude, which would push the softmax into regions with very small gradients for large $d_k$.
 
 $$
-\text{LayerNorm}(x+\text{Sublayer}(x))
+Attention(Q,K,V) = softmax(\frac{QK^\top}{\sqrt{d_k}})V
 $$
 
-> 💡 **类比:** 残差连接就像修建一条高速公路直通目的地，车辆（梯度）可以绕过弯弯绕绕的小路；层归一化像交通管制，保持道路通畅，避免拥堵。
+> 💡 **类比:** Like computing similarity scores between a query and a set of keys, then focusing on the values proportionally, but dampening large scores to prevent extreme focusing.
 
-📍 出处: [Section 3.1 (p.3)](https://arxiv.org/pdf/1706.03762.pdf#page=3)
+📍 出处: [Section 3.2.1 (p.4)](https://arxiv.org/pdf/1706.03762.pdf#page=4)
 
-![Figure 1: The Transformer - model architecture.](C:\Users\25343\.papermind\cache\1706.03762\figures\p3_figure1_x128.png)
+![教学示意图：Scaled Dot-Product Attention](figures/transformer-fig1.svg)
+*教学示意图：Scaled Dot-Product Attention（教学示意图）*
+
+> **读图**：Scaled Dot-Product Attention的计算流程与公式。
+>
+> - Q, K, V分别为查询、键、值矩阵。
+> - QK⊤/√d₀计算注意力分数，再经softmax归一化。
+> - 输出为注意力权重对V的加权和。
+> - 缩放因子√d₀防止softmax饱和。
+>
+> **关键**：核心公式：Attention(Q,K,V)=softmax(QK⊤/√d₀)V。
+
+### 3. Positional Encoding  `🟡 mid`
+
+To give the model information about sequence order, sinusoidal positional encodings are added to the input embeddings. Each dimension of the encoding uses a sinusoid of a different frequency: $PE_{(pos,2i)} = \sin(pos/10000^{2i/d_{model}})$ and $PE_{(pos,2i+1)} = \cos(pos/10000^{2i/d_{model}})$. The authors hypothesised that this allows the model to easily learn to attend by relative positions because $PE_{pos+k}$ can be represented as a linear function of $PE_{pos}$.
+
+$$
+PE_{(pos,2i)} = \sin(pos/10000^{2i/d_{model}}) \\ PE_{(pos,2i+1)} = \cos(pos/10000^{2i/d_{model}})
+$$
+
+> 💡 **类比:** Like adding a unique timestamp to each word in a sentence so the model knows the order, using periodic signals that can later be combined to measure distance.
+
+📍 出处: [Section 3.5 (p.6)](https://arxiv.org/pdf/1706.03762.pdf#page=6)
+
+![Figure 1: The Transformer - model architecture.](figures/transformer-orig2.png)
 *Figure 1: The Transformer - model architecture. (论文原图)*
 
-### 6. Learning Rate Warmup & Decay  `🟢 low`
+### 4. Masked Self-Attention in Decoder  `🟢 low`
 
-训练初期，线性增加学习率直到 warmup 步数，然后按步数的平方根倒数衰减。这避免了一开始学习率过大导致梯度爆炸或模型震荡，预热后模型平稳找到较好区域，再逐步降低学习率微调。
+In the decoder self-attention, to preserve the auto-regressive property, future positions are masked out by setting attention logits to $-\infty$ before the softmax. This ensures that predictions at position $i$ depend only on outputs at positions less than $i$.
+
+> 💡 **类比:** Like a game where each player can only see the moves of previous players, not future ones, to predict the next move.
+
+📍 出处: [Section 3.2.3 (p.5)](https://arxiv.org/pdf/1706.03762.pdf#page=5)
+
+![教学示意图：Masked Self-Attention in Decoder](figures/transformer-fig2.svg)
+*教学示意图：Masked Self-Attention in Decoder（教学示意图）*
+
+> **读图**：解码器中的掩码自注意力机制，保持自回归性质。
+>
+> - 掩码矩阵：未来位置j>i设为负无穷，softmax后权重为0。
+> - 注意力计算：Q=当前yᵢ，K,V=过去及当前y₁…yᵢ。
+> - 自回归性质：预测ŷᵢ仅依赖y₁…yᵢ₋₁。
+>
+> **关键**：掩码确保解码时不能看到未来位置，实现自回归。
+
+### 5. Learning Rate Schedule  `🟢 low`
+
+The learning rate follows $lrate = d_{model}^{-0.5} \cdot \min(step\_num^{-0.5}, step\_num \cdot warmup\_steps^{-1.5})$, where $warmup\_steps=4000$. It increases linearly for the first $warmup\_steps$ steps, then decreases proportionally to the inverse square root of the step number, combined with the Adam optimizer.
 
 $$
-lrate = d_{\text{model}}^{-0.5} \cdot \min(step\_num^{-0.5}, step\_num \cdot warmup\_steps^{-1.5})
+lrate = d_{model}^{-0.5} \cdot \min(step\_num^{-0.5}, step\_num \cdot warmup\_steps^{-1.5})
 $$
 
-> 💡 **类比:** 刚开始学习一项技能时，先慢速打下基础（预热），然后加速练习，最后逐渐放慢节奏打磨细节。
+> 💡 **类比:** Like gradually warming up an engine before cruising, then slowing down as you approach the destination.
 
 📍 出处: [Section 5.3 (p.7)](https://arxiv.org/pdf/1706.03762.pdf#page=7)
 
-![教学示意图：Learning Rate Warmup & Decay](figures/transformer-fig3.svg)
-*教学示意图：Learning Rate Warmup & Decay（教学示意图）*
+![教学示意图：Learning Rate Schedule](figures/transformer-fig3.svg)
+*教学示意图：Learning Rate Schedule（教学示意图）*
 
-> **读图**：Transformer学习率预热后按平方根倒数衰减的调度曲线。
+> **读图**：Transformer学习率调度：线性预热后按平方根倒数衰减。
 >
-> - 横轴为训练步数，纵轴为学习率。
-> - warmup_steps=4000处达到峰值学习率约0.0007。
-> - 预热阶段线性增长，衰减阶段按步数平方根倒数下降。
-> - d_model=512为模型维度常数。
+> - lrate公式：d_model^-0.5 * min(step_num^-0.5, step_num * warmup_steps^-1.5)
+> - d_model=512, warmup_steps=4000, 使用Adam优化器
+> - Phase1线性预热：step_num≤4000时lrate∝step_num
+> - Phase2平方根衰减：step_num>4000时lrate∝step_num^-0.5
 >
-> **关键**：先线性预热避免梯度爆炸，再缓慢衰减微调。
+> **关键**：预热阶段线性增长，之后按步数平方根倒数衰减。
+
+### 6. Label Smoothing  `🟢 low`
+
+During training, label smoothing with $\epsilon_{ls}=0.1$ is used, which makes the model less confident by distributing some probability mass to incorrect classes. This hurts perplexity but improves accuracy and BLEU score.
+
+> 💡 **类比:** Like a teacher giving partial credit for close answers, encouraging the student to consider alternatives rather than memorizing exact answers.
+
+📍 出处: [Section 5.4 (p.7)](https://arxiv.org/pdf/1706.03762.pdf#page=7)
+
+![教学示意图：Label Smoothing](figures/transformer-fig4.svg)
+*教学示意图：Label Smoothing（教学示意图）*
+
+> **读图**：Label Smoothing通过软化目标分布提升模型泛化能力。
+>
+> - 标准目标：正确类概率1，其余0。
+> - 平滑目标：正确类概率1-ε+ε/K，其余ε/K。
+> - 效果：降低模型自信，提高准确率和BLEU。
+>
+> **关键**：平滑目标分布可减少过拟合，提升泛化性能。
 
 <a id="connections"></a>
 
@@ -148,113 +149,103 @@ $$
 
 | 概念 | 相关论文 | 关系 |
 | --- | --- | --- |
-| 注意力机制 | [Bahdanau et al. 2014](https://arxiv.org/abs/1409.0473) | 继承并扩展了注意力机制，完全摒弃RNN/CNN，完全基于注意力构建序列转导模型 |
-| 缩放点积注意力 | [Luong et al. 2015](https://arxiv.org/abs/1508.04025) | 改进自点积注意力，添加缩放因子 $1/\sqrt{d_k}$ 防止大维度下点积过大导致梯度消失 |
-| 多头注意力 | Vaswani et al. 2017 | 提出多头注意力机制，允许模型在不同表示子空间中联合关注信息，是本工作的核心创新之一 |
-| 正弦位置编码 | [Gehring et al. 2017](https://arxiv.org/abs/1705.03122) | 对比学习的位置嵌入，采用固定正弦/余弦位置编码，具有外推能力 |
-| 残差连接与层归一化 | [He et al. 2016; Ba et al. 2016](https://arxiv.org/abs/1512.03385) | 继承残差连接和层归一化，构建深层架构并稳定训练 |
-| 自注意力在序列转导中的应用 | [Cheng et al. 2016](https://arxiv.org/abs/1601.06733) | 将自注意力从阅读理解等任务扩展到完全替代RNN/CNN的序列转导模型，首次实现纯注意力编解码 |
+| Scaled Dot-Product Attention | [Bahdanau et al. 2014](https://arxiv.org/abs/1409.0473) | 改进自 Bahdanau 等人提出的 additive attention 和 dot-product attention，通过引入缩放因子 1/√dk 解决大维度下点积值过大致使 softmax 梯度极小的问题。 |
+| Multi-Head Attention | [Bahdanau et al. 2014 (single-head attention)](https://arxiv.org/abs/1409.0473) | 扩展单头注意力，使用多个并行的线性投影和注意力计算，使模型能够从不同的表示子空间中联合关注信息。 |
+| Self-Attention as Core Building Block | [ConvS2S (Gehring et al. 2017) and ByteNet (Kalchbrenner et al. 2017)](https://arxiv.org/abs/1705.03122) | 对比基于卷积或循环的序列转导模型，Transformer 完全依赖自注意力，将任意两位置的路径长度缩短为 O(1)，并提高并行度。 |
+| Sinusoidal Positional Encoding | [ConvS2S (Gehring et al. 2017)](https://arxiv.org/abs/1705.03122) | 对比 ConvS2S 中使用的可学习位置嵌入，采用固定正弦函数编码位置，以利于模型外推到训练期间未见过的序列长度。 |
+| Residual Connections and Layer Normalization | He et al. 2016; Ba et al. 2016 | 继承残差连接（He et al. 2016）和层归一化（Ba et al. 2016），在每个子层输出上使用 LayerNorm(x + Sublayer(x))，以稳定深层网络训练。 |
+| Regularization (Dropout and Label Smoothing) | Srivastava et al. 2014; Szegedy et al. 2016 | 继承 Dropout（Srivastava et al. 2014）和 Label Smoothing（Szegedy et al. 2016）作为正则化手段，防止过拟合并提升准确率。 |
 
 <a id="reproduction"></a>
 
 ## 🛠️ 复现指南
 
-- **官方代码:** [https://github.com/tensorflow/tensor2tensor](https://github.com/tensorflow/tensor2tensor)
-- **环境要求:** Python 2.7 or 3.5+, TensorFlow 1.12+, CUDA 9.0+ (GPU), cuDNN 7+
-- **推荐硬件:** 8 NVIDIA GPUs (e.g., P100, V100, A100) with at least 16 GB memory each
-- **关键超参数:** `num_layers=6`, `d_model=512`, `d_ff=2048`, `num_heads=8`, `d_k=64`, `d_v=64`, `dropout=0.1`, `label_smoothing=0.1`, `warmup_steps=4000`, `optimizer=Adam(beta1=0.9, beta2=0.98, epsilon=1e-9)`, `lr_schedule=noam`, `max_length=256`, `batch_tokens=25000 per GPU`, `train_steps=100000 (base), 300000 (big)`
+- **代码仓库（论文原文链接 · ★17312）:** [https://github.com/tensorflow/tensor2tensor](https://github.com/tensorflow/tensor2tensor)
+- **安装 / 运行（取自该仓库，非模型生成）:**
+  - `pip install -e .`
+- **环境要求:** Python >= 3.5, TensorFlow 1.15, CUDA >= 8.0, cuDNN >= 6.0, 8 NVIDIA P100 GPUs (or equivalent)
+- **推荐硬件:** 8 NVIDIA P100 GPUs (newer V100/A100 also work); a single GPU can train base model with reduced batch size.
+- **关键超参数:** `N=6 (number of encoder/decoder layers)`, `d_model=512 (base) / 1024 (big)`, `d_ff=2048 (base) / 4096 (big)`, `h=8 (base) / 16 (big) attention heads`, `d_k=d_v=64 (key/value dimension per head)`, `dropout P_drop=0.1 (base) / 0.3 (big)`, `label smoothing ε_ls=0.1`, `optimizer Adam with β1=0.9, β2=0.98, ε=1e-9`, `learning rate schedule: warmup_steps=4000, peak lr = d_model^{-0.5} * step^{-0.5} (before warmup: linear increase)`, `batch size: ~25000 source + 25000 target tokens per batch`
 
 ### 环境配置步骤
 
-**1. Clone tensor2tensor repository**
+**1. Check CUDA and GPU availability**
 
-Obtain the official implementation from GitHub.
+Ensure CUDA and cuDNN are installed and GPU is visible to TensorFlow.
 
 ```bash
-git clone https://github.com/tensorflow/tensor2tensor.git
-cd tensor2tensor
+nvcc --version && nvidia-smi
 ```
 
-**2. Install dependencies**
+**2. Install TensorFlow and tensor2tensor**
 
-Install Python packages. If using GPU, ensure CUDA/cuDNN are compatible.
+Create a Python virtual environment and install the required packages. TensorFlow 1.15 is recommended to match the original implementation.
 
 ```bash
-pip install -r requirements.txt
+pip install tensorflow-gpu==1.15.0 tensor2tensor
 ```
 
-**3. Verify GPU setup**
+**3. Clone tensor2tensor repository (optional)**
 
-Check NVIDIA driver, CUDA, and cuDNN versions.
+If you need to modify code or use the latest version from source, clone the Git repository.
 
 ```bash
-nvidia-smi
-nvcc --version
+git clone https://github.com/tensorflow/tensor2tensor && cd tensor2tensor && pip install -e .
 ```
 
-**4. Download and preprocess WMT data**
+**4. Prepare WMT translation dataset**
 
-Generate the English-German dataset using the built-in problem definition.
+Use t2t-datagen to download and preprocess the WMT14 English-German dataset. This step requires internet access and may take hours.
 
 ```bash
-t2t-datagen --data_dir=$DATA_DIR --tmp_dir=$TMP_DIR --problem=translate_ende_wmt32k
+t2t-datagen --problem=translate_ende_wmt32k --data_dir=~/t2t_data --tmp_dir=~/t2t_tmp
 ```
 
-**5. Train the base Transformer**
+**5. Launch training (base model)**
 
-Start training on 8 GPUs. Adjust `--worker_gpu` and `--hparams_set` as needed.
-
-```bash
-t2t-trainer --data_dir=$DATA_DIR --output_dir=$TRAIN_DIR --problem=translate_ende_wmt32k --model=transformer --hparams_set=transformer_base --train_steps=100000 --hparams='batch_size=4096' --worker_gpu=8
-```
-
-**6. Evaluate and translate**
-
-Run inference with beam search and compute BLEU score.
+Start training the Transformer base model on 8 GPUs using the predefined hyperparameter set. Adjust --worker_gpu according to your GPU count.
 
 ```bash
-t2t-decoder --data_dir=$DATA_DIR --output_dir=$TRAIN_DIR --problem=translate_ende_wmt32k --model=transformer --hparams_set=transformer_base --decode_hparams='beam_size=4,alpha=0.6' --decode_to_file=translations.en
-t2t-bleu --translation=translations.en --reference=$DATA_DIR/newstest2014.en
+t2t-trainer --data_dir=~/t2t_data --problem=translate_ende_wmt32k --model=transformer --hparams_set=transformer_base --output_dir=~/t2t_train/base --worker_gpu=8
 ```
 
 ### 性能基准
 
 | 设置 | Baseline | 结果 | 加速 | 显存 |
 | --- | --- | --- | --- | --- |
-| WMT 2014 EN-DE (newstest2014) | GNMT+RL: 24.6 BLEU / 2.3e19 FLOPs | Transformer base: 27.3 BLEU / 3.3e18 FLOPs | ~7x lower training cost | - |
-| WMT 2014 EN-DE (newstest2014) | ConvS2S Ensemble: 26.36 BLEU | Transformer big: 28.4 BLEU | - | - |
-| WMT 2014 EN-FR (newstest2014) | ConvS2S: 40.46 BLEU / 1.5e20 FLOPs | Transformer big: 41.8 BLEU / 2.3e19 FLOPs (est.) | ~6x lower training cost | - |
-| English Constituency Parsing (WSJ Section 23) | BerkeleyParser: 90.4 F1 | Transformer (4 layers): 92.7 F1 (semi-supervised) | - | - |
+| WMT 2014 English-German newstest2014 (big Transformer) | GNMT+RL Ensemble (26.30 BLEU) | 28.4 BLEU | - | Training FLOPs: 2.3e19 |
+| WMT 2014 English-French newstest2014 (big Transformer) | ConvS2S single model (40.46 BLEU) | 41.8 BLEU | - | - |
+| EN-DE training compute (FLOPs) | ConvS2S (9.6e18 FLOPs) | 3.3e18 FLOPs (Transformer base) | 2.9x fewer FLOPs | - |
+| English constituency parsing WSJ Section 23 (semi-supervised) | Vinyals & Kaiser (92.1 F1) | 92.7 F1 | - | - |
 
 ### 数据集
 
-- **[WMT 2014 English-German](http://statmt.org/wmt14/translation-task.html)** — Machine translation benchmark
-- **[WMT 2014 English-French](http://statmt.org/wmt14/translation-task.html)** — Machine translation benchmark
-- **[Penn Treebank WSJ (English Constituency Parsing)](https://catalog.ldc.upenn.edu/LDC99T42)** — Constituency parsing benchmark
+- **[WMT 2014 English-German](http://www.statmt.org/wmt14/translation-task.html)** — Machine translation training and evaluation
+- **[WMT 2014 English-French](http://www.statmt.org/wmt14/translation-task.html)** — Machine translation training and evaluation
+- **[Penn Treebank WSJ](https://catalog.ldc.upenn.edu/LDC99T42)** — English constituency parsing
 
 ### 常见报错与解决
 
-- **报错:** `ResourceExhaustedError: OOM when allocating tensor`
-  - 原因: Batch size or sequence length too large for GPU memory.
-  - 修复: `Reduce `batch_size` or `max_length` hyperparameters. Use `--hparams='batch_size=2048'``
-- **报错:** `NotFoundError: libcuda.so.1 not found`
-  - 原因: CUDA libraries not installed or not in LD_LIBRARY_PATH.
-  - 修复: `Verify CUDA installation: `ls /usr/local/cuda/lib64` and update `export LD_LIBRARY_PATH=/usr/local/cuda/lib64:$LD_LIBRARY_PATH``
-- **报错:** `ValueError: Variable transformer/... already exists`
-  - 原因: Attempting to train from a checkpoint but the model graph differs (e.g., hyperparameters changed).
-  - 修复: `Remove the checkpoint directory or use `--output_dir` with a fresh directory.`
-- **报错:** `ImportError: No module named tensor2tensor`
-  - 原因: tensor2tensor not installed correctly.
-  - 修复: `Run `pip install -e .` from the tensor2tensor root directory, or set PYTHONPATH.`
+- **报错:** `Resource exhausted: OOM when allocating tensor ...`
+  - 原因: Batch size too large for GPU memory. The default token-based batch may exceed the memory of older GPUs.
+  - 修复: `--hparams='batch_size=2048' or use gradient accumulation. Alternatively, reduce max_length.`
+- **报错:** `Error downloading wmt14 data: HTTP error ...`
+  - 原因: Network restrictions or server downtime during t2t-datagen.
+  - 修复: `Manually download the dataset and place it in the data_dir, or set HTTP_PROXY environment variable.`
+- **报错:** `AttributeError: module 'tensorflow' has no attribute '...'`
+  - 原因: tensor2tensor is incompatible with TensorFlow 2.x by default.
+  - 修复: `pip install tensorflow-gpu==1.15.0`
+- **报错:** `Validation BLEU does not improve, loss oscillates.`
+  - 原因: Learning rate too high, incorrect mask, or missing label smoothing.
+  - 修复: `Use standard hparams_set (transformer_base). Try lowering warmup_steps or add --hparams='learning_rate_warmup_steps=8000'.`
 
 ### ⚠️ 坑点提示
 
-- Weight sharing: Embedding layers (source and target) and pre-softmax linear transformation share the same weight matrix, scaled by sqrt(d_model).
-- Positional encodings: Use sinusoidal fixed encodings instead of learned; they are added to input embeddings.
-- Label smoothing: Set to 0.1 during training; reduces perplexity but improves BLEU.
-- Beam search parameters: Use beam size 4 and length penalty α=0.6 for translation.
-- Checkpoint averaging: Average last 5 (base) or 20 (big) checkpoints for final model.
-- The codebase uses TensorFlow 1.x; some functions may require adaptation for TensorFlow 2.x.
+- Decoder self-attention must use a causal mask to prevent attending to future tokens; verify mask implementation.
+- Checkpoint averaging significantly boosts BLEU: average last 5 checkpoints for base, last 20 for big.
+- Label smoothing (0.1) hurts perplexity but improves BLEU; always keep it enabled.
+- Sinusoidal positional encoding allows extrapolation to longer sequences, while learned embeddings give similar results on seen lengths.
+- Inference beam search: use beam size 4, length penalty α=0.6, and set max output length to input length + 50.
 
 
 ---

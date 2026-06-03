@@ -1,5 +1,3 @@
-<!-- PaperMind 示例输出（illustrative sample）。运行 `papermind analyze https://arxiv.org/abs/2307.09288` 可生成你自己的版本。-->
-
 # Llama 2: Open Foundation and Fine-Tuned Chat Models
 
 **Authors:** Hugo Touvron, Louis Martin, Kevin Stone, Peter Albert, Amjad Almahairi, Yasmine Babaei et al.  •  **Year:** 2023  •  **arXiv:** [2307.09288](https://arxiv.org/abs/2307.09288)  •  [PDF](https://arxiv.org/pdf/2307.09288.pdf)
@@ -13,115 +11,111 @@
 
 ## 🎯 贡献与创新点
 
-**核心贡献:** Llama 2, including Llama 2-Chat, is released as an open-source set of models that achieve competitive performance with closed-source models through careful pretraining upgrades and iterative fine-tuning with RLHF and safety alignment.
+**核心贡献:** 发布 Llama 2 系列预训练与对话微调模型，并详细公开其微调与安全改进方法，在性能上超越现有开源模型且可与闭源模型媲美。
 
-**新颖之处:** Compared to Llama 1, it uses 40% more training data, doubled context length, grouped-query attention, and a novel iterative RLHF process combining rejection sampling and PPO, along with extensive safety fine-tuning and context distillation.
+**新颖之处:** 首次开源达到闭源产品级对话性能与安全水平的模型，并透明地共享了包含 RLHF 和安全微调的完整方法。
 
-**解决的问题:** It addresses the performance gap between open-source and closed-source chat models, particularly in helpfulness and safety, demonstrating that open models can be a viable substitute for proprietary systems.
+**解决的问题:** 先前开源大模型无法替代闭源产品模型，主要因安全微调方法不透明且成本高昂，阻碍了社区对 AI 对齐的研究。
 
 > **原文出处:**
-> - [Frontmatter (p.1)](https://arxiv.org/pdf/2307.09288.pdf#page=1): In this work, we develop and release Llama 2, a collection of pretrained and fine-tuned large language models (LLMs) ranging in scale from 7 billion to 70 billion parameters. Our fine-tuned LLMs, called Llama 2-Chat, are optimized for dialogue use cases. Our models outperform open-source chat models on most benchmarks we tested, and based on our human evaluations for helpfulness and safety, may be a suitable substitute for closed-source models.
-> - [1 Introduction (p.4)](https://arxiv.org/pdf/2307.09288.pdf#page=4): We are releasing the following models to the general public for research and commercial use: 1. Llama 2, an updated version of Llama 1, trained on a new mix of publicly available data. We also increased the size of the pretraining corpus by 40%, doubled the context length of the model, and adopted grouped-query attention ... 2. Llama 2-Chat, a fine-tuned version of Llama 2 that is optimized for dialogue use cases.
-> - [1 Introduction (p.4)](https://arxiv.org/pdf/2307.09288.pdf#page=4): Figure 4: Training of Llama 2-Chat: This process begins with the pretraining of Llama 2 using publicly available online sources. Following this, we create an initial version of Llama 2-Chat through the application of supervised fine-tuning. Subsequently, the model is iteratively refined using Reinforcement Learning with Human Feedback (RLHF) methodologies, specifically through rejection sampling and Proximal Policy Optimization (PPO).
-> - [Frontmatter (p.1)](https://arxiv.org/pdf/2307.09288.pdf#page=1): We provide a detailed description of our approach to fine-tuning and safety improvements of Llama 2-Chat in order to enable the community to build on our work and contribute to the responsible development of LLMs.
+> - [Frontmatter (p.1)](https://arxiv.org/pdf/2307.09288.pdf#page=1): In this work, we develop and release Llama 2, a collection of pretrained and fine-tuned large language models (LLMs) ranging in scale from 7 billion to 70 billion parameters. Our fine-tuned LLMs, called Llama 2-Chat, are optimized for dialogue use cases. Our models outperform open-source chat models on most benchmarks we tested, and based on our human evaluations for helpfulness and safety, may be a suitable substitute for closed-source models. We provide a detailed description of our approach to fine-tuning and safety improvements of Llama 2-Chat in order to enable the community to build on our work and contribute to the responsible development of LLMs.
+> - [1 Introduction (p.3)](https://arxiv.org/pdf/2307.09288.pdf#page=3): These closed product LLMs are heavily fine-tuned to align with human preferences, which greatly enhances their usability and safety. This step can require significant costs in compute and human annotation, and is often not transparent or easily reproducible, limiting progress within the community to advance AI alignment research.
+> - [1 Introduction (p.3)](https://arxiv.org/pdf/2307.09288.pdf#page=3): We have taken measures to increase the safety of these models, using safety-specific data annotation and tuning, as well as conducting red-teaming and employing iterative evaluations. Additionally, this paper contributes a thorough description of our fine-tuning methodology and approach to improving LLM safety.
 
 <a id="technical"></a>
 
 ## 🔬 技术细节解释
 
-### 1. 分段安全-帮助性奖励合成  `🔴 high`
+### 1. PPO with piecewise reward and KL penalty  `🔴 high`
 
-在RLHF的PPO阶段，奖励函数 $R_c(g|p)$ 根据提示是否被标注为不安全或安全评分低于0.15来动态切换：若是则使用安全奖励模型 $R_s$，否则使用帮助性奖励模型 $R_h$。然后对 $R_c$ 进行白化处理（先取logit再标准化）得到 $\tilde{R}_c$，使奖励分布稳定并与KL惩罚项平衡，最终奖励为 $\tilde{R}_c - \beta D_{KL}$。此设计确保对潜在不安全提示优先施加安全约束，同时避免过度惩罚无害提示。
-
-$$
-R_c(g | p) = \begin{cases} R_s(g | p) & \text{if } \text{is\_safety}(p) \text{ or } R_s(g | p) < 0.15 \\ R_h(g | p) & \text{otherwise} \end{cases}, \quad \tilde{R}_c(g | p) = \text{whiten}(\text{logit}(R_c(g | p)))
-$$
-
-> 💡 **类比:** 好比一个双评分系统：当检测到危险信号时启动安全考官严厉打分，平时则让帮助性考官打分，最后将所有分数归一化到同一量级，再减去一个“偏离原始路线”的罚分，就像给赛车手安上一个测速仪，一旦超速就切换严苛的裁判。
-
-📍 出处: [Section 3.2.3 (p.14)](https://arxiv.org/pdf/2307.09288.pdf#page=14)
-
-![教学示意图：分段安全-帮助性奖励合成](figures/llama2-fig1.svg)
-*教学示意图：分段安全-帮助性奖励合成（教学示意图）*
-
-> **读图**：RLHF中根据提示安全性动态组合奖励并白化
->
-> - Rc：根据提示安全性选择Rs或Rh的合成奖励
-> - Whiten：对Rc取logit后标准化，稳定分布
-> - Final reward：白化奖励减去KL散度惩罚项
-> - Decision Flow：根据is_safety(p)或Rs<0.15选择RM
->
-> **关键**：不安全提示优先用安全RM，否则用帮助性RM
-
-### 2. PPO训练中的KL惩罚项  `🔴 high`
-
-在RLHF的PPO阶段，优化目标为 $\arg\max_\pi \mathbb{E}[R(g|p)]$，其中最终奖励 $R(g|p) = \tilde{R}_c(g|p) - \beta D_{KL}(\pi_\theta(g|p) \parallel \pi_0(g|p))$。KL散度项惩罚当前策略 $\pi_\theta$ 与初始策略 $\pi_0$ 的偏离，系数 $\beta$ 控制惩罚强度。这防止模型为追逐高奖励而产生荒谬回答（奖励黑客），同时保持训练稳定，并通过调整 $\beta$ 适配不同模型尺寸。
+在RLHF中，PPO阶段优化策略$\pi_\theta$以最大化期望奖励，同时惩罚与原始策略$\pi_0$的KL散度。最终奖励函数为$R(g|p)=\tilde{R}_c(g|p)-\beta D_{KL}(\pi_\theta(g|p)\parallel\pi_0(g|p))$，其中$\tilde{R}_c$是经过白化处理的组合奖励模型。组合奖励$R_c$根据提示是否属于安全类别或安全得分$<0.15$，分别使用安全奖励模型$R_s$或帮助性奖励模型$R_h$。白化奖励使用的 logit 反向 sigmoid 和白化处理是为了增加训练稳定性和与 KL 惩罚项平衡。
 
 $$
-R(g | p) = \tilde{R}_c(g | p) - \beta D_{\text{KL}}(\pi_\theta(g | p) \parallel \pi_0(g | p))
+R(g | p) = \tilde{R}_c(g | p) - \beta D_{KL}(\pi_\theta(g | p) \parallel \pi_0(g | p))
 $$
 
-> 💡 **类比:** 就像训练一个演讲者：奖励他讲得精彩（高奖励），但若他完全改变个人风格去讨好观众，就扣分（KL惩罚），鼓励他在原有风格基础上改进，防止为了高分而变成另外一个人。
-
-📍 出处: [Section 3.2.3 (p.14)](https://arxiv.org/pdf/2307.09288.pdf#page=14)
-
-![教学示意图：PPO训练中的KL惩罚项](figures/llama2-fig2.svg)
-*教学示意图：PPO训练中的KL惩罚项（教学示意图）*
-
-> **读图**：PPO训练中KL惩罚项防止奖励黑客并保持策略稳定。
->
-> - 最终奖励R(g|p)=̃Rc - β DKL(πθ∥π0)
-> - KL散度DKL惩罚πθ偏离初始策略π0
-> - β控制惩罚强度，按模型尺寸调整
-> - 无KL惩罚时模型可能输出乱码获高奖励
->
-> **关键**：KL惩罚项平衡奖励优化与策略稳定性。
-
-### 3. 拒绝采样微调  `🟡 mid`
-
-对于给定提示，从当前模型采样 $K$ 个输出，用奖励模型对每个输出打分，选择得分最高的作为伪标准答案，然后用这个最佳答案对模型进行监督微调（类似SFT）。该方法相当于用奖励模型对生成空间做束搜索并蒸馏回模型，随着迭代，采样的最优温度会变化（如RLHF后最优温度变为1.2-1.3），需要重新调整。与PPO相比，它每次使用固定策略采样，不涉及在线策略更新，但同样能有效提升奖励。
-
-> 💡 **类比:** 就像让学生做一题多解，老师从中选出最优解答当作范本，然后让学生重新学习这份范本；多次考试后，需要调整出题难度（温度），才能找出更好解法。
+> 💡 **类比:** 好比训练一只狗表演时，不仅奖励正确的动作（奖励模型打分），还要防止它完全忘记基础服从（原始策略），所以每次给零食要扣除它偏离训练初期表现的“罚款”$\beta$倍KL散度。
 
 📍 出处: [Section 3.2.3 (p.13)](https://arxiv.org/pdf/2307.09288.pdf#page=13)
 
-![教学示意图：拒绝采样微调](figures/llama2-fig3.svg)
-*教学示意图：拒绝采样微调（教学示意图）*
+![教学示意图：PPO with piecewise reward and KL penalty](figures/llama2-fig1.svg)
+*教学示意图：PPO with piecewise reward and KL penalty（教学示意图）*
 
-> **读图**：拒绝采样微调流程：采样、评分、选优、监督微调。
+> **读图**：PPO阶段使用分段奖励和KL散度惩罚优化策略。
 >
-> - 从当前策略采样K个输出。
-> - 用奖励模型对每个输出评分。
-> - 选择得分最高的输出作为伪标准答案。
-> - 对最佳输出进行监督微调（交叉熵损失）。
+> - 最终奖励函数R = 白化组合奖励 - β·KL散度。
+> - 分段奖励根据安全类别/得分选择安全或帮助性奖励模型。
+> - KL散度惩罚策略偏离原始策略，防止奖励黑客。
+> - PPO通过裁剪替代目标更新策略参数θ。
 >
-> **关键**：固定策略采样，选最佳输出微调，类似束搜索蒸馏。
+> **关键**：关注分段奖励选择与KL惩罚的平衡。
 
-### 4. 分组查询注意力（GQA）  `🟡 mid`
+### 2. Iterative Fine-tuning with Rejection Sampling and PPO  `🔴 high`
 
-将多头注意力的查询头分成 $G$ 组，每组共享相同的键和值投影（$W^K$ 和 $W^V$），而查询投影 $W^Q$ 仍各自独立。这样在自回归解码时，可以减少键值缓存的内存占用，提升推理速度，尤其对70B等大模型效果显著。GQA在保持性能的同时，改善了微调时多头注意力的扩展性。
+迭代微调依次训练多个RLHF版本（V1至V5），先用拒绝采样：从最新模型为每个提示采样$K$个回答，用奖励模型选最高分回答作为金标准进行梯度更新；之后叠加PPO进一步优化。拒绝采样仅用于最大的70B模型，小模型蒸馏其拒绝采样数据。早期版本仅从前一次迭代的采样中选择回答，但发现能力退化，后期改为纳入所有先前迭代的最佳样本。温度参数需随模型更新动态调整，RLHF会重新标定温度，对于70B模型采样10-100个输出时最优温度$T\in[1.2,1.3]$。
+
+> 💡 **类比:** 像学生反复修改文章：先对同一题目写多篇草稿（拒绝采样），老师挑最好的一篇来学习（梯度更新）；之后再用强化学习微调表达方式（PPO），而且每次用之前累积的好文章一起参考，避免只学最新风格导致退步。
+
+📍 出处: [Section 3.2.3 (p.13)](https://arxiv.org/pdf/2307.09288.pdf#page=13)
+
+![Figure 4: Training of Llama 2-Chat: This process begins with the pretraining of Llama 2 using publicly available online sources. Following this, we create an initial version of Llama 2-Chat through the application of supervised fine-tuning. Subsequently, the model is iteratively refined using Reinforcement Learning with Human Feedback (RLHF) methodologies, specifically through rejection sampling a](figures/llama2-orig1.png)
+*Figure 4: Training of Llama 2-Chat: This process begins with the pretraining of Llama 2 using publicly available online sources. Following this, we create an initial version of Llama 2-Chat through the application of supervised fine-tuning. Subsequently, the model is iteratively refined using Reinforcement Learning with Human Feedback (RLHF) methodologies, specifically through rejection sampling a (论文原图)*
+
+### 3. Ghost Attention (GAtt) for multi-turn consistency  `🟡 mid`
+
+在多轮对话中，初始指令（如“简洁回答”）容易被模型遗忘。GAtt方法通过修改微调数据：将本该贯穿全对话的指令拼接到每一条用户消息前面，但在训练时对指令部分的token损失设为零掩盖，使得模型学会在每一轮都遵从指令。推理时只需在第一轮提供指令，后续轮次模型能够保持约束。该方法受上下文蒸馏启发。
+
+> 💡 **类比:** 像在智能助手对话首轮设置了一个全局“咒语”，之后助手每轮回答前都会自动在脑海里重复该咒语，从而持续遵守指令，但训练时这个咒语并不作为预测目标，只是暗示上下文。
+
+📍 出处: [Section 3.3 (p.16)](https://arxiv.org/pdf/2307.09288.pdf#page=16)
+
+![Figure 9: Issues with multi-turn memory (left) can be improved with GAtt (right).](figures/llama2-orig2.png)
+*Figure 9: Issues with multi-turn memory (left) can be improved with GAtt (right). (论文原图)*
+
+### 4. Safety RLHF with reward model mixture and false refusal analysis  `🟡 mid`
+
+安全RLHF先收集对抗性提示的人类偏好数据训练安全奖励模型，然后与帮助性奖励模型组合成$R_c$：若提示为安全类别或安全奖励$R_s<0.15$，使用$R_s$，否则使用帮助性$R_h$。阈值0.15在Meta安全测试集上对应精确率0.89、召回率0.55。通过调节安全数据比例进行实验，发现安全性能提升的同时帮助性得分几乎不变，但定性观察到更保守的回答，故训练拒绝分类器量化误拒率，发现在帮助性测试集上误拒率很低（约0.05%），但在故意包含敏感词的边界测试集上较高。
 
 $$
-\text{Attention}(Q_i, K_g, V_g) = \text{softmax}\left(\frac{Q_i K_g^\top}{\sqrt{d_k}}\right)V_g, \quad i \in \text{group } g
+R_c(g | p) = \begin{cases} R_s(g | p) & \text{if } \text{is\_safety}(p) \text{ or } R_s(g | p) < 0.15 \\ R_h(g | p) & \text{otherwise} \end{cases}
 $$
 
-> 💡 **类比:** 就像多个研究员（查询）共用一个资料库（键/值），而不是每人携带全套资料，既节省了存储空间，又能保持各自的研究视角。
+> 💡 **类比:** 好比给一个助手同时配备两位导师：一位关注任务完成质量（帮助性），一位监督合规性（安全）。当任务有风险或安全导师打出低分时，采纳安全导师的意见；调整安全导师的参与度可看到助手越安全但可能越谨慎，通过测试误拒率来平衡。
 
-📍 出处: [Section 2.2 (p.5)](https://arxiv.org/pdf/2307.09288.pdf#page=5)
+📍 出处: [Section 4.2.3 (p.24)](https://arxiv.org/pdf/2307.09288.pdf#page=24)
 
-![Figure 24 shows how inference speed changed for the 30B GQA and MQA ablation models compared to the MHA baseline, in an experiment using 8 x 80 GiB A100s with tensor parallelism. In these runs we simply duplicated the KV heads for MQA in all GPUs, so the KV cache size for MQA became equal to the GQA and the two variants behaved very similar (with MQA just having a slightly larger FFN dimension).](C:\Users\25343\.papermind\cache\2307.09288\figures\p48_figure24_x1731.png)
-*Figure 24 shows how inference speed changed for the 30B GQA and MQA ablation models compared to the MHA baseline, in an experiment using 8 x 80 GiB A100s with tensor parallelism. In these runs we simply duplicated the KV heads for MQA in all GPUs, so the KV cache size for MQA became equal to the GQA and the two variants behaved very similar (with MQA just having a slightly larger FFN dimension). (论文原图)*
+![教学示意图：Safety RLHF with reward model mixture and false refusal analysis](figures/llama2-fig2.svg)
+*教学示意图：Safety RLHF with reward model mixture and false refusal analysis（教学示意图）*
 
-### 5. 面向安全的上下文蒸馏  `🟢 low`
+> **读图**：安全RLHF的奖励模型混合与误拒分析
+>
+> - Rc由安全奖励Rs和帮助性奖励Rh混合组成
+> - 阈值0.15在Meta安全测试集上精确率0.89召回率0.55
+> - 拒绝分类器量化误拒率：帮助性集约0.05%，边界集较高
+>
+> **关键**：安全提升但回答更保守，误拒率在边界集升高
 
-先用带有安全引导语（如“你是一个负责任的助手”）的前置提示对对抗性提示生成安全响应，然后去掉引导语，用原始对抗性提示和之前生成的安全响应对模型进行微调。这迫使模型将安全行为内化到无引导语的设定中，从而在无辅助提示时也能主动产生安全输出。该方法作为安全RLHF的初始步骤，可快速提升模型对困难对抗提示的抵抗力。
+### 5. Safety context distillation with preprompts and answer templates  `🟡 mid`
 
-> 💡 **类比:** 就像教孩子礼貌：先给他看带敬语的对话范例，然后撤去范例，让他自己用平常语气说出同样礼貌的话，通过反复练习使其养成习惯。
+通过给对抗性提示加上安全预提示（如“你是一个安全负责的助手”）生成更安全的回答，然后去除预提示，用原始对抗性提示和该安全回答微调模型，使模型学会直接对风险提示输出安全回复。预提示由模板自动生成，使用“responsible”“respectful”等形容词。还可以结合风险类别标注，使用专用回答模板进行定向蒸馏。该方法能快速提升模型对困难对抗性提示的安全行为，后续可进一步用RLHF增强。
+
+> 💡 **类比:** 像教师先给出一道难题并附上安全作答的要点（预提示），学生参考后写出安全答案；之后教师只给原题，让学生模仿之前写出的答案。这样就教会学生一看到难题就自动产生安全思维。
 
 📍 出处: [Section 4.2.4 (p.27)](https://arxiv.org/pdf/2307.09288.pdf#page=27)
 
-![Figure 16: Context distillation analysis. Left: Distribution of safety RM scores from the base model, when adding a generic preprompt, and when adding a preprompt based on the risk category with tailored answer template. While a generic preprompt increases safety RM scores, a preprompt with tailored answer template helps even more. Right: Context distillation increases the RM score significantly f](C:\Users\25343\.papermind\cache\2307.09288\figures\p28_figure16_x1275.png)
+![Figure 16: Context distillation analysis. Left: Distribution of safety RM scores from the base model, when adding a generic preprompt, and when adding a preprompt based on the risk category with tailored answer template. While a generic preprompt increases safety RM scores, a preprompt with tailored answer template helps even more. Right: Context distillation increases the RM score significantly f](figures/llama2-orig3.png)
 *Figure 16: Context distillation analysis. Left: Distribution of safety RM scores from the base model, when adding a generic preprompt, and when adding a preprompt based on the risk category with tailored answer template. While a generic preprompt increases safety RM scores, a preprompt with tailored answer template helps even more. Right: Context distillation increases the RM score significantly f (论文原图)*
+
+### 6. Grouped-Query Attention (GQA) for KV cache reduction  `🟢 low`
+
+在自回归解码中，缓存所有注意力头的键值对占大量内存。GQA将多个查询头分成组，每组共享一套键值投影，从而减少KV缓存大小。与MHA相比，GQA增加FFN维度补偿参数，性能可比肩MHA，且优于仅有一组KV投影的MQA。对于部署在单节点8 GPU的张量并行，MQA无法跨头分片，而GQA仍可正常工作，避免复制KV或跨批分片的复杂性。
+
+> 💡 **类比:** 图书馆原先为每位读者单独复印书本（每头独立KV），成本高；现在让几位读者共用一本共享书（每组的头共享KV），只额外多安排几位管理员分发副本（FFN维度补偿），总成本下降，阅读效率几乎不变。
+
+📍 出处: [Section A.2.1 (p.47)](https://arxiv.org/pdf/2307.09288.pdf#page=47)
+
+![Figure 24 shows how inference speed changed for the 30B GQA and MQA ablation models compared to the MHA baseline, in an experiment using 8 x 80 GiB A100s with tensor parallelism. In these runs we simply duplicated the KV heads for MQA in all GPUs, so the KV cache size for MQA became equal to the GQA and the two variants behaved very similar (with MQA just having a slightly larger FFN dimension).](figures/llama2-orig4.png)
+*Figure 24 shows how inference speed changed for the 30B GQA and MQA ablation models compared to the MHA baseline, in an experiment using 8 x 80 GiB A100s with tensor parallelism. In these runs we simply duplicated the KV heads for MQA in all GPUs, so the KV cache size for MQA became equal to the GQA and the two variants behaved very similar (with MQA just having a slightly larger FFN dimension). (论文原图)*
 
 <a id="connections"></a>
 
@@ -129,74 +123,83 @@ $$
 
 | 概念 | 相关论文 | 关系 |
 | --- | --- | --- |
-| Transformer architecture | [Vaswani et al. 2017](https://arxiv.org/abs/1706.03762) | 继承并改进，在标准Transformer基础上引入RMSNorm、SwiGLU、RoPE和GQA等组件 |
-| Root Mean Square Layer Normalization (RMSNorm) | [Zhang and Sennrich 2019](https://arxiv.org/abs/1911.07467) | 继承，采用RMSNorm替代LayerNorm进行预归一化 |
-| SwiGLU activation function | [Shazeer 2020](https://arxiv.org/abs/2002.05202) | 继承，使用SwiGLU激活函数替代标准ReLU/GELU |
-| Rotary Position Embeddings (RoPE) | [Su et al. 2022](https://arxiv.org/abs/2104.09864) | 继承，采用RoPE作为位置编码方式 |
-| Grouped-Query Attention (GQA) | [Ainslie et al. 2023](https://arxiv.org/abs/2305.13245) | 继承，引入GQA以提升大模型推理效率 |
-| RLHF with reward modeling and PPO | [Stiennon et al. 2020](https://arxiv.org/abs/2009.01325) | 继承并改进，遵循其RL框架，使用reward模型估计人类偏好，并添加KL惩罚项以稳定训练 |
+| Proximal Policy Optimization (PPO) | [Schulman et al. 2017](https://arxiv.org/abs/1707.06347) | 继承，作为 RLHF 微调阶段的标准算法 |
+| Rejection Sampling fine-tuning | [Bai et al. 2022b](https://arxiv.org/abs/2204.05862) | 继承其基于奖励选择最佳样本的思想，并改进为使用所选输出进行梯度更新 |
+| Ghost Attention (GAtt) | [Askell et al. 2021a; Bai et al. 2022b](https://arxiv.org/abs/2112.00861) | 灵感来源于 Context Distillation，用于增强多轮对话一致性 |
+| RLHF with reward model and KL penalty | [Stiennon et al. 2020](https://arxiv.org/abs/2009.01325) | 遵循其 RL 方案，使用奖励模型作为偏好估计并添加 KL 散度惩罚 |
+| Grouped-Query Attention (GQA) | [Ainslie et al. 2023](https://arxiv.org/abs/2305.13245) | 采用 GQA 变体，并与 MHA 和 MQA 进行性能比较 |
+| Context Distillation for safety | [Askell et al. 2021a](https://arxiv.org/abs/2112.00861) | 继承其上下文蒸馏方法，通过安全前置提示生成更安全的响应并微调 |
 
 <a id="reproduction"></a>
 
 ## 🛠️ 复现指南
 
-- **官方代码（已核实 · 论文原文链接 ✓官方 · ★59441）:** [https://github.com/facebookresearch/llama](https://github.com/facebookresearch/llama)
-- **安装 / 运行（取自仓库）:**
+- **代码仓库（论文原文链接 · ★59444）:** [https://github.com/facebookresearch/llama](https://github.com/facebookresearch/llama)
+- **安装 / 运行（取自该仓库，非模型生成）:**
   - `pip install -r requirements.txt`
   - `torchrun --nproc_per_node 1 example_chat_completion.py \`
   - `torchrun --nproc_per_node 1 example_text_completion.py \`
-- **推荐硬件:** A100-80GB
-- **关键超参数:** `global_batch_size=4M tokens (pretrain)`, `AdamW β1=0.9 β2=0.95 eps=1e-5`, `weight_decay=0.1`, `gradient_clipping=1.0`, `cosine_lr_schedule warmup=2000 decay_to_10% (pretrain)`, `SFT: lr=2e-5 batch_size=64 seq_len=4096 epochs=2`, `PPO: lr=1e-6 batch_size=512 minibatch=64 clip=0.2`, `PPO KL_penalty β=0.01 (7B/13B) / 0.005 (34B/70B)`, `vocab_size=32k`, `context_length=4096`, `grouped-query attention (GQA) for inference`
+- **推荐硬件:** 8x NVIDIA A100 (80GB) or higher (as used in the paper for the 70B model)
+- **关键超参数:** `learning_rate=1e-6 (constant, used in PPO)`, `batch_size=512 (PPO)`, `ppo_clip_threshold=0.2`, `mini_batch_size=64 (PPO, one gradient step per mini-batch)`, `weight_decay=0.1`, `gradient_clipping=1.0`, `optimizer=AdamW (β1=0.9, β2=0.95, eps=1e-5)`, `kl_penalty_beta=0.01 (7B/13B), 0.005 (34B/70B)`, `safety_threshold=0.15 (for filtering unsafe responses in the composite reward)`, `temperature_sampling=1.2-1.3 (for RLHF rejection sampling with 10-100 outputs)`, `context_length=4096`, `gqa_groups=8 (grouped-query attention variant used in largest models)`, `pretraining_tokens=150B (ablation experiments; full model details not disclosed)`, `sft_epochs=2 (for safety data scaling ablation)`
 
 ### 环境配置步骤
 
-**1. 安装 PyTorch**
+**1. Clone the official repository**
 
-安装 PyTorch，版本需支持 CUDA，推荐 CUDA 11.8
-
-```bash
-pip install torch torchvision --index-url https://download.pytorch.org/whl/cu118
-```
-
-**2. 安装依赖库**
-
-安装 transformers、datasets、accelerate、deepspeed、sentencepiece 等常用库
+Clone the Llama 2 codebase from Meta's GitHub.
 
 ```bash
-pip install transformers datasets accelerate deepspeed sentencepiece
+git clone https://github.com/facebookresearch/llama && cd llama
 ```
 
-**3. 准备预训练数据**
+**2. Install PyTorch with CUDA**
 
-论文使用从公开来源混合的 2T token 语料。用户需自行准备或使用类似规模的数据集，如 RedPajama、The Pile 等。
+Install PyTorch compatible with your CUDA version. Adjust the CUDA version as needed (e.g., cu118).
 
-**4. 配置分布式训练**
+```bash
+pip install torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cu118
+```
 
-使用多 GPU 或多节点训练，可通过 accelerate 或 deepspeed 配置文件设置。对于 70B 模型，可能需要 ZeRO-3 优化。
+**3. Install remaining dependencies**
+
+Install packages listed in the repository's requirements file (if present) or common dependencies for large model training.
+
+```bash
+pip install -r requirements.txt || pip install transformers datasets accelerate sentencepiece
+```
+
+**4. Request model weights access**
+
+Follow Meta's instructions to request access to the pretrained model weights. The weights are not included in the public GitHub repository.
 
 ### 数据集
 
-- **MMLU** — 多任务语言理解基准
-- **BBH** — BIG-Bench Hard 基准
-- **GSM8K** — 数学推理基准
-- **HumanEval** — 代码生成基准
-- **TruthfulQA** — 真实性评估
+- **[NaturalQuestions](https://huggingface.co/datasets/natural_questions)** — Evaluation of closed-book QA (Exact Match)
+- **[TriviaQA](https://huggingface.co/datasets/trivia_qa)** — Evaluation of knowledge-intensive QA (Exact Match)
+- **[SQuAD](https://huggingface.co/datasets/squad)** — Reading comprehension evaluation (Exact Match)
+- **[GSM8k](https://huggingface.co/datasets/gsm8k)** — Mathematical reasoning evaluation (maj1@1)
+- **[MATH](https://huggingface.co/datasets/hendrycks/competition_math)** — Mathematical reasoning evaluation (maj1@1)
+- **[HumanEval](https://huggingface.co/datasets/openai_humaneval)** — Code generation evaluation (pass@k)
+- **[MBPP](https://huggingface.co/datasets/mbpp)** — Code generation evaluation (pass@k)
 
 ### 常见报错与解决
 
-- **报错:** `训练 70B 模型时 OOM`
-  - 原因: 模型过大，单个 GPU 显存不足
-  - 修复: `启用 gradient checkpointing 并配合 DeepSpeed ZeRO-3 或模型并行`
-- **报错:** `RLHF 训练中 reward 不提升甚至下降`
-  - 原因: 奖励模型与当前策略分布不匹配
-  - 修复: `参照论文 Section 3.2.3，使用新收集的偏好数据迭代更新奖励模型`
+- **报错:** `Generation is extremely slow (20× slower) when using FSDP during PPO training`
+  - 原因: FSDP overhead during text generation, even with large batch size and KV cache.
+  - 修复: `Consolidate model weights to each node before generation, then free memory after generation. Implementation: modify the training loop to call `model.consolidate_state_dict()` once per node before sampling.`
+- **报错:** `Reward hacking: the model starts generating nonsensical text that receives high reward but is not helpful`
+  - 原因: The policy overfits to the reward model; this can occur if the KL penalty is too small or the reward model is not well calibrated.
+  - 修复: `Increase the KL penalty coefficient (β) or adjust the whitening of reward scores. Monitor KL divergence and use early stopping on held-out prompts (Section 3.2.3).`
+- **报错:** `False refusal increases significantly after adding safety RLHF data`
+  - 原因: The model becomes overly conservative, refusing benign prompts that contain sensitive keywords (e.g., 'bomb', 'crack').
+  - 修复: `Re‑balance safety and helpfulness data; use a borderline test set to measure false refusal rate. Consider using context distillation with appropriate templates to avoid over‑triggering refusals (Section 4.2.4).`
 
 ### ⚠️ 坑点提示
 
-- 温度参数对拒绝采样的效果影响显著，RLHF 不同阶段可能需要重新调整温度（参见 Figure 8）
-- 安全数据比例增加可能导致错误拒绝（false refusal）率上升，需平衡 helpfulness 与 safety
-- GAtt（Ghost Attention）能有效提升多轮对话的一致性，建议在微调时应用
-- 使用 context distillation 可快速提升安全性，但可能引入模糊回答或错误拒绝（参见 Table 40）
+- The optimal sampling temperature changes after each RLHF iteration; it should be re‑tuned dynamically. For the RLHF‑tuned model, the best temperature for rejection sampling (10–100 outputs) is around 1.2–1.3.
+- Using only rejection sampling from the most recent iteration can cause capability regression; include top samples from all prior iterations to stabilize training.
+- Context distillation for safety can make responses vague or introduce false refusals (e.g., model refuses to talk about pizza due to strong opinions). Applying dedicated answer templates per risk category helps.
+- Sharding for multi‑query attention (MQA) cannot be done across heads when the number of heads is lower than the number of GPUs; GQA with 8 KV projections offers a better trade‑off for inference speed and memory.
 
 
 ---

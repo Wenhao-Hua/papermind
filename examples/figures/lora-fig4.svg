@@ -1,0 +1,131 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 960 680" font-family="'Segoe UI','PingFang SC','Microsoft YaHei',sans-serif" width="960" height="680">
+  <rect x="0" y="0" width="960" height="680" fill="#ffffff"/>
+
+  <!-- 标题 -->
+  <text x="480" y="36" font-size="22" font-weight="bold" fill="#1e293b" text-anchor="middle">LoRA: Low-Rank Adaptation of Transformer</text>
+
+  <!-- 左侧主面板：LoRA 重参数化 -->
+  <rect x="40" y="60" width="520" height="340" fill="#f8fafc" stroke="#cbd5e1" stroke-width="1.5" rx="4"/>
+  <text x="300" y="86" font-size="16" font-weight="bold" fill="#1e293b" text-anchor="middle">LoRA Reparametrization (Section 4.1)</text>
+
+  <!-- 预训练权重 W 框 -->
+  <rect x="80" y="110" width="200" height="80" fill="#eef2ff" stroke="#6366f1" stroke-width="2" rx="4"/>
+  <text x="180" y="140" font-size="15" font-weight="bold" fill="#3730a3" text-anchor="middle">Pre-trained Weight</text>
+  <text x="180" y="162" font-size="14" fill="#3730a3" text-anchor="middle">W ∈ ℝ^{d×d}</text>
+  <text x="180" y="180" font-size="12" fill="#64748b" text-anchor="middle">(frozen, not updated)</text>
+
+  <!-- 冻结标签 -->
+  <rect x="100" y="196" width="160" height="22" fill="#f1f5f9" stroke="#94a3b8" stroke-width="1" rx="3"/>
+  <text x="180" y="212" font-size="12" fill="#64748b" text-anchor="middle">Frozen (no gradient)</text>
+
+  <!-- 右侧：LoRA 低秩分解 -->
+  <rect x="340" y="110" width="200" height="80" fill="#fbfcfe" stroke="#475569" stroke-width="1.5" rx="4"/>
+  <text x="440" y="136" font-size="14" font-weight="bold" fill="#1e293b" text-anchor="middle">Low-Rank Update</text>
+  <text x="440" y="156" font-size="13" fill="#334155" text-anchor="middle">ΔW = B · A</text>
+  <text x="440" y="176" font-size="12" fill="#64748b" text-anchor="middle">(trainable, r ≪ d)</text>
+
+  <!-- A 矩阵 -->
+  <rect x="360" y="200" width="60" height="60" fill="#f1f5f9" stroke="#94a3b8" stroke-width="1.5" rx="3"/>
+  <text x="390" y="226" font-size="13" font-weight="bold" fill="#334155" text-anchor="middle">A</text>
+  <text x="390" y="244" font-size="11" fill="#64748b" text-anchor="middle">ℝ^{r×d}</text>
+  <text x="390" y="258" font-size="10" fill="#94a3b8" text-anchor="middle">init: N(0,σ²)</text>
+
+  <!-- B 矩阵 -->
+  <rect x="460" y="200" width="60" height="60" fill="#f1f5f9" stroke="#94a3b8" stroke-width="1.5" rx="3"/>
+  <text x="490" y="226" font-size="13" font-weight="bold" fill="#334155" text-anchor="middle">B</text>
+  <text x="490" y="244" font-size="11" fill="#64748b" text-anchor="middle">ℝ^{d×r}</text>
+  <text x="490" y="258" font-size="10" fill="#94a3b8" text-anchor="middle">init: 0</text>
+
+  <!-- 乘号 -->
+  <text x="430" y="236" font-size="16" fill="#475569" text-anchor="middle">&#215;</text>
+
+  <!-- 箭头：W → 输出 -->
+  <line x1="180" y1="190" x2="180" y2="280" stroke="#6366f1" stroke-width="2"/>
+  <polygon points="180,290 174,278 186,278" fill="#6366f1"/>
+
+  <!-- 箭头：A → B → 输出 -->
+  <line x1="390" y1="260" x2="390" y2="280" stroke="#475569" stroke-width="1.5"/>
+  <line x1="390" y1="280" x2="490" y2="280" stroke="#475569" stroke-width="1.5"/>
+  <line x1="490" y1="260" x2="490" y2="280" stroke="#475569" stroke-width="1.5"/>
+  <polygon points="490,290 484,278 496,278" fill="#475569"/>
+
+  <!-- 加法节点 -->
+  <circle cx="180" cy="310" r="16" fill="#eef2ff" stroke="#6366f1" stroke-width="2"/>
+  <text x="180" y="315" font-size="14" font-weight="bold" fill="#3730a3" text-anchor="middle">+</text>
+
+  <!-- 输出 -->
+  <rect x="120" y="340" width="120" height="36" fill="#eef2ff" stroke="#6366f1" stroke-width="2" rx="4"/>
+  <text x="180" y="363" font-size="14" font-weight="bold" fill="#3730a3" text-anchor="middle">Output = Wx + BAx</text>
+
+  <!-- 箭头到输出 -->
+  <line x1="180" y1="326" x2="180" y2="340" stroke="#6366f1" stroke-width="2"/>
+
+  <!-- 右侧面板：LoRA 在 Transformer 上的应用 -->
+  <rect x="580" y="60" width="340" height="340" fill="#f8fafc" stroke="#cbd5e1" stroke-width="1.5" rx="4"/>
+  <text x="750" y="86" font-size="16" font-weight="bold" fill="#1e293b" text-anchor="middle">Application to Transformer (Section 4.2)</text>
+
+  <!-- Transformer 层示意图 -->
+  <rect x="610" y="110" width="280" height="270" fill="#fbfcfe" stroke="#475569" stroke-width="1.5" rx="4"/>
+  <text x="750" y="134" font-size="14" font-weight="bold" fill="#1e293b" text-anchor="middle">Transformer Layer</text>
+
+  <!-- 自注意力模块 -->
+  <rect x="630" y="150" width="240" height="100" fill="#f1f5f9" stroke="#94a3b8" stroke-width="1.5" rx="3"/>
+  <text x="750" y="172" font-size="13" font-weight="bold" fill="#334155" text-anchor="middle">Self-Attention</text>
+
+  <!-- W_q, W_k, W_v, W_o -->
+  <rect x="645" y="184" width="50" height="24" fill="#eef2ff" stroke="#6366f1" stroke-width="1.5" rx="2"/>
+  <text x="670" y="200" font-size="11" font-weight="bold" fill="#3730a3" text-anchor="middle">W_q</text>
+
+  <rect x="705" y="184" width="50" height="24" fill="#eef2ff" stroke="#6366f1" stroke-width="1.5" rx="2"/>
+  <text x="730" y="200" font-size="11" font-weight="bold" fill="#3730a3" text-anchor="middle">W_k</text>
+
+  <rect x="765" y="184" width="50" height="24" fill="#eef2ff" stroke="#6366f1" stroke-width="1.5" rx="2"/>
+  <text x="790" y="200" font-size="11" font-weight="bold" fill="#3730a3" text-anchor="middle">W_v</text>
+
+  <rect x="825" y="184" width="30" height="24" fill="#eef2ff" stroke="#6366f1" stroke-width="1.5" rx="2"/>
+  <text x="840" y="200" font-size="11" font-weight="bold" fill="#3730a3" text-anchor="middle">W_o</text>
+
+  <!-- LoRA 标签 -->
+  <text x="750" y="224" font-size="11" fill="#6366f1" text-anchor="middle">LoRA applied to W_q &amp; W_v (most experiments)</text>
+
+  <!-- MLP 模块 -->
+  <rect x="630" y="270" width="240" height="50" fill="#f8fafc" stroke="#cbd5e1" stroke-width="1.5" rx="3"/>
+  <text x="750" y="292" font-size="13" font-weight="bold" fill="#64748b" text-anchor="middle">MLP (Feed-Forward)</text>
+  <text x="750" y="310" font-size="11" fill="#94a3b8" text-anchor="middle">Frozen — no LoRA applied</text>
+
+  <!-- 箭头：自注意力 → MLP -->
+  <line x1="750" y1="250" x2="750" y2="270" stroke="#94a3b8" stroke-width="1.5"/>
+
+  <!-- 图例 -->
+  <rect x="580" y="420" width="340" height="100" fill="#f8fafc" stroke="#cbd5e1" stroke-width="1.5" rx="4"/>
+  <text x="750" y="446" font-size="14" font-weight="bold" fill="#1e293b" text-anchor="middle">Legend</text>
+
+  <!-- 图例项 -->
+  <line x1="610" y1="470" x2="660" y2="470" stroke="#6366f1" stroke-width="2"/>
+  <polygon points="660,470 654,464 666,464" fill="#6366f1"/>
+  <text x="670" y="475" font-size="12" fill="#334155">Forward pass (data flow)</text>
+
+  <line x1="610" y1="495" x2="660" y2="495" stroke="#475569" stroke-width="1.5"/>
+  <polygon points="660,495 654,489 666,489" fill="#475569"/>
+  <text x="670" y="500" font-size="12" fill="#334155">LoRA update path (B·A)</text>
+
+  <!-- 底部说明 -->
+  <rect x="40" y="420" width="520" height="100" fill="#f8fafc" stroke="#cbd5e1" stroke-width="1.5" rx="4"/>
+  <text x="300" y="446" font-size="14" font-weight="bold" fill="#1e293b" text-anchor="middle">Key Definition: Low-Rank Update</text>
+
+  <text x="300" y="472" font-size="14" fill="#334155" text-anchor="middle">For a pre-trained weight matrix W₀ ∈ ℝ^{d×d}, the adapted weight is:</text>
+  <text x="300" y="496" font-size="16" font-weight="bold" fill="#3730a3" text-anchor="middle">W = W₀ + ΔW = W₀ + BA, where B ∈ ℝ^{d×r}, A ∈ ℝ^{r×d}, r ≪ d</text>
+
+  <!-- 参数节省说明 -->
+  <rect x="40" y="540" width="520" height="60" fill="#eef2ff" stroke="#6366f1" stroke-width="1.5" rx="4"/>
+  <text x="300" y="564" font-size="14" font-weight="bold" fill="#3730a3" text-anchor="middle">Parameter Efficiency (GPT-3 175B example)</text>
+  <text x="300" y="586" font-size="13" fill="#334155" text-anchor="middle">Trainable params reduced by 10,000&#215;  |  GPU memory reduced by 3&#215;  |  No inference latency</text>
+
+  <!-- 右侧底部：秩 r 说明 -->
+  <rect x="580" y="540" width="340" height="60" fill="#f8fafc" stroke="#cbd5e1" stroke-width="1.5" rx="4"/>
+  <text x="750" y="564" font-size="14" font-weight="bold" fill="#1e293b" text-anchor="middle">Rank r</text>
+  <text x="750" y="586" font-size="13" fill="#334155" text-anchor="middle">Typical r = 1, 2, 4, 8 (r ≪ d)</text>
+
+  <!-- 底部引用 -->
+  <text x="480" y="660" font-size="11" fill="#94a3b8" text-anchor="middle">Figure 1: LoRA reparametrization and its application to Transformer. Adapted from Hu et al. (2021).</text>
+</svg>

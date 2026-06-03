@@ -1,0 +1,91 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 960 620" font-family="'Segoe UI','PingFang SC','Microsoft YaHei',sans-serif" width="960" height="620">
+  <rect x="0" y="0" width="960" height="620" fill="#ffffff"/>
+
+  <!-- 标题 -->
+  <text x="480" y="36" font-size="20" font-weight="700" fill="#1e293b" text-anchor="middle">Classification Head Strategy in ViT</text>
+  <line x1="280" y1="46" x2="680" y2="46" stroke="#6366f1" stroke-width="2"/>
+
+  <!-- 左侧主面板：预训练与微调对比 -->
+  <!-- 预训练头部 -->
+  <rect x="40" y="70" width="420" height="240" rx="6" fill="#f8fafc" stroke="#cbd5e1" stroke-width="1.5"/>
+  <text x="250" y="100" font-size="15" font-weight="700" fill="#1e293b" text-anchor="middle">Pre-training Head</text>
+  <line x1="60" y1="110" x2="440" y2="110" stroke="#e2e8f0" stroke-width="1"/>
+
+  <!-- 输入：class token -->
+  <rect x="140" y="130" width="220" height="36" rx="4" fill="#eef2ff" stroke="#6366f1" stroke-width="1.5"/>
+  <text x="250" y="153" font-size="14" font-weight="600" fill="#3730a3" text-anchor="middle">z⁰_L  (class token output)</text>
+
+  <!-- 箭头 -->
+  <line x1="250" y1="166" x2="250" y2="190" stroke="#475569" stroke-width="1.5"/>
+  <polygon points="245,188 250,198 255,188" fill="#475569"/>
+
+  <!-- MLP 隐藏层 -->
+  <rect x="120" y="198" width="260" height="40" rx="4" fill="#f1f5f9" stroke="#475569" stroke-width="1.5"/>
+  <text x="250" y="223" font-size="14" font-weight="600" fill="#1e293b" text-anchor="middle">MLP (one hidden layer)</text>
+
+  <!-- 箭头 -->
+  <line x1="250" y1="238" x2="250" y2="262" stroke="#475569" stroke-width="1.5"/>
+  <polygon points="245,260 250,270 255,260" fill="#475569"/>
+
+  <!-- 输出 -->
+  <rect x="140" y="270" width="220" height="30" rx="4" fill="#eef2ff" stroke="#6366f1" stroke-width="1.5"/>
+  <text x="250" y="290" font-size="13" font-weight="600" fill="#3730a3" text-anchor="middle">Output: D → K_pretrain</text>
+
+  <!-- 微调头部 -->
+  <rect x="500" y="70" width="420" height="240" rx="6" fill="#f8fafc" stroke="#cbd5e1" stroke-width="1.5"/>
+  <text x="710" y="100" font-size="15" font-weight="700" fill="#1e293b" text-anchor="middle">Fine-tuning Head</text>
+  <line x1="520" y1="110" x2="900" y2="110" stroke="#e2e8f0" stroke-width="1"/>
+
+  <!-- 输入 -->
+  <rect x="600" y="130" width="220" height="36" rx="4" fill="#eef2ff" stroke="#6366f1" stroke-width="1.5"/>
+  <text x="710" y="153" font-size="14" font-weight="600" fill="#3730a3" text-anchor="middle">z⁰_L  (class token output)</text>
+
+  <!-- 箭头 -->
+  <line x1="710" y1="166" x2="710" y2="190" stroke="#475569" stroke-width="1.5"/>
+  <polygon points="705,188 710,198 715,188" fill="#475569"/>
+
+  <!-- 移除旧头部 -->
+  <rect x="580" y="198" width="260" height="40" rx="4" fill="#f1f5f9" stroke="#94a3b8" stroke-width="1.5" stroke-dasharray="5,3"/>
+  <text x="710" y="218" font-size="13" fill="#64748b" text-anchor="middle">Remove pre-training head</text>
+  <text x="710" y="232" font-size="12" fill="#94a3b8" text-anchor="middle">(entire MLP replaced)</text>
+
+  <!-- 箭头 -->
+  <line x1="710" y1="238" x2="710" y2="262" stroke="#475569" stroke-width="1.5"/>
+  <polygon points="705,260 710,270 715,260" fill="#475569"/>
+
+  <!-- 新线性层 -->
+  <rect x="600" y="270" width="220" height="30" rx="4" fill="#eef2ff" stroke="#6366f1" stroke-width="1.5"/>
+  <text x="710" y="290" font-size="13" font-weight="600" fill="#3730a3" text-anchor="middle">Linear layer D × K (zero-init)</text>
+
+  <!-- 中间标注：替换 -->
+  <text x="480" y="200" font-size="14" font-weight="700" fill="#6366f1" text-anchor="middle">&#8594; Replace &#8594;</text>
+  <text x="480" y="220" font-size="12" fill="#64748b" text-anchor="middle">More robust than</text>
+  <text x="480" y="236" font-size="12" fill="#64748b" text-anchor="middle">re-initializing last layer</text>
+
+  <!-- 底部说明面板 -->
+  <rect x="40" y="340" width="880" height="120" rx="6" fill="#f1f5f9" stroke="#cbd5e1" stroke-width="1.5"/>
+  <text x="480" y="370" font-size="14" font-weight="700" fill="#1e293b" text-anchor="middle">Key Design Details</text>
+  <line x1="60" y1="380" x2="900" y2="380" stroke="#e2e8f0" stroke-width="1"/>
+
+  <!-- 细节行 -->
+  <text x="80" y="408" font-size="13" fill="#334155">&#8226;  Pre-training: classification head = MLP with one hidden layer (D &#8594; D_hidden &#8594; K_pretrain)</text>
+  <text x="80" y="432" font-size="13" fill="#334155">&#8226;  Fine-tuning: remove entire pre-training head, replace with single linear layer D &#215; K (K = target classes)</text>
+  <text x="80" y="456" font-size="13" fill="#334155">&#8226;  New linear layer initialized to zero; this replacement strategy is more robust than re-initializing only the last layer</text>
+
+  <!-- 图例 -->
+  <rect x="40" y="480" width="880" height="50" rx="4" fill="#fbfcfe" stroke="#e2e8f0" stroke-width="1"/>
+  <text x="60" y="510" font-size="12" font-weight="600" fill="#64748b">Legend:</text>
+  <line x1="120" y1="505" x2="160" y2="505" stroke="#475569" stroke-width="1.5"/>
+  <polygon points="155,501 165,505 155,509" fill="#475569"/>
+  <text x="170" y="510" font-size="12" fill="#64748b">Data flow</text>
+  <line x1="260" y1="505" x2="300" y2="505" stroke="#94a3b8" stroke-width="1.5" stroke-dasharray="5,3"/>
+  <text x="310" y="510" font-size="12" fill="#64748b">Removed / replaced</text>
+  <rect x="430" y="496" width="16" height="16" rx="2" fill="#eef2ff" stroke="#6366f1" stroke-width="1.5"/>
+  <text x="454" y="510" font-size="12" fill="#64748b">Active component</text>
+  <rect x="570" y="496" width="16" height="16" rx="2" fill="#f1f5f9" stroke="#475569" stroke-width="1.5"/>
+  <text x="594" y="510" font-size="12" fill="#64748b">Intermediate layer</text>
+
+  <!-- 底部引用 -->
+  <text x="480" y="560" font-size="11" fill="#94a3b8" text-anchor="middle">Based on ViT paper (Dosovitskiy et al., 2021) Section 3.1: "Both during pre-training and fine-tuning, a classification head is attached to z⁰_L."</text>
+  <text x="480" y="578" font-size="11" fill="#94a3b8" text-anchor="middle">"The classification head is implemented by a MLP with one hidden layer at pre-training time and by a single linear layer at fine-tuning time."</text>
+</svg>

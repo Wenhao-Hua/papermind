@@ -1,0 +1,65 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 960 680" font-family="'Segoe UI','PingFang SC','Microsoft YaHei',sans-serif" font-size="14" fill="#1e293b" width="960" height="680">
+  <rect x="0" y="0" width="960" height="680" fill="#ffffff"/>
+
+  <!-- 标题 -->
+  <text x="480" y="36" font-size="20" font-weight="bold" text-anchor="middle" fill="#1e293b">Truncated Generalized Advantage Estimation (GAE) for Fixed-Length Segments</text>
+  <line x1="200" y1="46" x2="760" y2="46" stroke="#cbd5e1" stroke-width="1"/>
+
+  <!-- 核心公式框（视觉焦点） -->
+  <rect x="80" y="68" width="800" height="100" rx="6" fill="#eef2ff" stroke="#6366f1" stroke-width="2"/>
+  <text x="480" y="94" font-size="16" font-weight="bold" text-anchor="middle" fill="#3730a3">Core Definition: Truncated GAE</text>
+  <text x="480" y="126" font-size="18" text-anchor="middle" fill="#1e293b">&#x1D700;<tspan font-style="italic">A</tspan><tspan baseline-shift="sub" font-size="75%">t</tspan> = &#x3B4;<tspan baseline-shift="sub" font-size="75%">t</tspan> + (&#x3B3;&#x3BB;)&#x3B4;<tspan baseline-shift="sub" font-size="75%">t+1</tspan> + &#x2026; + (&#x3B3;&#x3BB;)<tspan baseline-shift="super" font-size="75%">T&#x2212;t+1</tspan>&#x3B4;<tspan baseline-shift="sub" font-size="75%">T&#x2212;1</tspan></text>
+  <text x="480" y="154" font-size="15" text-anchor="middle" fill="#334155">where &#x3B4;<tspan baseline-shift="sub" font-size="75%">t</tspan> = r<tspan baseline-shift="sub" font-size="75%">t</tspan> + &#x3B3;V(s<tspan baseline-shift="sub" font-size="75%">t+1</tspan>) &#x2212; V(s<tspan baseline-shift="sub" font-size="75%">t</tspan>)</text>
+
+  <!-- 左侧：截断求和示意 -->
+  <rect x="80" y="190" width="420" height="200" rx="4" fill="#f8fafc" stroke="#cbd5e1" stroke-width="1"/>
+  <text x="290" y="216" font-size="14" font-weight="bold" text-anchor="middle" fill="#1e293b">Truncated Summation over Segment</text>
+
+  <!-- 求和展开示意 -->
+  <text x="110" y="248" font-size="13" fill="#334155">&#x1D700;<tspan font-style="italic">A</tspan><tspan baseline-shift="sub" font-size="75%">t</tspan> = &#x3B4;<tspan baseline-shift="sub" font-size="75%">t</tspan></text>
+  <text x="110" y="272" font-size="13" fill="#334155">&#x2003;&#x2003;+ (&#x3B3;&#x3BB;)&#x3B4;<tspan baseline-shift="sub" font-size="75%">t+1</tspan></text>
+  <text x="110" y="296" font-size="13" fill="#334155">&#x2003;&#x2003;+ (&#x3B3;&#x3BB;)<tspan baseline-shift="super" font-size="75%">2</tspan>&#x3B4;<tspan baseline-shift="sub" font-size="75%">t+2</tspan></text>
+  <text x="110" y="320" font-size="13" fill="#334155">&#x2003;&#x2003;+ &#x22EE;</text>
+  <text x="110" y="344" font-size="13" fill="#334155">&#x2003;&#x2003;+ (&#x3B3;&#x3BB;)<tspan baseline-shift="super" font-size="75%">T&#x2212;t+1</tspan>&#x3B4;<tspan baseline-shift="sub" font-size="75%">T&#x2212;1</tspan></text>
+
+  <!-- 右侧：关键属性 -->
+  <rect x="530" y="190" width="350" height="200" rx="4" fill="#f8fafc" stroke="#cbd5e1" stroke-width="1"/>
+  <text x="705" y="216" font-size="14" font-weight="bold" text-anchor="middle" fill="#1e293b">Key Properties</text>
+
+  <text x="550" y="248" font-size="13" fill="#334155">&#x2022; Truncation at T: avoids full-trajectory</text>
+  <text x="550" y="272" font-size="13" fill="#334155">&#x2003;&#x2003;dependence, matches fixed-length</text>
+  <text x="550" y="296" font-size="13" fill="#334155">&#x2003;&#x2003;segment sampling.</text>
+  <text x="550" y="328" font-size="13" fill="#334155">&#x2022; When &#x3BB; = 1: reduces to finite-horizon</text>
+  <text x="550" y="352" font-size="13" fill="#334155">&#x2003;&#x2003;Monte Carlo advantage estimate.</text>
+
+  <!-- 下方：δ_t 分解 -->
+  <rect x="80" y="412" width="420" height="120" rx="4" fill="#f1f5f9" stroke="#94a3b8" stroke-width="1"/>
+  <text x="290" y="438" font-size="14" font-weight="bold" text-anchor="middle" fill="#1e293b">TD Residual &#x3B4;<tspan baseline-shift="sub" font-size="75%">t</tspan> Decomposition</text>
+  <text x="110" y="466" font-size="13" fill="#334155">&#x3B4;<tspan baseline-shift="sub" font-size="75%">t</tspan> = r<tspan baseline-shift="sub" font-size="75%">t</tspan> + &#x3B3;V(s<tspan baseline-shift="sub" font-size="75%">t+1</tspan>) &#x2212; V(s<tspan baseline-shift="sub" font-size="75%">t</tspan>)</text>
+  <text x="110" y="494" font-size="12" fill="#64748b">&#x2192; Measures one-step temporal difference</text>
+  <text x="110" y="516" font-size="12" fill="#64748b">&#x2192; Combines reward + value bootstrap</text>
+
+  <!-- 下方右侧：图例 -->
+  <rect x="530" y="412" width="350" height="120" rx="4" fill="#f1f5f9" stroke="#94a3b8" stroke-width="1"/>
+  <text x="705" y="438" font-size="14" font-weight="bold" text-anchor="middle" fill="#1e293b">Legend</text>
+
+  <line x1="550" y1="466" x2="610" y2="466" stroke="#6366f1" stroke-width="2"/>
+  <polygon points="610,462 618,466 610,470" fill="#6366f1"/>
+  <text x="630" y="470" font-size="12" fill="#334155">Core definition / formula</text>
+
+  <line x1="550" y1="494" x2="610" y2="494" stroke="#475569" stroke-width="1.5"/>
+  <polygon points="610,490 618,494 610,498" fill="#475569"/>
+  <text x="630" y="498" font-size="12" fill="#334155">Derived quantity / property</text>
+
+  <line x1="550" y1="522" x2="610" y2="522" stroke="#94a3b8" stroke-width="1" stroke-dasharray="5,4"/>
+  <polygon points="610,518 618,522 610,526" fill="#94a3b8"/>
+  <text x="630" y="526" font-size="12" fill="#334155">Reference / background</text>
+
+  <!-- 底部说明 -->
+  <text x="480" y="600" font-size="12" text-anchor="middle" fill="#64748b">Truncated GAE enables efficient, unbiased advantage estimation within fixed-length trajectory segments,</text>
+  <text x="480" y="620" font-size="12" text-anchor="middle" fill="#64748b">matching the sampling scheme used in PPO and other on-policy algorithms.</text>
+
+  <!-- 底部边界线 -->
+  <line x1="80" y1="640" x2="880" y2="640" stroke="#e2e8f0" stroke-width="1"/>
+  <text x="480" y="660" font-size="11" text-anchor="middle" fill="#94a3b8">Figure 1: Truncated Generalized Advantage Estimation for fixed-length segments in PPO.</text>
+</svg>

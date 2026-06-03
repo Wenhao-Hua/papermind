@@ -1,0 +1,94 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 960 680" font-family="'Segoe UI','PingFang SC','Microsoft YaHei',sans-serif" font-size="14" fill="#1e293b" width="960" height="680">
+<rect x="0" y="0" width="960" height="680" fill="#ffffff"/>
+
+<!-- 标题 -->
+<text x="480" y="36" text-anchor="middle" font-size="20" font-weight="bold" fill="#1e293b">Combined Loss: L&#771;CLIP+VF+S&#771;t(&#952;)</text>
+<text x="480" y="58" text-anchor="middle" font-size="13" fill="#64748b">PPO final objective integrating clipped surrogate, value function MSE, and entropy bonus</text>
+
+<!-- 核心公式框（视觉焦点） -->
+<rect x="160" y="80" width="640" height="80" rx="6" fill="#eef2ff" stroke="#6366f1" stroke-width="2"/>
+<text x="480" y="108" text-anchor="middle" font-size="16" font-weight="bold" fill="#3730a3">L&#771;CLIP+VF+S&#771;t(&#952;) = &#771;E&#771;t [ L&#771;CLIP&#771;t(&#952;) &#8722; c&#8321; L&#771;VF&#771;t(&#952;) + c&#8322; S[&#960;&#952;](s&#771;t) ]</text>
+<text x="480" y="134" text-anchor="middle" font-size="12" fill="#475569">where c&#8321;, c&#8322; are coefficients balancing value loss and entropy regularization</text>
+<text x="480" y="150" text-anchor="middle" font-size="11" fill="#64748b">&#771;E&#771;t denotes empirical average over a finite batch of samples</text>
+
+<!-- 三部分分解：左侧三列 -->
+<!-- 第一部分：L_CLIP -->
+<rect x="60" y="190" width="260" height="180" rx="4" fill="#f8fafc" stroke="#cbd5e1" stroke-width="1"/>
+<text x="190" y="214" text-anchor="middle" font-size="14" font-weight="bold" fill="#1e293b">L&#771;CLIP&#771;t(&#952;)</text>
+<text x="190" y="234" text-anchor="middle" font-size="11" fill="#64748b">Clipped Surrogate Objective</text>
+<line x1="80" y1="244" x2="300" y2="244" stroke="#e2e8f0" stroke-width="1"/>
+<text x="190" y="264" text-anchor="middle" font-size="12" fill="#334155">&#771;E&#771;t [ min( r&#771;t(&#952;) &#771;A&#771;t,</text>
+<text x="190" y="282" text-anchor="middle" font-size="12" fill="#334155">clip(r&#771;t(&#952;), 1&#8722;&#949;, 1+&#949;) &#771;A&#771;t ) ]</text>
+<text x="190" y="304" text-anchor="middle" font-size="11" fill="#64748b">r&#771;t(&#952;) = &#960;&#952;(a&#771;t|s&#771;t) / &#960;&#952;_old(a&#771;t|s&#771;t)</text>
+<text x="190" y="324" text-anchor="middle" font-size="11" fill="#64748b">&#949; = 0.2 (clipping threshold)</text>
+<text x="190" y="344" text-anchor="middle" font-size="11" fill="#64748b">&#771;A&#771;t = advantage estimate</text>
+<text x="190" y="362" text-anchor="middle" font-size="10" fill="#94a3b8">prevents large destructive updates</text>
+
+<!-- 第二部分：L_VF -->
+<rect x="350" y="190" width="260" height="180" rx="4" fill="#f8fafc" stroke="#cbd5e1" stroke-width="1"/>
+<text x="480" y="214" text-anchor="middle" font-size="14" font-weight="bold" fill="#1e293b">L&#771;VF&#771;t(&#952;)</text>
+<text x="480" y="234" text-anchor="middle" font-size="11" fill="#64748b">Value Function MSE Loss</text>
+<line x1="370" y1="244" x2="590" y2="244" stroke="#e2e8f0" stroke-width="1"/>
+<text x="480" y="264" text-anchor="middle" font-size="12" fill="#334155">( V&#952;(s&#771;t) &#8722; V&#771;target&#771;t )&#178;</text>
+<text x="480" y="286" text-anchor="middle" font-size="11" fill="#64748b">V&#952; = learned state-value function</text>
+<text x="480" y="306" text-anchor="middle" font-size="11" fill="#64748b">V&#771;target = bootstrapped return</text>
+<text x="480" y="326" text-anchor="middle" font-size="11" fill="#64748b">(e.g., GAE or TD(&#955;) target)</text>
+<text x="480" y="350" text-anchor="middle" font-size="10" fill="#94a3b8">trains value function via regression</text>
+
+<!-- 第三部分：S[π] -->
+<rect x="640" y="190" width="260" height="180" rx="4" fill="#f8fafc" stroke="#cbd5e1" stroke-width="1"/>
+<text x="770" y="214" text-anchor="middle" font-size="14" font-weight="bold" fill="#1e293b">S[&#960;&#952;](s&#771;t)</text>
+<text x="770" y="234" text-anchor="middle" font-size="11" fill="#64748b">Policy Entropy Bonus</text>
+<line x1="660" y1="244" x2="880" y2="244" stroke="#e2e8f0" stroke-width="1"/>
+<text x="770" y="264" text-anchor="middle" font-size="12" fill="#334155">&#8722;&#8721;&#771;a &#960;&#952;(a|s&#771;t) log &#960;&#952;(a|s&#771;t)</text>
+<text x="770" y="286" text-anchor="middle" font-size="11" fill="#64748b">Shannon entropy of policy</text>
+<text x="770" y="306" text-anchor="middle" font-size="11" fill="#64748b">at state s&#771;t</text>
+<text x="770" y="330" text-anchor="middle" font-size="11" fill="#64748b">encourages exploration</text>
+<text x="770" y="350" text-anchor="middle" font-size="10" fill="#94a3b8">prevents premature convergence</text>
+
+<!-- 箭头：三部分汇聚到公式 -->
+<!-- 左箭头 -->
+<line x1="190" y1="370" x2="190" y2="400" stroke="#6366f1" stroke-width="1.5"/>
+<line x1="190" y1="400" x2="480" y2="400" stroke="#6366f1" stroke-width="1.5"/>
+<polygon points="480,396 472,400 480,404" fill="#6366f1"/>
+<!-- 中箭头 -->
+<line x1="480" y1="370" x2="480" y2="396" stroke="#6366f1" stroke-width="1.5"/>
+<polygon points="480,392 472,396 480,400" fill="#6366f1"/>
+<!-- 右箭头 -->
+<line x1="770" y1="370" x2="770" y2="400" stroke="#6366f1" stroke-width="1.5"/>
+<line x1="770" y1="400" x2="480" y2="400" stroke="#6366f1" stroke-width="1.5"/>
+<polygon points="480,396 472,400 480,404" fill="#6366f1"/>
+
+<!-- 汇聚标签 -->
+<text x="340" y="414" text-anchor="middle" font-size="11" fill="#6366f1" font-weight="bold">weighted sum</text>
+
+<!-- 下方：共享网络参数示意图 -->
+<rect x="160" y="430" width="640" height="100" rx="4" fill="#f1f5f9" stroke="#94a3b8" stroke-width="1" stroke-dasharray="5,3"/>
+<text x="480" y="454" text-anchor="middle" font-size="13" font-weight="bold" fill="#1e293b">Shared Network Parameters &#952;</text>
+<text x="480" y="474" text-anchor="middle" font-size="11" fill="#64748b">Policy &#960;&#952; and value function V&#952; share early layers (e.g., convolutional or MLP)</text>
+<text x="480" y="494" text-anchor="middle" font-size="11" fill="#64748b">Two output heads: policy head (softmax over actions) + value head (scalar)</text>
+<text x="480" y="514" text-anchor="middle" font-size="11" fill="#64748b">Gradient from all three loss terms backpropagated through shared parameters</text>
+
+<!-- 图例面板（右侧） -->
+<rect x="740" y="440" width="200" height="120" rx="4" fill="#fbfcfe" stroke="#e2e8f0" stroke-width="1"/>
+<text x="840" y="462" text-anchor="middle" font-size="12" font-weight="bold" fill="#1e293b">Legend</text>
+<line x1="755" y1="472" x2="925" y2="472" stroke="#e2e8f0" stroke-width="1"/>
+<line x1="760" y1="488" x2="790" y2="488" stroke="#6366f1" stroke-width="1.5"/>
+<polygon points="790,485 785,488 790,491" fill="#6366f1"/>
+<text x="800" y="492" font-size="11" fill="#334155">forward / data flow</text>
+<line x1="760" y1="508" x2="790" y2="508" stroke="#94a3b8" stroke-width="1" stroke-dasharray="5,3"/>
+<text x="800" y="512" font-size="11" fill="#334155">shared params</text>
+<rect x="760" y="522" width="16" height="12" rx="2" fill="#eef2ff" stroke="#6366f1" stroke-width="1"/>
+<text x="800" y="534" font-size="11" fill="#334155">core formula</text>
+
+<!-- 底部说明 -->
+<text x="480" y="560" text-anchor="middle" font-size="11" fill="#64748b">Algorithm alternates between sampling data from policy &#960;&#952;_old and performing multiple epochs of minibatch SGD on L&#771;CLIP+VF+S&#771;t(&#952;)</text>
+<text x="480" y="580" text-anchor="middle" font-size="11" fill="#64748b">c&#8321; = 0.5, c&#8322; = 0.01 (default values from PPO paper)</text>
+
+<!-- 底部小表格：系数说明 -->
+<rect x="280" y="600" width="400" height="60" rx="3" fill="#f8fafc" stroke="#e2e8f0" stroke-width="1"/>
+<text x="480" y="620" text-anchor="middle" font-size="11" font-weight="bold" fill="#1e293b">Coefficient Default Values (PPO Paper)</text>
+<line x1="300" y1="628" x2="660" y2="628" stroke="#e2e8f0" stroke-width="1"/>
+<text x="360" y="646" text-anchor="middle" font-size="11" fill="#334155">c&#8321; (value loss weight) = 0.5</text>
+<text x="600" y="646" text-anchor="middle" font-size="11" fill="#334155">c&#8322; (entropy bonus weight) = 0.01</text>
+</svg>

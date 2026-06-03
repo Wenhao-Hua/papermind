@@ -1,0 +1,124 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 960 680" font-family="'Segoe UI','PingFang SC','Microsoft YaHei',sans-serif" width="960" height="680">
+  <rect x="0" y="0" width="960" height="680" fill="#ffffff"/>
+
+  <!-- 标题 -->
+  <text x="480" y="36" font-size="20" font-weight="bold" fill="#1e293b" text-anchor="middle">PPO: Fixed-Length Trajectory Segments &amp; Parallel Actors</text>
+
+  <!-- 核心定义框（强调色） -->
+  <rect x="40" y="56" width="880" height="80" rx="6" fill="#eef2ff" stroke="#6366f1" stroke-width="2"/>
+  <text x="480" y="82" font-size="18" font-weight="bold" fill="#3730a3" text-anchor="middle">Core Definition: Batch Construction</text>
+  <text x="480" y="110" font-size="15" fill="#334155" text-anchor="middle">N parallel actors each run T steps &#8594; collect NT transitions per update</text>
+  <text x="480" y="130" font-size="14" fill="#64748b" text-anchor="middle">Batch = { (s<tspan baseline-shift="sub" font-size="75%">t</tspan>, a<tspan baseline-shift="sub" font-size="75%">t</tspan>, r<tspan baseline-shift="sub" font-size="75%">t</tspan>, s<tspan baseline-shift="sub" font-size="75%">t+1</tspan>) } for t = 1 … NT, then compute advantages &amp; surrogate loss</text>
+
+  <!-- 左面板：并行 actor 与段 -->
+  <rect x="40" y="156" width="440" height="280" rx="4" fill="#f8fafc" stroke="#cbd5e1" stroke-width="1.5"/>
+  <text x="260" y="182" font-size="15" font-weight="bold" fill="#1e293b" text-anchor="middle">N Parallel Actors, Each T Steps</text>
+
+  <!-- Actor 1 -->
+  <rect x="60" y="200" width="180" height="36" rx="4" fill="#f1f5f9" stroke="#94a3b8" stroke-width="1.2"/>
+  <text x="150" y="222" font-size="13" fill="#334155" text-anchor="middle">Actor 1: s<tspan baseline-shift="sub" font-size="75%">1</tspan>…s<tspan baseline-shift="sub" font-size="75%">T</tspan></text>
+  <line x1="240" y1="218" x2="280" y2="218" stroke="#475569" stroke-width="1.5"/>
+  <polygon points="280,213 292,218 280,223" fill="#475569"/>
+
+  <!-- Actor 2 -->
+  <rect x="60" y="248" width="180" height="36" rx="4" fill="#f1f5f9" stroke="#94a3b8" stroke-width="1.2"/>
+  <text x="150" y="270" font-size="13" fill="#334155" text-anchor="middle">Actor 2: s<tspan baseline-shift="sub" font-size="75%">1</tspan>…s<tspan baseline-shift="sub" font-size="75%">T</tspan></text>
+  <line x1="240" y1="266" x2="280" y2="266" stroke="#475569" stroke-width="1.5"/>
+  <polygon points="280,261 292,266 280,271" fill="#475569"/>
+
+  <!-- 省略号 -->
+  <text x="150" y="300" font-size="14" fill="#64748b" text-anchor="middle">&#8942;</text>
+
+  <!-- Actor N -->
+  <rect x="60" y="312" width="180" height="36" rx="4" fill="#f1f5f9" stroke="#94a3b8" stroke-width="1.2"/>
+  <text x="150" y="334" font-size="13" fill="#334155" text-anchor="middle">Actor N: s<tspan baseline-shift="sub" font-size="75%">1</tspan>…s<tspan baseline-shift="sub" font-size="75%">T</tspan></text>
+  <line x1="240" y1="330" x2="280" y2="330" stroke="#475569" stroke-width="1.5"/>
+  <polygon points="280,325 292,330 280,335" fill="#475569"/>
+
+  <!-- 合并箭头 -->
+  <line x1="292" y1="218" x2="292" y2="330" stroke="#94a3b8" stroke-width="1.2" stroke-dasharray="4,3"/>
+  <line x1="292" y1="274" x2="340" y2="274" stroke="#475569" stroke-width="1.8"/>
+  <polygon points="340,268 354,274 340,280" fill="#475569"/>
+
+  <!-- 合并框 -->
+  <rect x="354" y="252" width="110" height="44" rx="4" fill="#eef2ff" stroke="#6366f1" stroke-width="1.5"/>
+  <text x="409" y="272" font-size="13" font-weight="bold" fill="#3730a3" text-anchor="middle">Merge</text>
+  <text x="409" y="288" font-size="11" fill="#64748b" text-anchor="middle">NT transitions</text>
+
+  <!-- 右面板：段结构 -->
+  <rect x="500" y="156" width="420" height="280" rx="4" fill="#f8fafc" stroke="#cbd5e1" stroke-width="1.5"/>
+  <text x="710" y="182" font-size="15" font-weight="bold" fill="#1e293b" text-anchor="middle">Fixed-Length Segment Structure</text>
+
+  <!-- 时间轴 -->
+  <line x1="530" y1="220" x2="890" y2="220" stroke="#475569" stroke-width="2"/>
+  <!-- 刻度 -->
+  <line x1="530" y1="214" x2="530" y2="226" stroke="#475569" stroke-width="1.5"/>
+  <text x="530" y="242" font-size="11" fill="#64748b" text-anchor="middle">t=1</text>
+  <line x1="620" y1="214" x2="620" y2="226" stroke="#475569" stroke-width="1.5"/>
+  <text x="620" y="242" font-size="11" fill="#64748b" text-anchor="middle">t=2</text>
+  <line x1="710" y1="214" x2="710" y2="226" stroke="#475569" stroke-width="1.5"/>
+  <text x="710" y="242" font-size="11" fill="#64748b" text-anchor="middle">&#8942;</text>
+  <line x1="800" y1="214" x2="800" y2="226" stroke="#475569" stroke-width="1.5"/>
+  <text x="800" y="242" font-size="11" fill="#64748b" text-anchor="middle">t=T</text>
+  <line x1="890" y1="214" x2="890" y2="226" stroke="#475569" stroke-width="1.5"/>
+  <text x="890" y="242" font-size="11" fill="#64748b" text-anchor="middle">t=T+1</text>
+
+  <!-- 段标注 -->
+  <rect x="530" y="256" width="270" height="28" rx="4" fill="#eef2ff" stroke="#6366f1" stroke-width="1.2"/>
+  <text x="665" y="274" font-size="12" font-weight="bold" fill="#3730a3" text-anchor="middle">Segment: T steps per actor</text>
+
+  <!-- 优势估计说明 -->
+  <text x="710" y="312" font-size="13" fill="#334155" text-anchor="middle">Advantage: GAE(&#955;) within segment</text>
+  <text x="710" y="332" font-size="12" fill="#64748b" text-anchor="middle">&#913;̂<tspan baseline-shift="sub" font-size="75%">t</tspan> = &#948;<tspan baseline-shift="sub" font-size="75%">t</tspan> + (&#947;&#955;)&#948;<tspan baseline-shift="sub" font-size="75%">t+1</tspan> + … + (&#947;&#955;)<tspan baseline-shift="super" font-size="75%">T-t+1</tspan>&#948;<tspan baseline-shift="sub" font-size="75%">T</tspan></text>
+
+  <!-- 循环兼容 -->
+  <rect x="530" y="352" width="360" height="36" rx="4" fill="#f1f5f9" stroke="#94a3b8" stroke-width="1.2"/>
+  <text x="710" y="374" font-size="12" fill="#334155" text-anchor="middle">Compatible with RNN: hidden state reset per segment</text>
+
+  <!-- 底部：更新流程 -->
+  <rect x="40" y="456" width="880" height="100" rx="4" fill="#f8fafc" stroke="#cbd5e1" stroke-width="1.5"/>
+  <text x="480" y="482" font-size="15" font-weight="bold" fill="#1e293b" text-anchor="middle">Update Procedure (per iteration)</text>
+
+  <!-- 步骤 1 -->
+  <rect x="60" y="498" width="160" height="40" rx="4" fill="#f1f5f9" stroke="#94a3b8" stroke-width="1.2"/>
+  <text x="140" y="516" font-size="12" fill="#334155" text-anchor="middle">1. Run N actors</text>
+  <text x="140" y="532" font-size="11" fill="#64748b" text-anchor="middle">T steps each</text>
+
+  <line x1="220" y1="518" x2="260" y2="518" stroke="#475569" stroke-width="1.5"/>
+  <polygon points="260,513 272,518 260,523" fill="#475569"/>
+
+  <!-- 步骤 2 -->
+  <rect x="272" y="498" width="160" height="40" rx="4" fill="#f1f5f9" stroke="#94a3b8" stroke-width="1.2"/>
+  <text x="352" y="516" font-size="12" fill="#334155" text-anchor="middle">2. Compute advantages</text>
+  <text x="352" y="532" font-size="11" fill="#64748b" text-anchor="middle">GAE(&#955;)</text>
+
+  <line x1="432" y1="518" x2="472" y2="518" stroke="#475569" stroke-width="1.5"/>
+  <polygon points="472,513 484,518 472,523" fill="#475569"/>
+
+  <!-- 步骤 3 -->
+  <rect x="484" y="498" width="180" height="40" rx="4" fill="#eef2ff" stroke="#6366f1" stroke-width="1.5"/>
+  <text x="574" y="516" font-size="12" font-weight="bold" fill="#3730a3" text-anchor="middle">3. Optimize surrogate</text>
+  <text x="574" y="532" font-size="11" fill="#64748b" text-anchor="middle">L<tspan baseline-shift="super" font-size="75%">CLIP</tspan> or L<tspan baseline-shift="super" font-size="75%">KLPEN</tspan></text>
+
+  <line x1="664" y1="518" x2="704" y2="518" stroke="#475569" stroke-width="1.5"/>
+  <polygon points="704,513 716,518 704,523" fill="#475569"/>
+
+  <!-- 步骤 4 -->
+  <rect x="716" y="498" width="180" height="40" rx="4" fill="#f1f5f9" stroke="#94a3b8" stroke-width="1.2"/>
+  <text x="806" y="516" font-size="12" fill="#334155" text-anchor="middle">4. Update policy &#952;</text>
+  <text x="806" y="532" font-size="11" fill="#64748b" text-anchor="middle">SGD on minibatches</text>
+
+  <!-- 图例 -->
+  <rect x="40" y="576" width="880" height="44" rx="4" fill="#fbfcfe" stroke="#e2e8f0" stroke-width="1"/>
+  <text x="60" y="598" font-size="12" font-weight="bold" fill="#1e293b">Legend:</text>
+  <line x1="120" y1="594" x2="160" y2="594" stroke="#475569" stroke-width="1.5"/>
+  <polygon points="160,589 170,594 160,599" fill="#475569"/>
+  <text x="175" y="598" font-size="11" fill="#64748b">Data flow (forward)</text>
+  <line x1="310" y1="594" x2="350" y2="594" stroke="#94a3b8" stroke-width="1.2" stroke-dasharray="4,3"/>
+  <polygon points="350,589 360,594 350,599" fill="#94a3b8"/>
+  <text x="365" y="598" font-size="11" fill="#64748b">Reference / alignment</text>
+  <rect x="530" y="584" width="16" height="16" rx="2" fill="#eef2ff" stroke="#6366f1" stroke-width="1.2"/>
+  <text x="552" y="598" font-size="11" fill="#64748b">Key component</text>
+  <rect x="670" y="584" width="16" height="16" rx="2" fill="#f1f5f9" stroke="#94a3b8" stroke-width="1.2"/>
+  <text x="692" y="598" font-size="11" fill="#64748b">Standard step</text>
+</svg>

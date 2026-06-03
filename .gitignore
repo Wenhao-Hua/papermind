@@ -29,3 +29,9 @@ Thumbs.db
 
 # Playwright MCP browser artifacts / screenshots
 .playwright-mcp/
+
+# Dev-only preview pages / scratch screenshots
+examples/_*.html
+/candidates.png
+/home-hero.png
+/fig-preview.png

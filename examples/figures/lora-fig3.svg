@@ -1,0 +1,138 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 960 680" font-family="'Segoe UI','PingFang SC','Microsoft YaHei',sans-serif" font-size="14" fill="#1e293b" width="960" height="680">
+  <rect x="0" y="0" width="960" height="680" fill="#ffffff"/>
+
+  <!-- 标题 -->
+  <text x="480" y="36" text-anchor="middle" font-size="20" font-weight="bold" fill="#1e293b">LoRA 可泛化为全微调</text>
+  <text x="480" y="58" text-anchor="middle" font-size="13" fill="#64748b">当 LoRA 应用于所有权重矩阵且秩 r 等于预训练矩阵的秩时，可恢复全微调的表达能力</text>
+
+  <!-- ===== 左侧主区：核心定义 ===== -->
+  <!-- 核心公式框 -->
+  <rect x="40" y="80" width="440" height="120" rx="6" fill="#eef2ff" stroke="#6366f1" stroke-width="2"/>
+  <text x="260" y="108" text-anchor="middle" font-size="16" font-weight="bold" fill="#3730a3">核心定义：LoRA 更新</text>
+  <text x="260" y="138" text-anchor="middle" font-size="15" fill="#1e293b">h = W₀ x + ΔW x</text>
+  <text x="260" y="162" text-anchor="middle" font-size="14" fill="#334155">ΔW = B · A, 其中 B ∈ ℝ^{d×r}, A ∈ ℝ^{r×d}</text>
+  <text x="260" y="186" text-anchor="middle" font-size="13" fill="#64748b">训练时冻结 W₀，仅更新 A 和 B；r ≪ d</text>
+
+  <!-- 全微调定义框 -->
+  <rect x="40" y="220" width="440" height="100" rx="6" fill="#f8fafc" stroke="#94a3b8" stroke-width="1.5"/>
+  <text x="260" y="248" text-anchor="middle" font-size="15" font-weight="bold" fill="#334155">全微调（Full Fine-Tuning）</text>
+  <text x="260" y="274" text-anchor="middle" font-size="14" fill="#475569">h = (W₀ + ΔW_full) x</text>
+  <text x="260" y="298" text-anchor="middle" font-size="13" fill="#64748b">ΔW_full ∈ ℝ^{d×d} 无低秩约束，更新所有参数</text>
+
+  <!-- 箭头：LoRA → 全微调 -->
+  <line x1="260" y1="200" x2="260" y2="220" stroke="#6366f1" stroke-width="2"/>
+  <polygon points="254,218 260,228 266,218" fill="#6366f1"/>
+
+  <!-- 条件标注 -->
+  <rect x="140" y="340" width="240" height="44" rx="4" fill="#f1f5f9" stroke="#cbd5e1" stroke-width="1"/>
+  <text x="260" y="360" text-anchor="middle" font-size="13" fill="#334155">当 r = rank(W₀) 且应用于所有 W</text>
+  <text x="260" y="378" text-anchor="middle" font-size="13" fill="#334155">LoRA 可表示任意 ΔW ∈ ℝ^{d×d}</text>
+
+  <!-- 箭头：条件 → 结论 -->
+  <line x1="260" y1="384" x2="260" y2="410" stroke="#6366f1" stroke-width="2"/>
+  <polygon points="254,408 260,418 266,408" fill="#6366f1"/>
+
+  <!-- 结论框 -->
+  <rect x="80" y="418" width="360" height="60" rx="6" fill="#eef2ff" stroke="#6366f1" stroke-width="2"/>
+  <text x="260" y="446" text-anchor="middle" font-size="15" font-weight="bold" fill="#3730a3">结论：全微调是 LoRA 的特例</text>
+  <text x="260" y="468" text-anchor="middle" font-size="13" fill="#475569">LoRA 表达能力 ≥ 全微调（当 r 足够大时）</text>
+
+  <!-- ===== 右侧：集合/映射显式表示 ===== -->
+  <!-- 集合表示框 -->
+  <rect x="520" y="80" width="400" height="180" rx="6" fill="#f8fafc" stroke="#cbd5e1" stroke-width="1.5"/>
+  <text x="720" y="108" text-anchor="middle" font-size="14" font-weight="bold" fill="#334155">参数空间映射</text>
+
+  <!-- 集合 A -->
+  <text x="560" y="138" font-size="13" fill="#1e293b">预训练权重空间：</text>
+  <text x="560" y="158" font-size="13" fill="#475569">W₀ ∈ ℝ^{d×d}（冻结）</text>
+
+  <!-- 集合 B -->
+  <text x="560" y="188" font-size="13" fill="#1e293b">LoRA 参数空间：</text>
+  <text x="560" y="208" font-size="13" fill="#475569">A ∈ ℝ^{r×d}, B ∈ ℝ^{d×r}</text>
+  <text x="560" y="228" font-size="13" fill="#64748b">总参数量：2·r·d ≪ d²</text>
+
+  <!-- 映射箭头 -->
+  <line x1="680" y1="148" x2="680" y2="178" stroke="#6366f1" stroke-width="1.5"/>
+  <polygon points="676,176 680,186 684,176" fill="#6366f1"/>
+  <text x="700" y="168" font-size="11" fill="#6366f1">ΔW = BA</text>
+
+  <!-- 全微调映射 -->
+  <text x="560" y="258" font-size="13" fill="#1e293b">全微调参数空间：</text>
+  <text x="560" y="278" font-size="13" fill="#475569">ΔW_full ∈ ℝ^{d×d}（无约束）</text>
+
+  <line x1="680" y1="198" x2="680" y2="248" stroke="#94a3b8" stroke-width="1.5" stroke-dasharray="5,4"/>
+  <polygon points="676,246 680,256 684,246" fill="#94a3b8"/>
+  <text x="700" y="228" font-size="11" fill="#94a3b8">当 r = d 时等价</text>
+
+  <!-- ===== 右侧下方：二部图表示 ===== -->
+  <rect x="520" y="280" width="400" height="200" rx="6" fill="#f8fafc" stroke="#cbd5e1" stroke-width="1.5"/>
+  <text x="720" y="308" text-anchor="middle" font-size="14" font-weight="bold" fill="#334155">低秩分解的二部图表示</text>
+
+  <!-- 左侧节点列（输入维度 d） -->
+  <text x="560" y="332" font-size="12" fill="#64748b">输入维度 d</text>
+  <circle cx="560" cy="360" r="6" fill="#6366f1"/>
+  <circle cx="560" cy="390" r="6" fill="#6366f1"/>
+  <circle cx="560" cy="420" r="6" fill="#6366f1"/>
+  <circle cx="560" cy="450" r="6" fill="#6366f1"/>
+  <text x="560" y="470" text-anchor="middle" font-size="11" fill="#94a3b8">⋮</text>
+
+  <!-- 中间节点列（秩 r） -->
+  <text x="720" y="332" font-size="12" fill="#64748b">秩 r（瓶颈）</text>
+  <circle cx="720" cy="370" r="6" fill="#e2e8f0" stroke="#6366f1" stroke-width="1.5"/>
+  <circle cx="720" cy="410" r="6" fill="#e2e8f0" stroke="#6366f1" stroke-width="1.5"/>
+  <circle cx="720" cy="450" r="6" fill="#e2e8f0" stroke="#6366f1" stroke-width="1.5"/>
+
+  <!-- 右侧节点列（输出维度 d） -->
+  <text x="870" y="332" font-size="12" fill="#64748b">输出维度 d</text>
+  <circle cx="870" cy="360" r="6" fill="#6366f1"/>
+  <circle cx="870" cy="390" r="6" fill="#6366f1"/>
+  <circle cx="870" cy="420" r="6" fill="#6366f1"/>
+  <circle cx="870" cy="450" r="6" fill="#6366f1"/>
+  <text x="870" y="470" text-anchor="middle" font-size="11" fill="#94a3b8">⋮</text>
+
+  <!-- 连边：左→中（A 矩阵） -->
+  <line x1="566" y1="360" x2="714" y2="370" stroke="#6366f1" stroke-width="1" opacity="0.5"/>
+  <line x1="566" y1="360" x2="714" y2="410" stroke="#6366f1" stroke-width="1" opacity="0.5"/>
+  <line x1="566" y1="390" x2="714" y2="370" stroke="#6366f1" stroke-width="1" opacity="0.5"/>
+  <line x1="566" y1="390" x2="714" y2="410" stroke="#6366f1" stroke-width="1" opacity="0.5"/>
+  <line x1="566" y1="420" x2="714" y2="410" stroke="#6366f1" stroke-width="1" opacity="0.5"/>
+  <line x1="566" y1="420" x2="714" y2="450" stroke="#6366f1" stroke-width="1" opacity="0.5"/>
+  <line x1="566" y1="450" x2="714" y2="450" stroke="#6366f1" stroke-width="1" opacity="0.5"/>
+
+  <!-- 连边：中→右（B 矩阵） -->
+  <line x1="726" y1="370" x2="864" y2="360" stroke="#6366f1" stroke-width="1" opacity="0.5"/>
+  <line x1="726" y1="370" x2="864" y2="390" stroke="#6366f1" stroke-width="1" opacity="0.5"/>
+  <line x1="726" y1="410" x2="864" y2="390" stroke="#6366f1" stroke-width="1" opacity="0.5"/>
+  <line x1="726" y1="410" x2="864" y2="420" stroke="#6366f1" stroke-width="1" opacity="0.5"/>
+  <line x1="726" y1="450" x2="864" y2="420" stroke="#6366f1" stroke-width="1" opacity="0.5"/>
+  <line x1="726" y1="450" x2="864" y2="450" stroke="#6366f1" stroke-width="1" opacity="0.5"/>
+
+  <!-- 标签 -->
+  <text x="640" y="490" text-anchor="middle" font-size="12" fill="#6366f1">A: ℝ^{d} → ℝ^{r}</text>
+  <text x="800" y="490" text-anchor="middle" font-size="12" fill="#6366f1">B: ℝ^{r} → ℝ^{d}</text>
+
+  <!-- ===== 底部：图例 ===== -->
+  <rect x="40" y="500" width="880" height="50" rx="4" fill="#f1f5f9" stroke="#e2e8f0" stroke-width="1"/>
+  <text x="80" y="528" font-size="12" font-weight="bold" fill="#334155">图例</text>
+
+  <line x1="140" y1="525" x2="180" y2="525" stroke="#6366f1" stroke-width="2"/>
+  <polygon points="176,521 182,525 176,529" fill="#6366f1"/>
+  <text x="190" y="530" font-size="12" fill="#475569">前向/数据流</text>
+
+  <line x1="310" y1="525" x2="350" y2="525" stroke="#94a3b8" stroke-width="1.5" stroke-dasharray="5,4"/>
+  <polygon points="346,521 352,525 346,529" fill="#94a3b8"/>
+  <text x="360" y="530" font-size="12" fill="#475569">对照/等价关系</text>
+
+  <rect x="500" y="516" width="12" height="12" rx="2" fill="#eef2ff" stroke="#6366f1" stroke-width="1.5"/>
+  <text x="520" y="528" font-size="12" fill="#475569">核心定义/结论</text>
+
+  <rect x="640" y="516" width="12" height="12" rx="2" fill="#f8fafc" stroke="#cbd5e1" stroke-width="1"/>
+  <text x="660" y="528" font-size="12" fill="#475569">辅助说明/映射</text>
+
+  <!-- ===== 底部说明 ===== -->
+  <text x="480" y="580" text-anchor="middle" font-size="12" fill="#64748b">注：当 LoRA 的秩 r 等于预训练权重矩阵的秩 d 时，ΔW = BA 可表示任意 d×d 矩阵，</text>
+  <text x="480" y="600" text-anchor="middle" font-size="12" fill="#64748b">因此 LoRA 的表达能力至少与全微调相同。实际中 r ≪ d 以保持高效。</text>
+
+  <!-- 论文引用 -->
+  <text x="480" y="640" text-anchor="middle" font-size="11" fill="#94a3b8">Hu et al. (2021) — LoRA: Low-Rank Adaptation of Large Language Models</text>
+</svg>

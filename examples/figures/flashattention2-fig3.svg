@@ -1,0 +1,113 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 960 680" font-family="'Segoe UI','PingFang SC','Microsoft YaHei',sans-serif" width="960" height="680">
+  <rect x="0" y="0" width="960" height="680" fill="#ffffff"/>
+
+  <!-- 标题 -->
+  <text x="480" y="36" font-size="20" font-weight="700" fill="#1e293b" text-anchor="middle">FlashAttention-2: Block Size Tuning</text>
+  <line x1="160" y1="48" x2="800" y2="48" stroke="#cbd5e1" stroke-width="1"/>
+
+  <!-- 核心定义框（强调色） -->
+  <rect x="60" y="68" width="840" height="100" rx="6" fill="#eef2ff" stroke="#6366f1" stroke-width="2"/>
+  <text x="480" y="96" font-size="18" font-weight="700" fill="#3730a3" text-anchor="middle">Core Tuning Objective</text>
+  <text x="480" y="126" font-size="16" fill="#1e293b" text-anchor="middle">Choose block sizes B<tspan baseline-shift="sub" font-size="75%">r</tspan> (query blocks) and B<tspan baseline-shift="sub" font-size="75%">c</tspan> (key/value blocks)</text>
+  <text x="480" y="152" font-size="15" fill="#334155" text-anchor="middle">to maximize throughput while fitting within shared memory and register constraints</text>
+
+  <!-- 左侧：块大小选择空间 -->
+  <rect x="60" y="188" width="420" height="240" rx="4" fill="#f8fafc" stroke="#cbd5e1" stroke-width="1"/>
+  <text x="270" y="214" font-size="15" font-weight="600" fill="#1e293b" text-anchor="middle">Block Size Selection Space</text>
+
+  <!-- 候选块大小表格 -->
+  <rect x="80" y="228" width="380" height="30" rx="2" fill="#f1f5f9" stroke="#94a3b8" stroke-width="1"/>
+  <text x="140" y="248" font-size="13" font-weight="600" fill="#334155" text-anchor="middle">B<tspan baseline-shift="sub" font-size="75%">r</tspan> (query)</text>
+  <line x1="200" y1="228" x2="200" y2="258" stroke="#94a3b8" stroke-width="1"/>
+  <text x="290" y="248" font-size="13" font-weight="600" fill="#334155" text-anchor="middle">B<tspan baseline-shift="sub" font-size="75%">c</tspan> (key/value)</text>
+  <line x1="340" y1="228" x2="340" y2="258" stroke="#94a3b8" stroke-width="1"/>
+  <text x="420" y="248" font-size="13" font-weight="600" fill="#334155" text-anchor="middle">Status</text>
+
+  <!-- 行1 -->
+  <rect x="80" y="258" width="380" height="28" rx="2" fill="#ffffff" stroke="#e2e8f0" stroke-width="1"/>
+  <text x="140" y="276" font-size="13" fill="#1e293b" text-anchor="middle">64</text>
+  <text x="290" y="276" font-size="13" fill="#1e293b" text-anchor="middle">64</text>
+  <text x="420" y="276" font-size="13" fill="#64748b" text-anchor="middle">safe</text>
+
+  <!-- 行2 -->
+  <rect x="80" y="286" width="380" height="28" rx="2" fill="#ffffff" stroke="#e2e8f0" stroke-width="1"/>
+  <text x="140" y="304" font-size="13" fill="#1e293b" text-anchor="middle">64</text>
+  <text x="290" y="304" font-size="13" fill="#1e293b" text-anchor="middle">128</text>
+  <text x="420" y="304" font-size="13" fill="#64748b" text-anchor="middle">safe</text>
+
+  <!-- 行3 -->
+  <rect x="80" y="314" width="380" height="28" rx="2" fill="#ffffff" stroke="#e2e8f0" stroke-width="1"/>
+  <text x="140" y="332" font-size="13" fill="#1e293b" text-anchor="middle">128</text>
+  <text x="290" y="332" font-size="13" fill="#1e293b" text-anchor="middle">64</text>
+  <text x="420" y="332" font-size="13" fill="#64748b" text-anchor="middle">safe</text>
+
+  <!-- 行4（强调） -->
+  <rect x="80" y="342" width="380" height="28" rx="2" fill="#eef2ff" stroke="#6366f1" stroke-width="1.5"/>
+  <text x="140" y="360" font-size="13" font-weight="600" fill="#3730a3" text-anchor="middle">128</text>
+  <text x="290" y="360" font-size="13" font-weight="600" fill="#3730a3" text-anchor="middle">128</text>
+  <text x="420" y="360" font-size="13" font-weight="600" fill="#3730a3" text-anchor="middle">optimal</text>
+
+  <!-- 行5 -->
+  <rect x="80" y="370" width="380" height="28" rx="2" fill="#ffffff" stroke="#e2e8f0" stroke-width="1"/>
+  <text x="140" y="388" font-size="13" fill="#1e293b" text-anchor="middle">256</text>
+  <text x="290" y="388" font-size="13" fill="#1e293b" text-anchor="middle">64</text>
+  <text x="420" y="388" font-size="13" fill="#ef4444" text-anchor="middle">overflow</text>
+
+  <!-- 行6 -->
+  <rect x="80" y="398" width="380" height="28" rx="2" fill="#ffffff" stroke="#e2e8f0" stroke-width="1"/>
+  <text x="140" y="416" font-size="13" fill="#1e293b" text-anchor="middle">256</text>
+  <text x="290" y="416" font-size="13" fill="#1e293b" text-anchor="middle">128</text>
+  <text x="420" y="416" font-size="13" fill="#ef4444" text-anchor="middle">overflow</text>
+
+  <!-- 右侧：权衡分析 -->
+  <rect x="500" y="188" width="400" height="240" rx="4" fill="#f8fafc" stroke="#cbd5e1" stroke-width="1"/>
+  <text x="700" y="214" font-size="15" font-weight="600" fill="#1e293b" text-anchor="middle">Trade-off Analysis</text>
+
+  <!-- 权衡1 -->
+  <rect x="520" y="228" width="360" height="60" rx="3" fill="#ffffff" stroke="#e2e8f0" stroke-width="1"/>
+  <text x="700" y="248" font-size="13" font-weight="600" fill="#1e293b" text-anchor="middle">Larger Block Size</text>
+  <text x="700" y="268" font-size="12" fill="#475569" text-anchor="middle">Fewer shared memory reads/writes</text>
+  <text x="700" y="282" font-size="12" fill="#475569" text-anchor="middle">Higher arithmetic intensity</text>
+
+  <!-- 权衡2 -->
+  <rect x="520" y="298" width="360" height="60" rx="3" fill="#ffffff" stroke="#e2e8f0" stroke-width="1"/>
+  <text x="700" y="318" font-size="13" font-weight="600" fill="#1e293b" text-anchor="middle">Too Large Block Size</text>
+  <text x="700" y="338" font-size="12" fill="#475569" text-anchor="middle">Register pressure / spilling</text>
+  <text x="700" y="352" font-size="12" fill="#475569" text-anchor="middle">Exceeds shared memory capacity</text>
+
+  <!-- 权衡3 -->
+  <rect x="520" y="368" width="360" height="50" rx="3" fill="#eef2ff" stroke="#6366f1" stroke-width="1.5"/>
+  <text x="700" y="388" font-size="13" font-weight="600" fill="#3730a3" text-anchor="middle">Optimal Balance</text>
+  <text x="700" y="406" font-size="12" fill="#334155" text-anchor="middle">B<tspan baseline-shift="sub" font-size="75%">r</tspan> = B<tspan baseline-shift="sub" font-size="75%">c</tspan> = 128 (for d=64, A100 SMEM)</text>
+
+  <!-- 底部：依赖因素 -->
+  <rect x="60" y="448" width="840" height="100" rx="4" fill="#f8fafc" stroke="#cbd5e1" stroke-width="1"/>
+  <text x="480" y="474" font-size="15" font-weight="600" fill="#1e293b" text-anchor="middle">Dependency Factors</text>
+
+  <!-- 三个因子 -->
+  <rect x="80" y="488" width="250" height="48" rx="3" fill="#ffffff" stroke="#e2e8f0" stroke-width="1"/>
+  <text x="205" y="508" font-size="13" font-weight="600" fill="#1e293b" text-anchor="middle">Head Dimension d</text>
+  <text x="205" y="526" font-size="12" fill="#475569" text-anchor="middle">d = 64 / 128 / 256</text>
+
+  <rect x="355" y="488" width="250" height="48" rx="3" fill="#ffffff" stroke="#e2e8f0" stroke-width="1"/>
+  <text x="480" y="508" font-size="13" font-weight="600" fill="#1e293b" text-anchor="middle">GPU Shared Memory Size</text>
+  <text x="480" y="526" font-size="12" fill="#475569" text-anchor="middle">A100: 192 KB / SM</text>
+
+  <rect x="630" y="488" width="250" height="48" rx="3" fill="#ffffff" stroke="#e2e8f0" stroke-width="1"/>
+  <text x="755" y="508" font-size="13" font-weight="600" fill="#1e293b" text-anchor="middle">Register File Size</text>
+  <text x="755" y="526" font-size="12" fill="#475569" text-anchor="middle">A100: 65536 regs / SM</text>
+
+  <!-- 底部说明 -->
+  <rect x="60" y="568" width="840" height="60" rx="4" fill="#f1f5f9" stroke="#cbd5e1" stroke-width="1"/>
+  <text x="480" y="594" font-size="13" fill="#334155" text-anchor="middle">Manual tuning over a small set of candidates ({64, 128} &#215; {64, 128}) balances</text>
+  <text x="480" y="614" font-size="13" fill="#334155" text-anchor="middle">shared memory traffic, register pressure, and occupancy for each GPU architecture.</text>
+
+  <!-- 图例 -->
+  <rect x="60" y="640" width="840" height="28" rx="3" fill="#f8fafc" stroke="#e2e8f0" stroke-width="1"/>
+  <rect x="80" y="648" width="14" height="14" rx="2" fill="#eef2ff" stroke="#6366f1" stroke-width="1.5"/>
+  <text x="100" y="660" font-size="11" fill="#475569">Optimal / selected</text>
+  <rect x="220" y="648" width="14" height="14" rx="2" fill="#ffffff" stroke="#e2e8f0" stroke-width="1"/>
+  <text x="240" y="660" font-size="11" fill="#475569">Safe candidate</text>
+  <rect x="370" y="648" width="14" height="14" rx="2" fill="#ffffff" stroke="#ef4444" stroke-width="1"/>
+  <text x="390" y="660" font-size="11" fill="#475569">Overflow / invalid</text>
+</svg>

@@ -1,0 +1,115 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 960 680" font-family="'Segoe UI','PingFang SC','Microsoft YaHei',sans-serif" width="960" height="680">
+  <rect x="0" y="0" width="960" height="680" fill="#ffffff"/>
+
+  <!-- 主标题 -->
+  <text x="480" y="36" font-size="22" font-weight="bold" fill="#1e293b" text-anchor="middle">Adaptive KL Penalty Coefficient (&#946;)</text>
+  <line x1="200" y1="48" x2="760" y2="48" stroke="#cbd5e1" stroke-width="1"/>
+
+  <!-- 核心公式框（视觉焦点） -->
+  <rect x="80" y="68" width="800" height="80" rx="6" fill="#eef2ff" stroke="#6366f1" stroke-width="2"/>
+  <text x="480" y="98" font-size="18" fill="#3730a3" text-anchor="middle" font-weight="bold">L&#8315;&#8310;&#8315;&#8315;&#8315;&#8315;(&#952;) = &#770;E&#8347; [ r&#8347;(&#952;) &#770;A&#8347; &#8722; &#946; &#183; KL[ &#960;&#8347;&#8315;&#8315;&#8315;&#8315;(&#183;|s&#8347;) , &#960;&#8347;(&#183;|s&#8347;) ] ]</text>
+  <text x="480" y="130" font-size="14" fill="#64748b" text-anchor="middle">where r&#8347;(&#952;) = &#960;&#8347;(a&#8347;|s&#8347;) / &#960;&#8347;&#8315;&#8315;&#8315;&#8315;(a&#8347;|s&#8347;)  (importance sampling ratio)</text>
+
+  <!-- 左侧：自适应调整机制 -->
+  <rect x="80" y="170" width="520" height="240" rx="4" fill="#f8fafc" stroke="#e2e8f0" stroke-width="1"/>
+  <text x="340" y="196" font-size="16" font-weight="bold" fill="#1e293b" text-anchor="middle">Adaptive &#946; Adjustment Rule</text>
+
+  <!-- 规则表格 -->
+  <line x1="100" y1="210" x2="580" y2="210" stroke="#cbd5e1" stroke-width="1"/>
+  <text x="120" y="232" font-size="13" font-weight="bold" fill="#334155" text-anchor="start">Condition</text>
+  <text x="320" y="232" font-size="13" font-weight="bold" fill="#334155" text-anchor="start">Action on &#946;</text>
+  <text x="500" y="232" font-size="13" font-weight="bold" fill="#334155" text-anchor="start">Effect</text>
+  <line x1="100" y1="240" x2="580" y2="240" stroke="#e2e8f0" stroke-width="1"/>
+
+  <!-- 行1 -->
+  <text x="120" y="262" font-size="12" fill="#1e293b" text-anchor="start">d &lt; d&#8347;&#8315;&#8315;&#8315;&#8315; / 1.5</text>
+  <text x="320" y="262" font-size="12" fill="#1e293b" text-anchor="start">&#946; &#8592; &#946; / 2</text>
+  <text x="500" y="262" font-size="12" fill="#64748b" text-anchor="start">KL too small</text>
+  <line x1="100" y1="270" x2="580" y2="270" stroke="#f1f5f9" stroke-width="1"/>
+
+  <!-- 行2 -->
+  <text x="120" y="292" font-size="12" fill="#1e293b" text-anchor="start">d &gt; d&#8347;&#8315;&#8315;&#8315;&#8315; &#215; 1.5</text>
+  <text x="320" y="292" font-size="12" fill="#1e293b" text-anchor="start">&#946; &#8592; &#946; &#215; 2</text>
+  <text x="500" y="292" font-size="12" fill="#64748b" text-anchor="start">KL too large</text>
+  <line x1="100" y1="300" x2="580" y2="300" stroke="#f1f5f9" stroke-width="1"/>
+
+  <!-- 行3 -->
+  <text x="120" y="322" font-size="12" fill="#1e293b" text-anchor="start">d&#8347;&#8315;&#8315;&#8315;&#8315;/1.5 &#8804; d &#8804; d&#8347;&#8315;&#8315;&#8315;&#8315;&#215;1.5</text>
+  <text x="320" y="322" font-size="12" fill="#1e293b" text-anchor="start">&#946; unchanged</text>
+  <text x="500" y="322" font-size="12" fill="#64748b" text-anchor="start">KL in target range</text>
+  <line x1="100" y1="330" x2="580" y2="330" stroke="#e2e8f0" stroke-width="1"/>
+
+  <!-- 目标值说明 -->
+  <text x="340" y="360" font-size="12" fill="#64748b" text-anchor="middle">d = KL[&#960;&#8347;&#8315;&#8315;&#8315;&#8315;(&#183;|s&#8347;), &#960;&#8347;(&#183;|s&#8347;)]  (actual KL divergence after update)</text>
+  <text x="340" y="382" font-size="12" fill="#64748b" text-anchor="middle">d&#8347;&#8315;&#8315;&#8315;&#8315; = target KL divergence (hyperparameter, e.g. 0.01)</text>
+
+  <!-- 右侧：KL 散度维持示意图 -->
+  <rect x="620" y="170" width="260" height="240" rx="4" fill="#f8fafc" stroke="#e2e8f0" stroke-width="1"/>
+  <text x="750" y="196" font-size="14" font-weight="bold" fill="#1e293b" text-anchor="middle">KL Maintenance</text>
+
+  <!-- 目标区间可视化 -->
+  <rect x="660" y="215" width="180" height="20" rx="3" fill="#e2e8f0" stroke="#94a3b8" stroke-width="1"/>
+  <text x="750" y="230" font-size="11" fill="#64748b" text-anchor="middle">target range</text>
+
+  <!-- 三个箭头表示调整 -->
+  <polygon points="660,260 650,255 650,265" fill="#6366f1"/>
+  <line x1="650" y1="260" x2="660" y2="260" stroke="#6366f1" stroke-width="2"/>
+  <text x="640" y="254" font-size="10" fill="#6366f1" text-anchor="end">&#946;/2</text>
+
+  <polygon points="840,260 850,255 850,265" fill="#6366f1"/>
+  <line x1="840" y1="260" x2="830" y2="260" stroke="#6366f1" stroke-width="2"/>
+  <text x="850" y="254" font-size="10" fill="#6366f1" text-anchor="start">&#946;&#215;2</text>
+
+  <line x1="750" y1="260" x2="750" y2="280" stroke="#6366f1" stroke-width="1.5" stroke-dasharray="4,3"/>
+  <polygon points="750,285 745,278 755,278" fill="#6366f1"/>
+
+  <text x="750" y="310" font-size="11" fill="#64748b" text-anchor="middle">d stays near d&#8347;&#8315;&#8315;&#8315;&#8315;</text>
+
+  <!-- 底部：算法流程 -->
+  <rect x="80" y="435" width="800" height="220" rx="4" fill="#f1f5f9" stroke="#e2e8f0" stroke-width="1"/>
+  <text x="480" y="462" font-size="16" font-weight="bold" fill="#1e293b" text-anchor="middle">Algorithm Flow (per iteration)</text>
+
+  <!-- 步骤框 -->
+  <rect x="110" y="480" width="160" height="50" rx="4" fill="#ffffff" stroke="#94a3b8" stroke-width="1"/>
+  <text x="190" y="502" font-size="12" fill="#1e293b" text-anchor="middle" font-weight="bold">Step 1</text>
+  <text x="190" y="520" font-size="11" fill="#64748b" text-anchor="middle">Collect trajectory</text>
+
+  <rect x="310" y="480" width="160" height="50" rx="4" fill="#ffffff" stroke="#94a3b8" stroke-width="1"/>
+  <text x="390" y="502" font-size="12" fill="#1e293b" text-anchor="middle" font-weight="bold">Step 2</text>
+  <text x="390" y="520" font-size="11" fill="#64748b" text-anchor="middle">Compute L&#8315;&#8310;&#8315;&#8315;&#8315;&#8315;</text>
+
+  <rect x="510" y="480" width="160" height="50" rx="4" fill="#ffffff" stroke="#94a3b8" stroke-width="1"/>
+  <text x="590" y="502" font-size="12" fill="#1e293b" text-anchor="middle" font-weight="bold">Step 3</text>
+  <text x="590" y="520" font-size="11" fill="#64748b" text-anchor="middle">Gradient update</text>
+
+  <rect x="710" y="480" width="150" height="50" rx="4" fill="#eef2ff" stroke="#6366f1" stroke-width="2"/>
+  <text x="785" y="502" font-size="12" fill="#3730a3" text-anchor="middle" font-weight="bold">Step 4</text>
+  <text x="785" y="520" font-size="11" fill="#3730a3" text-anchor="middle">Adjust &#946;</text>
+
+  <!-- 箭头 -->
+  <polygon points="278,505 288,500 288,510" fill="#94a3b8"/>
+  <line x1="270" y1="505" x2="310" y2="505" stroke="#94a3b8" stroke-width="1.5"/>
+
+  <polygon points="478,505 488,500 488,510" fill="#94a3b8"/>
+  <line x1="470" y1="505" x2="510" y2="505" stroke="#94a3b8" stroke-width="1.5"/>
+
+  <polygon points="678,505 688,500 688,510" fill="#94a3b8"/>
+  <line x1="670" y1="505" x2="710" y2="505" stroke="#94a3b8" stroke-width="1.5"/>
+
+  <!-- 反馈箭头 -->
+  <path d="M 785 530 L 785 560 L 190 560 L 190 530" fill="none" stroke="#6366f1" stroke-width="1.5" stroke-dasharray="5,4"/>
+  <polygon points="190,525 185,532 195,532" fill="#6366f1"/>
+  <text x="488" y="575" font-size="11" fill="#6366f1" text-anchor="middle">repeat with updated &#946;</text>
+
+  <!-- 图例 -->
+  <rect x="80" y="600" width="800" height="40" rx="4" fill="#fbfcfe" stroke="#e2e8f0" stroke-width="1"/>
+  <text x="120" y="625" font-size="12" font-weight="bold" fill="#334155" text-anchor="start">Legend:</text>
+  <line x1="200" y1="620" x2="240" y2="620" stroke="#94a3b8" stroke-width="1.5"/>
+  <polygon points="240,620 245,617 245,623" fill="#94a3b8"/>
+  <text x="250" y="625" font-size="11" fill="#64748b" text-anchor="start">forward flow</text>
+  <line x1="360" y1="620" x2="400" y2="620" stroke="#6366f1" stroke-width="1.5" stroke-dasharray="5,4"/>
+  <polygon points="400,620 405,617 405,623" fill="#6366f1"/>
+  <text x="410" y="625" font-size="11" fill="#64748b" text-anchor="start">feedback / iteration</text>
+  <rect x="540" y="610" width="16" height="16" rx="2" fill="#eef2ff" stroke="#6366f1" stroke-width="1"/>
+  <text x="565" y="625" font-size="11" fill="#64748b" text-anchor="start">key step (&#946; adjustment)</text>
+</svg>

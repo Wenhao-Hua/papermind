@@ -119,11 +119,17 @@ def generate_svg_diagrams(
 def _svg_text_labels(svg: str, limit: int = 1200) -> str:
     """Pull the visible <text>/<tspan> strings out of an SVG so the walkthrough can be
     grounded in what the figure actually shows (rather than inventing parts)."""
+    def _entity(m, base):
+        try:
+            return chr(int(m.group(1), base))  # a bad/out-of-range codepoint -> leave the entity as-is
+        except (ValueError, OverflowError):
+            return m.group(0)
+
     out, seen = [], set()
     for raw in re.findall(r"<(?:text|tspan)\b[^>]*>(.*?)</(?:text|tspan)>", svg, flags=re.DOTALL | re.IGNORECASE):
         t = re.sub(r"<[^>]+>", "", raw)
-        t = re.sub(r"&#x([0-9a-fA-F]+);", lambda m: chr(int(m.group(1), 16)), t)
-        t = re.sub(r"&#(\d+);", lambda m: chr(int(m.group(1))), t)
+        t = re.sub(r"&#x([0-9a-fA-F]+);", lambda m: _entity(m, 16), t)
+        t = re.sub(r"&#(\d+);", lambda m: _entity(m, 10), t)
         t = t.replace("&amp;", "&").replace("&lt;", "<").replace("&gt;", ">")
         t = re.sub(r"\s+", " ", t).strip()
         if t and t not in seen:

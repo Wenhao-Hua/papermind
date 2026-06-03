@@ -1,0 +1,122 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 960 680" font-family="'Segoe UI','PingFang SC','Microsoft YaHei',sans-serif" width="960" height="680">
+  <rect x="0" y="0" width="960" height="680" fill="#ffffff"/>
+
+  <!-- 标题 -->
+  <text x="480" y="36" text-anchor="middle" font-size="18" font-weight="700" fill="#1e293b">Hybrid Architecture: CNN + Transformer</text>
+  <line x1="200" y1="46" x2="760" y2="46" stroke="#cbd5e1" stroke-width="1"/>
+
+  <!-- ===== 左侧主流程：CNN 特征图 → Patch → 嵌入 → Transformer ===== -->
+  <!-- 1. CNN 特征图 -->
+  <rect x="60" y="72" width="180" height="100" rx="4" fill="#f1f5f9" stroke="#475569" stroke-width="1.5"/>
+  <text x="150" y="100" text-anchor="middle" font-size="13" font-weight="600" fill="#1e293b">CNN Feature Map</text>
+  <text x="150" y="120" text-anchor="middle" font-size="11" fill="#334155">x ∈ ℝ^(H×W×C)</text>
+  <text x="150" y="140" text-anchor="middle" font-size="11" fill="#64748b">(e.g., ResNet stage 4)</text>
+  <text x="150" y="158" text-anchor="middle" font-size="10" fill="#64748b">spatial size H×W, channels C</text>
+
+  <!-- 箭头 1 -->
+  <line x1="150" y1="172" x2="150" y2="210" stroke="#6366f1" stroke-width="2"/>
+  <polygon points="145,206 150,218 155,206" fill="#6366f1"/>
+
+  <!-- 2. 划分 patch -->
+  <rect x="60" y="218" width="180" height="90" rx="4" fill="#eef2ff" stroke="#6366f1" stroke-width="1.5"/>
+  <text x="150" y="244" text-anchor="middle" font-size="13" font-weight="600" fill="#3730a3">Patch Division</text>
+  <text x="150" y="264" text-anchor="middle" font-size="11" fill="#334155">patch size P×P (often 1×1)</text>
+  <text x="150" y="282" text-anchor="middle" font-size="11" fill="#334155">N = (H/P) × (W/P) patches</text>
+  <text x="150" y="298" text-anchor="middle" font-size="10" fill="#64748b">each patch: ℝ^(P²·C)</text>
+
+  <!-- 箭头 2 -->
+  <line x1="150" y1="308" x2="150" y2="346" stroke="#6366f1" stroke-width="2"/>
+  <polygon points="145,342 150,354 155,342" fill="#6366f1"/>
+
+  <!-- 3. 展平 + 投影 -->
+  <rect x="60" y="354" width="180" height="90" rx="4" fill="#eef2ff" stroke="#6366f1" stroke-width="1.5"/>
+  <text x="150" y="380" text-anchor="middle" font-size="13" font-weight="600" fill="#3730a3">Flatten &amp; Project</text>
+  <text x="150" y="400" text-anchor="middle" font-size="11" fill="#334155">linear: ℝ^(P²·C) → ℝ^D</text>
+  <text x="150" y="420" text-anchor="middle" font-size="11" fill="#334155">patch embeddings: E ∈ ℝ^(N×D)</text>
+  <text x="150" y="436" text-anchor="middle" font-size="10" fill="#64748b">D = latent dimension</text>
+
+  <!-- 箭头 3 -->
+  <line x1="150" y1="444" x2="150" y2="482" stroke="#6366f1" stroke-width="2"/>
+  <polygon points="145,478 150,490 155,478" fill="#6366f1"/>
+
+  <!-- 4. 添加 class + 位置嵌入 -->
+  <rect x="60" y="490" width="180" height="80" rx="4" fill="#eef2ff" stroke="#6366f1" stroke-width="1.5"/>
+  <text x="150" y="514" text-anchor="middle" font-size="13" font-weight="600" fill="#3730a3">Add [class] &amp; Pos Embed</text>
+  <text x="150" y="534" text-anchor="middle" font-size="11" fill="#334155">z₀⁰ = x_class (learnable)</text>
+  <text x="150" y="552" text-anchor="middle" font-size="11" fill="#334155">z₀ = [x_class; E] + E_pos</text>
+  <text x="150" y="566" text-anchor="middle" font-size="10" fill="#64748b">E_pos ∈ ℝ^((N+1)×D)</text>
+
+  <!-- 箭头 4 -->
+  <line x1="150" y1="570" x2="150" y2="608" stroke="#6366f1" stroke-width="2"/>
+  <polygon points="145,604 150,616 155,604" fill="#6366f1"/>
+
+  <!-- 5. Transformer Encoder -->
+  <rect x="40" y="616" width="220" height="50" rx="4" fill="#f1f5f9" stroke="#475569" stroke-width="1.5"/>
+  <text x="150" y="640" text-anchor="middle" font-size="13" font-weight="600" fill="#1e293b">Transformer Encoder</text>
+  <text x="150" y="656" text-anchor="middle" font-size="10" fill="#64748b">L layers: MSA → MLP (with LN &amp; residual)</text>
+
+  <!-- ===== 右侧：公式与图例面板 ===== -->
+  <!-- 公式面板 -->
+  <rect x="340" y="72" width="580" height="200" rx="4" fill="#f8fafc" stroke="#cbd5e1" stroke-width="1"/>
+  <text x="630" y="96" text-anchor="middle" font-size="14" font-weight="700" fill="#1e293b">Key Formulation</text>
+
+  <!-- 公式 1 -->
+  <text x="360" y="126" font-size="12" font-weight="600" fill="#3730a3">Input sequence:</text>
+  <text x="360" y="148" font-size="12" fill="#1e293b">z₀ = [x_class; x_p¹E; x_p²E; …; x_pᴺE] + E_pos</text>
+  <text x="360" y="166" font-size="10" fill="#64748b">where x_pⁱ ∈ ℝ^(P²·C), E ∈ ℝ^((P²·C)×D), E_pos ∈ ℝ^((N+1)×D)</text>
+
+  <!-- 公式 2 -->
+  <text x="360" y="196" font-size="12" font-weight="600" fill="#3730a3">Transformer encoder layer (ℓ = 1…L):</text>
+  <text x="360" y="218" font-size="12" fill="#1e293b">z_ℓ' = MSA(LN(z_{ℓ-1})) + z_{ℓ-1}</text>
+  <text x="360" y="240" font-size="12" fill="#1e293b">z_ℓ = MLP(LN(z_ℓ')) + z_ℓ'</text>
+
+  <!-- 公式 3 -->
+  <text x="360" y="264" font-size="12" font-weight="600" fill="#3730a3">Output (classification):</text>
+  <text x="360" y="284" font-size="12" fill="#1e293b">y = LN(z_L⁰)  (z_L⁰ = [class] token at final layer)</text>
+
+  <!-- 图例面板 -->
+  <rect x="340" y="290" width="580" height="120" rx="4" fill="#f8fafc" stroke="#cbd5e1" stroke-width="1"/>
+  <text x="630" y="314" text-anchor="middle" font-size="14" font-weight="700" fill="#1e293b">Legend</text>
+
+  <!-- 图例项 -->
+  <line x1="360" y1="340" x2="420" y2="340" stroke="#6366f1" stroke-width="2"/>
+  <polygon points="415,336 420,340 415,344" fill="#6366f1"/>
+  <text x="432" y="344" font-size="11" fill="#334155">Data flow (forward pass)</text>
+
+  <line x1="360" y1="368" x2="420" y2="368" stroke="#94a3b8" stroke-width="1.5" stroke-dasharray="5,4"/>
+  <polygon points="415,364 420,368 415,372" fill="#94a3b8"/>
+  <text x="432" y="372" font-size="11" fill="#334155">Optional: CNN backbone (if pre-computed)</text>
+
+  <rect x="360" y="384" width="14" height="14" rx="2" fill="#eef2ff" stroke="#6366f1" stroke-width="1.5"/>
+  <text x="386" y="396" font-size="11" fill="#334155">Key component (patch embedding / [class] token)</text>
+
+  <!-- ===== 底部：集合/映射显式表示 ===== -->
+  <rect x="340" y="428" width="580" height="240" rx="4" fill="#f8fafc" stroke="#cbd5e1" stroke-width="1"/>
+  <text x="630" y="452" text-anchor="middle" font-size="14" font-weight="700" fill="#1e293b">Explicit Mapping: Feature Map → Patch Sequence</text>
+
+  <!-- 集合 A: 特征图 -->
+  <text x="370" y="480" font-size="12" font-weight="600" fill="#3730a3">Feature Map (grid)</text>
+  <rect x="360" y="488" width="120" height="80" rx="2" fill="#f1f5f9" stroke="#94a3b8" stroke-width="1"/>
+  <text x="420" y="508" text-anchor="middle" font-size="10" fill="#334155">H × W grid</text>
+  <text x="420" y="524" text-anchor="middle" font-size="10" fill="#334155">each cell: ℝ^C</text>
+  <text x="420" y="540" text-anchor="middle" font-size="10" fill="#64748b">(e.g., 7×7×2048)</text>
+
+  <!-- 箭头 -->
+  <line x1="485" y1="528" x2="535" y2="528" stroke="#6366f1" stroke-width="2"/>
+  <polygon points="530,524 535,528 530,532" fill="#6366f1"/>
+
+  <!-- 集合 B: patch 序列 -->
+  <text x="550" y="480" font-size="12" font-weight="600" fill="#3730a3">Patch Sequence</text>
+  <rect x="540" y="488" width="140" height="80" rx="2" fill="#eef2ff" stroke="#6366f1" stroke-width="1"/>
+  <text x="610" y="508" text-anchor="middle" font-size="10" fill="#334155">N = (H/P)×(W/P)</text>
+  <text x="610" y="524" text-anchor="middle" font-size="10" fill="#334155">each: ℝ^(P²·C)</text>
+  <text x="610" y="540" text-anchor="middle" font-size="10" fill="#64748b">(e.g., 49 patches)</text>
+
+  <!-- 映射说明 -->
+  <text x="370" y="590" font-size="11" fill="#334155">Mapping: f : grid(i,j) → patch_k  (k = i·(W/P) + j)</text>
+  <text x="370" y="610" font-size="11" fill="#334155">Projection: E · vec(patch)  (linear, no bias)</text>
+  <text x="370" y="630" font-size="11" fill="#64748b">Note: When P=1, each feature map cell becomes a token (N = H×W)</text>
+
+  <!-- ===== 右侧小提示 ===== -->
+  <text x="900" y="660" text-anchor="end" font-size="9" fill="#94a3b8">ViT Hybrid variant (Section 3.1)</text>
+</svg>
