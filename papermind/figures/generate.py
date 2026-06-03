@@ -225,4 +225,13 @@ def _clean_svg(value) -> str:
         ET.fromstring(svg)  # must be well-formed
     except Exception:  # noqa: BLE001
         return ""
+    # Give the root explicit width/height (from viewBox). Without them a browser renders
+    # the SVG at a tiny default size when it's an <img>/standalone file (e.g. the relative
+    # SVGs in examples/ on GitHub). Inline in the report it stays responsive (CSS sets
+    # max-width:100% + height:auto, which override these).
+    tag_end = svg.find(">")
+    if tag_end != -1 and "width=" not in svg[:tag_end]:
+        vb = re.search(r'viewBox="[\d.]+\s+[\d.]+\s+([\d.]+)\s+([\d.]+)"', svg[:tag_end])
+        if vb:
+            svg = svg[:tag_end] + f' width="{vb.group(1)}" height="{vb.group(2)}"' + svg[tag_end:]
     return svg
