@@ -1,105 +1,105 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 960 680" font-family="'Segoe UI','PingFang SC','Microsoft YaHei',sans-serif" width="960" height="680">
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 960 680" font-family="'Segoe UI','PingFang SC','Microsoft YaHei',sans-serif" font-size="14" fill="#1e293b" width="960" height="680">
   <rect x="0" y="0" width="960" height="680" fill="#ffffff"/>
 
   <!-- 标题 -->
-  <text x="480" y="38" font-size="20" font-weight="700" fill="#1e293b" text-anchor="middle">PPO Clipped Surrogate Objective</text>
-  <line x1="280" y1="48" x2="680" y2="48" stroke="#cbd5e1" stroke-width="1"/>
+  <text x="480" y="36" text-anchor="middle" font-size="20" font-weight="700" fill="#1e293b">PPO Clipped Surrogate Objective</text>
+  <line x1="200" y1="48" x2="760" y2="48" stroke="#cbd5e1" stroke-width="1"/>
 
-  <!-- 核心公式框（视觉焦点） -->
-  <rect x="120" y="68" width="720" height="100" rx="6" fill="#eef2ff" stroke="#6366f1" stroke-width="2"/>
-  <text x="480" y="96" font-size="16" font-weight="700" fill="#3730a3" text-anchor="middle">Core Objective: L<text><tspan baseline-shift="super" font-size="75%">CLIP</tspan></text>(θ)</text>
-  <text x="480" y="130" font-size="18" font-weight="600" fill="#1e293b" text-anchor="middle">L<text><tspan baseline-shift="super" font-size="75%">CLIP</tspan></text>(θ) = &#x1D0C;<text><tspan baseline-shift="sub" font-size="75%">t</tspan></text>[ min( r<text><tspan baseline-shift="sub" font-size="75%">t</tspan></text>(θ) · &#x1D0C;<text><tspan baseline-shift="sub" font-size="75%">t</tspan></text> , clip(r<text><tspan baseline-shift="sub" font-size="75%">t</tspan></text>(θ), 1−ε, 1+ε) · &#x1D0C;<text><tspan baseline-shift="sub" font-size="75%">t</tspan></text> ) ]</text>
-  <text x="480" y="156" font-size="13" fill="#64748b" text-anchor="middle">where r<text><tspan baseline-shift="sub" font-size="75%">t</tspan></text>(θ) = π<text><tspan baseline-shift="sub" font-size="75%">θ</tspan></text>(a<text><tspan baseline-shift="sub" font-size="75%">t</tspan></text>|s<text><tspan baseline-shift="sub" font-size="75%">t</tspan></text>) / π<text><tspan baseline-shift="sub" font-size="75%">θ<text><tspan baseline-shift="sub" font-size="75%">old</tspan></text></tspan></text>(a<text><tspan baseline-shift="sub" font-size="75%">t</tspan></text>|s<text><tspan baseline-shift="sub" font-size="75%">t</tspan></text>) ,  ε = 0.2 (default)</text>
+  <!-- ===== 主面板：核心公式 ===== -->
+  <rect x="40" y="68" width="880" height="120" rx="6" fill="#eef2ff" stroke="#6366f1" stroke-width="2"/>
+  <text x="480" y="96" text-anchor="middle" font-size="16" font-weight="700" fill="#3730a3">Core Objective: L&#8315;&#8314;&#8315;&#8315;&#8315;(θ)</text>
+  <text x="480" y="132" text-anchor="middle" font-size="18" font-weight="600" fill="#1e293b">L&#8315;&#8314;&#8315;&#8315;&#8315;(θ) = &#296;̂&#8342;[ min( r&#8342;(θ) · Â&#8342; , clip(r&#8342;(θ), 1−ε, 1+ε) · Â&#8342; ) ]</text>
+  <text x="480" y="162" text-anchor="middle" font-size="13" fill="#475569">where r&#8342;(θ) = π&#8342;(a&#8342;|s&#8342;) / π&#8342;ₒ&#8342;ₔ(a&#8342;|s&#8342;) &amp;nbsp; (probability ratio)</text>
+  <text x="480" y="180" text-anchor="middle" font-size="12" fill="#64748b">The min with clipped term forms a pessimistic lower bound, preventing large policy updates.</text>
 
-  <!-- 概率比率定义 -->
-  <rect x="120" y="188" width="340" height="80" rx="4" fill="#f8fafc" stroke="#cbd5e1" stroke-width="1"/>
-  <text x="290" y="214" font-size="14" font-weight="600" fill="#1e293b" text-anchor="middle">Probability Ratio r<text><tspan baseline-shift="sub" font-size="75%">t</tspan></text>(θ)</text>
-  <text x="290" y="244" font-size="15" fill="#334155" text-anchor="middle">r<text><tspan baseline-shift="sub" font-size="75%">t</tspan></text>(θ) = π<text><tspan baseline-shift="sub" font-size="75%">θ</tspan></text>(a<text><tspan baseline-shift="sub" font-size="75%">t</tspan></text>|s<text><tspan baseline-shift="sub" font-size="75%">t</tspan></text>) / π<text><tspan baseline-shift="sub" font-size="75%">θ<text><tspan baseline-shift="sub" font-size="75%">old</tspan></text></tspan></text>(a<text><tspan baseline-shift="sub" font-size="75%">t</tspan></text>|s<text><tspan baseline-shift="sub" font-size="75%">t</tspan></text>)</text>
-  <text x="290" y="262" font-size="11" fill="#64748b" text-anchor="middle">measures how much new policy deviates from old</text>
+  <!-- ===== 左侧：r_t 定义与映射 ===== -->
+  <rect x="40" y="208" width="420" height="200" rx="4" fill="#f8fafc" stroke="#cbd5e1" stroke-width="1"/>
+  <text x="250" y="234" text-anchor="middle" font-size="14" font-weight="600" fill="#1e293b">Probability Ratio r&#8342;(θ)</text>
 
-  <!-- 截断机制说明 -->
-  <rect x="500" y="188" width="340" height="80" rx="4" fill="#f8fafc" stroke="#cbd5e1" stroke-width="1"/>
-  <text x="670" y="214" font-size="14" font-weight="600" fill="#1e293b" text-anchor="middle">Clipping Mechanism</text>
-  <text x="670" y="240" font-size="13" fill="#334155" text-anchor="middle">clip(r<text><tspan baseline-shift="sub" font-size="75%">t</tspan></text>, 1−ε, 1+ε) =</text>
-  <text x="670" y="258" font-size="12" fill="#64748b" text-anchor="middle">1−ε  if r<text><tspan baseline-shift="sub" font-size="75%">t</tspan></text> &lt; 1−ε ; 1+ε  if r<text><tspan baseline-shift="sub" font-size="75%">t</tspan></text> &gt; 1+ε ; r<text><tspan baseline-shift="sub" font-size="75%">t</tspan></text> otherwise</text>
+  <!-- 映射表 -->
+  <text x="80" y="264" font-size="13" fill="#334155">r&#8342;(θ) = π&#8342;(a&#8342;|s&#8342;) / π&#8342;ₒ&#8342;ₔ(a&#8342;|s&#8342;)</text>
+  <text x="80" y="286" font-size="12" fill="#475569">Measures how much the new policy deviates from the old one.</text>
 
-  <!-- 二部图：优势正负两种情况 -->
-  <rect x="120" y="288" width="720" height="180" rx="4" fill="#f1f5f9" stroke="#e2e8f0" stroke-width="1"/>
-  <text x="480" y="314" font-size="15" font-weight="600" fill="#1e293b" text-anchor="middle">Two Cases of Advantage &#x1D0C;<text><tspan baseline-shift="sub" font-size="75%">t</tspan></text></text>
+  <!-- 二部图：旧策略 vs 新策略 -->
+  <text x="130" y="316" text-anchor="middle" font-size="12" font-weight="600" fill="#334155">Old Policy π&#8342;ₒ&#8342;ₔ</text>
+  <text x="370" y="316" text-anchor="middle" font-size="12" font-weight="600" fill="#334155">New Policy π&#8342;</text>
 
-  <!-- 情况1：A>0 -->
-  <rect x="150" y="330" width="320" height="120" rx="4" fill="#ffffff" stroke="#94a3b8" stroke-width="1"/>
-  <text x="310" y="354" font-size="14" font-weight="600" fill="#1e293b" text-anchor="middle">Case 1: &#x1D0C;<text><tspan baseline-shift="sub" font-size="75%">t</tspan></text> &gt; 0 (good action)</text>
-  <line x1="170" y1="364" x2="450" y2="364" stroke="#e2e8f0" stroke-width="1"/>
+  <!-- 左列节点 -->
+  <circle cx="130" cy="340" r="6" fill="#94a3b8"/>
+  <circle cx="130" cy="364" r="6" fill="#94a3b8"/>
+  <circle cx="130" cy="388" r="6" fill="#94a3b8"/>
 
-  <!-- 左列：r_t 范围 -->
-  <text x="210" y="390" font-size="12" fill="#334155" text-anchor="middle">r<text><tspan baseline-shift="sub" font-size="75%">t</tspan></text> &lt; 1−ε</text>
-  <text x="310" y="390" font-size="12" fill="#334155" text-anchor="middle">1−ε ≤ r<text><tspan baseline-shift="sub" font-size="75%">t</tspan></text> ≤ 1+ε</text>
-  <text x="410" y="390" font-size="12" fill="#334155" text-anchor="middle">r<text><tspan baseline-shift="sub" font-size="75%">t</tspan></text> &gt; 1+ε</text>
+  <!-- 右列节点 -->
+  <circle cx="370" cy="340" r="6" fill="#6366f1"/>
+  <circle cx="370" cy="364" r="6" fill="#6366f1"/>
+  <circle cx="370" cy="388" r="6" fill="#6366f1"/>
 
-  <!-- 箭头与结果 -->
-  <line x1="210" y1="400" x2="210" y2="420" stroke="#6366f1" stroke-width="1.5"/>
-  <polygon points="210,424 206,416 214,416" fill="#6366f1"/>
-  <line x1="310" y1="400" x2="310" y2="420" stroke="#6366f1" stroke-width="1.5"/>
-  <polygon points="310,424 306,416 314,416" fill="#6366f1"/>
-  <line x1="410" y1="400" x2="410" y2="420" stroke="#94a3b8" stroke-width="1.5" stroke-dasharray="5,3"/>
-  <polygon points="410,424 406,416 414,416" fill="#94a3b8"/>
+  <!-- 连线 -->
+  <line x1="136" y1="340" x2="364" y2="340" stroke="#cbd5e1" stroke-width="1"/>
+  <line x1="136" y1="364" x2="364" y2="364" stroke="#cbd5e1" stroke-width="1"/>
+  <line x1="136" y1="388" x2="364" y2="388" stroke="#cbd5e1" stroke-width="1"/>
 
-  <text x="210" y="440" font-size="11" fill="#6366f1" text-anchor="middle">increase r<text><tspan baseline-shift="sub" font-size="75%">t</tspan></text></text>
-  <text x="310" y="440" font-size="11" fill="#6366f1" text-anchor="middle">increase r<text><tspan baseline-shift="sub" font-size="75%">t</tspan></text></text>
-  <text x="410" y="440" font-size="11" fill="#94a3b8" text-anchor="middle">clipped (no gain)</text>
+  <text x="250" y="404" text-anchor="middle" font-size="11" fill="#64748b">Each action probability maps from old to new policy</text>
 
-  <!-- 情况2：A<0 -->
-  <rect x="490" y="330" width="320" height="120" rx="4" fill="#ffffff" stroke="#94a3b8" stroke-width="1"/>
-  <text x="650" y="354" font-size="14" font-weight="600" fill="#1e293b" text-anchor="middle">Case 2: &#x1D0C;<text><tspan baseline-shift="sub" font-size="75%">t</tspan></text> &lt; 0 (bad action)</text>
-  <line x1="510" y1="364" x2="790" y2="364" stroke="#e2e8f0" stroke-width="1"/>
+  <!-- ===== 右侧：clip 机制 ===== -->
+  <rect x="500" y="208" width="420" height="200" rx="4" fill="#f8fafc" stroke="#cbd5e1" stroke-width="1"/>
+  <text x="710" y="234" text-anchor="middle" font-size="14" font-weight="600" fill="#1e293b">Clipping Mechanism</text>
 
-  <text x="550" y="390" font-size="12" fill="#334155" text-anchor="middle">r<text><tspan baseline-shift="sub" font-size="75%">t</tspan></text> &lt; 1−ε</text>
-  <text x="650" y="390" font-size="12" fill="#334155" text-anchor="middle">1−ε ≤ r<text><tspan baseline-shift="sub" font-size="75%">t</tspan></text> ≤ 1+ε</text>
-  <text x="750" y="390" font-size="12" fill="#334155" text-anchor="middle">r<text><tspan baseline-shift="sub" font-size="75%">t</tspan></text> &gt; 1+ε</text>
+  <!-- 区间图 -->
+  <text x="540" y="268" font-size="12" fill="#334155">clip(r, 1−ε, 1+ε) =</text>
+  <text x="540" y="288" font-size="12" fill="#475569">1−ε &amp;nbsp; if r &lt; 1−ε</text>
+  <text x="540" y="306" font-size="12" fill="#475569">r &amp;nbsp; if 1−ε ≤ r ≤ 1+ε</text>
+  <text x="540" y="324" font-size="12" fill="#475569">1+ε &amp;nbsp; if r &gt; 1+ε</text>
 
-  <line x1="550" y1="400" x2="550" y2="420" stroke="#94a3b8" stroke-width="1.5" stroke-dasharray="5,3"/>
-  <polygon points="550,424 546,416 554,416" fill="#94a3b8"/>
-  <line x1="650" y1="400" x2="650" y2="420" stroke="#6366f1" stroke-width="1.5"/>
-  <polygon points="650,424 646,416 654,416" fill="#6366f1"/>
-  <line x1="750" y1="400" x2="750" y2="420" stroke="#6366f1" stroke-width="1.5"/>
-  <polygon points="750,424 746,416 754,416" fill="#6366f1"/>
+  <!-- 数轴示意 -->
+  <line x1="540" y1="350" x2="860" y2="350" stroke="#475569" stroke-width="1.5"/>
+  <polygon points="860,350 854,346 854,354" fill="#475569"/>
+  <text x="540" y="370" font-size="11" fill="#64748b">0</text>
+  <text x="660" y="370" font-size="11" fill="#64748b">1−ε</text>
+  <text x="760" y="370" font-size="11" fill="#64748b">1</text>
+  <text x="840" y="370" font-size="11" fill="#64748b">1+ε</text>
+  <line x1="660" y1="344" x2="660" y2="356" stroke="#6366f1" stroke-width="1.5"/>
+  <line x1="760" y1="344" x2="760" y2="356" stroke="#6366f1" stroke-width="1.5"/>
+  <line x1="840" y1="344" x2="840" y2="356" stroke="#6366f1" stroke-width="1.5"/>
 
-  <text x="550" y="440" font-size="11" fill="#94a3b8" text-anchor="middle">clipped (no decrease)</text>
-  <text x="650" y="440" font-size="11" fill="#6366f1" text-anchor="middle">decrease r<text><tspan baseline-shift="sub" font-size="75%">t</tspan></text></text>
-  <text x="750" y="440" font-size="11" fill="#6366f1" text-anchor="middle">decrease r<text><tspan baseline-shift="sub" font-size="75%">t</tspan></text></text>
+  <text x="710" y="400" text-anchor="middle" font-size="11" fill="#64748b">ε is a hyperparameter (typically 0.2)</text>
 
-  <!-- 图例 -->
-  <rect x="120" y="488" width="720" height="44" rx="4" fill="#f8fafc" stroke="#e2e8f0" stroke-width="1"/>
-  <text x="160" y="516" font-size="12" font-weight="600" fill="#1e293b">Legend:</text>
-  <line x1="220" y1="512" x2="260" y2="512" stroke="#6366f1" stroke-width="1.5"/>
-  <polygon points="260,516 256,508 264,508" fill="#6366f1"/>
-  <text x="270" y="516" font-size="11" fill="#334155">active update (gradient flows)</text>
-  <line x1="420" y1="512" x2="460" y2="512" stroke="#94a3b8" stroke-width="1.5" stroke-dasharray="5,3"/>
-  <polygon points="460,516 456,508 464,508" fill="#94a3b8"/>
-  <text x="470" y="516" font-size="11" fill="#334155">clipped (no gradient)</text>
-  <text x="600" y="516" font-size="11" fill="#64748b">ε = 0.2 (default clipping range)</text>
+  <!-- ===== 下方：min 操作与悲观下界 ===== -->
+  <rect x="40" y="428" width="880" height="120" rx="4" fill="#f1f5f9" stroke="#e2e8f0" stroke-width="1"/>
+  <text x="480" y="456" text-anchor="middle" font-size="14" font-weight="600" fill="#1e293b">Min Operation: Pessimistic Lower Bound</text>
 
-  <!-- 底部：算法流程 -->
-  <rect x="120" y="552" width="720" height="110" rx="4" fill="#f1f5f9" stroke="#e2e8f0" stroke-width="1"/>
-  <text x="480" y="578" font-size="14" font-weight="600" fill="#1e293b" text-anchor="middle">PPO Algorithm (Simplified)</text>
+  <!-- 两个项 -->
+  <rect x="80" y="472" width="360" height="60" rx="3" fill="#ffffff" stroke="#cbd5e1" stroke-width="1"/>
+  <text x="260" y="494" text-anchor="middle" font-size="13" fill="#334155">Term 1: r&#8342;(θ) · Â&#8342;</text>
+  <text x="260" y="514" text-anchor="middle" font-size="11" fill="#64748b">Unclipped surrogate objective</text>
 
-  <!-- 三个步骤 -->
-  <rect x="150" y="594" width="200" height="52" rx="4" fill="#ffffff" stroke="#94a3b8" stroke-width="1"/>
-  <text x="250" y="616" font-size="12" font-weight="600" fill="#1e293b" text-anchor="middle">1. Collect trajectory</text>
-  <text x="250" y="636" font-size="11" fill="#64748b" text-anchor="middle">using policy π<text><tspan baseline-shift="sub" font-size="75%">θ<text><tspan baseline-shift="sub" font-size="75%">old</tspan></text></tspan></text></text>
+  <rect x="520" y="472" width="360" height="60" rx="3" fill="#ffffff" stroke="#cbd5e1" stroke-width="1"/>
+  <text x="700" y="494" text-anchor="middle" font-size="13" fill="#334155">Term 2: clip(r&#8342;(θ), 1−ε, 1+ε) · Â&#8342;</text>
+  <text x="700" y="514" text-anchor="middle" font-size="11" fill="#64748b">Clipped version (removes incentive to go outside [1−ε, 1+ε])</text>
 
-  <line x1="350" y1="620" x2="380" y2="620" stroke="#6366f1" stroke-width="1.5"/>
-  <polygon points="380,624 376,616 384,616" fill="#6366f1"/>
+  <!-- min 箭头 -->
+  <line x1="260" y1="532" x2="260" y2="548" stroke="#6366f1" stroke-width="1.5"/>
+  <line x1="700" y1="532" x2="700" y2="548" stroke="#6366f1" stroke-width="1.5"/>
+  <line x1="260" y1="548" x2="700" y2="548" stroke="#6366f1" stroke-width="1.5"/>
+  <polygon points="480,548 474,542 486,542" fill="#6366f1"/>
+  <text x="480" y="564" text-anchor="middle" font-size="12" font-weight="600" fill="#3730a3">min(·, ·) → pessimistic estimate</text>
 
-  <rect x="385" y="594" width="200" height="52" rx="4" fill="#ffffff" stroke="#94a3b8" stroke-width="1"/>
-  <text x="485" y="616" font-size="12" font-weight="600" fill="#1e293b" text-anchor="middle">2. Compute &#x1D0C;<text><tspan baseline-shift="sub" font-size="75%">t</tspan></text> &amp; r<text><tspan baseline-shift="sub" font-size="75%">t</tspan></text>(θ)</text>
-  <text x="485" y="636" font-size="11" fill="#64748b" text-anchor="middle">advantage + ratio</text>
+  <!-- ===== 底部图例 ===== -->
+  <rect x="40" y="568" width="880" height="90" rx="4" fill="#fbfcfe" stroke="#e2e8f0" stroke-width="1"/>
+  <text x="80" y="594" font-size="12" font-weight="600" fill="#334155">Legend</text>
 
-  <line x1="585" y1="620" x2="615" y2="620" stroke="#6366f1" stroke-width="1.5"/>
-  <polygon points="615,624 611,616 619,616" fill="#6366f1"/>
+  <!-- 箭头样式 -->
+  <line x1="80" y1="616" x2="130" y2="616" stroke="#6366f1" stroke-width="1.5"/>
+  <polygon points="130,616 124,612 124,620" fill="#6366f1"/>
+  <text x="145" y="620" font-size="11" fill="#475569">Data flow / mapping</text>
 
-  <rect x="620" y="594" width="200" height="52" rx="4" fill="#ffffff" stroke="#6366f1" stroke-width="1.5"/>
-  <text x="720" y="616" font-size="12" font-weight="600" fill="#1e293b" text-anchor="middle">3. Optimize L<text><tspan baseline-shift="super" font-size="75%">CLIP</tspan></text></text>
-  <text x="720" y="636" font-size="11" fill="#64748b" text-anchor="middle">SGD for K epochs</text>
+  <line x1="280" y1="616" x2="330" y2="616" stroke="#94a3b8" stroke-width="1" stroke-dasharray="5,4"/>
+  <polygon points="330,616 324,612 324,620" fill="#94a3b8"/>
+  <text x="345" y="620" font-size="11" fill="#475569">Reference / baseline</text>
+
+  <line x1="500" y1="616" x2="550" y2="616" stroke="#6366f1" stroke-width="2.5"/>
+  <polygon points="550,616 544,612 544,620" fill="#6366f1"/>
+  <text x="565" y="620" font-size="11" fill="#475569">Selected / emphasized</text>
+
+  <text x="80" y="646" font-size="11" fill="#64748b">Notation: Â&#8342; = advantage estimate; ε = clip range (default 0.2); π&#8342; = policy parameterized by θ</text>
 </svg>

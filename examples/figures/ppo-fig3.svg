@@ -1,65 +1,107 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 960 680" font-family="'Segoe UI','PingFang SC','Microsoft YaHei',sans-serif" font-size="14" fill="#1e293b" width="960" height="680">
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 960 680" font-family="'Segoe UI','PingFang SC','Microsoft YaHei',sans-serif" width="960" height="680">
   <rect x="0" y="0" width="960" height="680" fill="#ffffff"/>
 
   <!-- 标题 -->
-  <text x="480" y="36" font-size="20" font-weight="bold" text-anchor="middle" fill="#1e293b">Truncated Generalized Advantage Estimation (GAE) for Fixed-Length Segments</text>
-  <line x1="200" y1="46" x2="760" y2="46" stroke="#cbd5e1" stroke-width="1"/>
+  <text x="480" y="36" font-size="20" font-weight="bold" fill="#1e293b" text-anchor="middle">PPO Combined Loss Function</text>
+  <text x="480" y="58" font-size="13" fill="#64748b" text-anchor="middle">L<tspan baseline-shift="sub" font-size="75%">t</tspan><tspan font-size="75%" baseline-shift="super">CLIP+VF+S</tspan>(θ) = Ê<tspan baseline-shift="sub" font-size="75%">t</tspan>[ L<tspan baseline-shift="sub" font-size="75%">t</tspan><tspan font-size="75%" baseline-shift="super">CLIP</tspan>(θ) − c<tspan baseline-shift="sub" font-size="75%">1</tspan> L<tspan baseline-shift="sub" font-size="75%">t</tspan><tspan font-size="75%" baseline-shift="super">VF</tspan>(θ) + c<tspan baseline-shift="sub" font-size="75%">2</tspan> S[π<tspan baseline-shift="sub" font-size="75%">θ</tspan>](s<tspan baseline-shift="sub" font-size="75%">t</tspan>) ]</text>
 
-  <!-- 核心公式框（视觉焦点） -->
-  <rect x="80" y="68" width="800" height="100" rx="6" fill="#eef2ff" stroke="#6366f1" stroke-width="2"/>
-  <text x="480" y="94" font-size="16" font-weight="bold" text-anchor="middle" fill="#3730a3">Core Definition: Truncated GAE</text>
-  <text x="480" y="126" font-size="18" text-anchor="middle" fill="#1e293b">&#x1D700;<tspan font-style="italic">A</tspan><tspan baseline-shift="sub" font-size="75%">t</tspan> = &#x3B4;<tspan baseline-shift="sub" font-size="75%">t</tspan> + (&#x3B3;&#x3BB;)&#x3B4;<tspan baseline-shift="sub" font-size="75%">t+1</tspan> + &#x2026; + (&#x3B3;&#x3BB;)<tspan baseline-shift="super" font-size="75%">T&#x2212;t+1</tspan>&#x3B4;<tspan baseline-shift="sub" font-size="75%">T&#x2212;1</tspan></text>
-  <text x="480" y="154" font-size="15" text-anchor="middle" fill="#334155">where &#x3B4;<tspan baseline-shift="sub" font-size="75%">t</tspan> = r<tspan baseline-shift="sub" font-size="75%">t</tspan> + &#x3B3;V(s<tspan baseline-shift="sub" font-size="75%">t+1</tspan>) &#x2212; V(s<tspan baseline-shift="sub" font-size="75%">t</tspan>)</text>
+  <!-- 主公式框 -->
+  <rect x="60" y="80" width="840" height="120" rx="6" fill="#f8fafc" stroke="#6366f1" stroke-width="2"/>
+  <text x="480" y="110" font-size="15" font-weight="bold" fill="#3730a3" text-anchor="middle">Core Objective (maximized via SGD)</text>
+  <text x="480" y="148" font-size="18" font-weight="bold" fill="#1e293b" text-anchor="middle">L<tspan baseline-shift="sub" font-size="75%">t</tspan><tspan font-size="75%" baseline-shift="super">CLIP+VF+S</tspan>(θ) = Ê<tspan baseline-shift="sub" font-size="75%">t</tspan>[ L<tspan baseline-shift="sub" font-size="75%">t</tspan><tspan font-size="75%" baseline-shift="super">CLIP</tspan>(θ) − c<tspan baseline-shift="sub" font-size="75%">1</tspan> · L<tspan baseline-shift="sub" font-size="75%">t</tspan><tspan font-size="75%" baseline-shift="super">VF</tspan>(θ) + c<tspan baseline-shift="sub" font-size="75%">2</tspan> · S[π<tspan baseline-shift="sub" font-size="75%">θ</tspan>](s<tspan baseline-shift="sub" font-size="75%">t</tspan>) ]</text>
+  <text x="480" y="180" font-size="12" fill="#64748b" text-anchor="middle">c<tspan baseline-shift="sub" font-size="75%">1</tspan>, c<tspan baseline-shift="sub" font-size="75%">2</tspan> : coefficients balancing value loss &amp; entropy bonus</text>
 
-  <!-- 左侧：截断求和示意 -->
-  <rect x="80" y="190" width="420" height="200" rx="4" fill="#f8fafc" stroke="#cbd5e1" stroke-width="1"/>
-  <text x="290" y="216" font-size="14" font-weight="bold" text-anchor="middle" fill="#1e293b">Truncated Summation over Segment</text>
+  <!-- 三个组件面板 -->
+  <!-- 1. CLIP 损失 -->
+  <rect x="60" y="230" width="260" height="200" rx="4" fill="#f1f5f9" stroke="#cbd5e1" stroke-width="1"/>
+  <text x="190" y="256" font-size="14" font-weight="bold" fill="#1e293b" text-anchor="middle">L<tspan baseline-shift="sub" font-size="75%">t</tspan><tspan font-size="75%" baseline-shift="super">CLIP</tspan>(θ) — Clipped Surrogate</text>
+  <line x1="80" y1="268" x2="300" y2="268" stroke="#cbd5e1" stroke-width="1"/>
+  <text x="190" y="292" font-size="12" fill="#334155" text-anchor="middle">L<tspan baseline-shift="sub" font-size="75%">t</tspan><tspan font-size="75%" baseline-shift="super">CLIP</tspan>(θ) = Ê<tspan baseline-shift="sub" font-size="75%">t</tspan>[ min( r<tspan baseline-shift="sub" font-size="75%">t</tspan>(θ) Â<tspan baseline-shift="sub" font-size="75%">t</tspan>,</text>
+  <text x="190" y="312" font-size="12" fill="#334155" text-anchor="middle">clip(r<tspan baseline-shift="sub" font-size="75%">t</tspan>(θ), 1−ε, 1+ε) Â<tspan baseline-shift="sub" font-size="75%">t</tspan> ) ]</text>
+  <text x="190" y="340" font-size="11" fill="#64748b" text-anchor="middle">r<tspan baseline-shift="sub" font-size="75%">t</tspan>(θ) = π<tspan baseline-shift="sub" font-size="75%">θ</tspan>(a<tspan baseline-shift="sub" font-size="75%">t</tspan>|s<tspan baseline-shift="sub" font-size="75%">t</tspan>) / π<tspan baseline-shift="sub" font-size="75%">θ_old</tspan>(a<tspan baseline-shift="sub" font-size="75%">t</tspan>|s<tspan baseline-shift="sub" font-size="75%">t</tspan>)</text>
+  <text x="190" y="362" font-size="11" fill="#64748b" text-anchor="middle">ε = 0.2 (clipping range)</text>
+  <text x="190" y="390" font-size="11" fill="#64748b" text-anchor="middle">Prevents large destructive policy updates</text>
 
-  <!-- 求和展开示意 -->
-  <text x="110" y="248" font-size="13" fill="#334155">&#x1D700;<tspan font-style="italic">A</tspan><tspan baseline-shift="sub" font-size="75%">t</tspan> = &#x3B4;<tspan baseline-shift="sub" font-size="75%">t</tspan></text>
-  <text x="110" y="272" font-size="13" fill="#334155">&#x2003;&#x2003;+ (&#x3B3;&#x3BB;)&#x3B4;<tspan baseline-shift="sub" font-size="75%">t+1</tspan></text>
-  <text x="110" y="296" font-size="13" fill="#334155">&#x2003;&#x2003;+ (&#x3B3;&#x3BB;)<tspan baseline-shift="super" font-size="75%">2</tspan>&#x3B4;<tspan baseline-shift="sub" font-size="75%">t+2</tspan></text>
-  <text x="110" y="320" font-size="13" fill="#334155">&#x2003;&#x2003;+ &#x22EE;</text>
-  <text x="110" y="344" font-size="13" fill="#334155">&#x2003;&#x2003;+ (&#x3B3;&#x3BB;)<tspan baseline-shift="super" font-size="75%">T&#x2212;t+1</tspan>&#x3B4;<tspan baseline-shift="sub" font-size="75%">T&#x2212;1</tspan></text>
+  <!-- 2. VF 损失 -->
+  <rect x="350" y="230" width="260" height="200" rx="4" fill="#f1f5f9" stroke="#cbd5e1" stroke-width="1"/>
+  <text x="480" y="256" font-size="14" font-weight="bold" fill="#1e293b" text-anchor="middle">L<tspan baseline-shift="sub" font-size="75%">t</tspan><tspan font-size="75%" baseline-shift="super">VF</tspan>(θ) — Value Function Loss</text>
+  <line x1="370" y1="268" x2="590" y2="268" stroke="#cbd5e1" stroke-width="1"/>
+  <text x="480" y="296" font-size="12" fill="#334155" text-anchor="middle">L<tspan baseline-shift="sub" font-size="75%">t</tspan><tspan font-size="75%" baseline-shift="super">VF</tspan>(θ) = ( V<tspan baseline-shift="sub" font-size="75%">θ</tspan>(s<tspan baseline-shift="sub" font-size="75%">t</tspan>) − V<tspan baseline-shift="sub" font-size="75%">t</tspan><tspan font-size="75%" baseline-shift="super">targ</tspan> )<tspan font-size="75%" baseline-shift="super">2</tspan></text>
+  <text x="480" y="326" font-size="11" fill="#64748b" text-anchor="middle">V<tspan baseline-shift="sub" font-size="75%">θ</tspan>(s<tspan baseline-shift="sub" font-size="75%">t</tspan>) : predicted value</text>
+  <text x="480" y="346" font-size="11" fill="#64748b" text-anchor="middle">V<tspan baseline-shift="sub" font-size="75%">t</tspan><tspan font-size="75%" baseline-shift="super">targ</tspan> : target (e.g. GAE or MC return)</text>
+  <text x="480" y="376" font-size="11" fill="#64748b" text-anchor="middle">Squared error loss for value estimation</text>
+  <text x="480" y="400" font-size="11" fill="#64748b" text-anchor="middle">Improves value function accuracy</text>
 
-  <!-- 右侧：关键属性 -->
-  <rect x="530" y="190" width="350" height="200" rx="4" fill="#f8fafc" stroke="#cbd5e1" stroke-width="1"/>
-  <text x="705" y="216" font-size="14" font-weight="bold" text-anchor="middle" fill="#1e293b">Key Properties</text>
+  <!-- 3. 熵奖励 -->
+  <rect x="640" y="230" width="260" height="200" rx="4" fill="#f1f5f9" stroke="#cbd5e1" stroke-width="1"/>
+  <text x="770" y="256" font-size="14" font-weight="bold" fill="#1e293b" text-anchor="middle">S[π<tspan baseline-shift="sub" font-size="75%">θ</tspan>](s<tspan baseline-shift="sub" font-size="75%">t</tspan>) — Entropy Bonus</text>
+  <line x1="660" y1="268" x2="880" y2="268" stroke="#cbd5e1" stroke-width="1"/>
+  <text x="770" y="296" font-size="12" fill="#334155" text-anchor="middle">S[π<tspan baseline-shift="sub" font-size="75%">θ</tspan>](s<tspan baseline-shift="sub" font-size="75%">t</tspan>) = H(π<tspan baseline-shift="sub" font-size="75%">θ</tspan>(·|s<tspan baseline-shift="sub" font-size="75%">t</tspan>))</text>
+  <text x="770" y="326" font-size="11" fill="#64748b" text-anchor="middle">= − Σ<tspan baseline-shift="sub" font-size="75%">a</tspan> π<tspan baseline-shift="sub" font-size="75%">θ</tspan>(a|s<tspan baseline-shift="sub" font-size="75%">t</tspan>) log π<tspan baseline-shift="sub" font-size="75%">θ</tspan>(a|s<tspan baseline-shift="sub" font-size="75%">t</tspan>)</text>
+  <text x="770" y="356" font-size="11" fill="#64748b" text-anchor="middle">Encourages exploration</text>
+  <text x="770" y="380" font-size="11" fill="#64748b" text-anchor="middle">Prevents premature convergence</text>
+  <text x="770" y="404" font-size="11" fill="#64748b" text-anchor="middle">c<tspan baseline-shift="sub" font-size="75%">2</tspan> controls exploration strength</text>
 
-  <text x="550" y="248" font-size="13" fill="#334155">&#x2022; Truncation at T: avoids full-trajectory</text>
-  <text x="550" y="272" font-size="13" fill="#334155">&#x2003;&#x2003;dependence, matches fixed-length</text>
-  <text x="550" y="296" font-size="13" fill="#334155">&#x2003;&#x2003;segment sampling.</text>
-  <text x="550" y="328" font-size="13" fill="#334155">&#x2022; When &#x3BB; = 1: reduces to finite-horizon</text>
-  <text x="550" y="352" font-size="13" fill="#334155">&#x2003;&#x2003;Monte Carlo advantage estimate.</text>
+  <!-- 箭头：三个组件汇聚到主公式 -->
+  <!-- 从 CLIP 框到主公式 -->
+  <line x1="190" y1="230" x2="190" y2="200" stroke="#6366f1" stroke-width="1.5"/>
+  <polygon points="190,200 186,208 194,208" fill="#6366f1"/>
 
-  <!-- 下方：δ_t 分解 -->
-  <rect x="80" y="412" width="420" height="120" rx="4" fill="#f1f5f9" stroke="#94a3b8" stroke-width="1"/>
-  <text x="290" y="438" font-size="14" font-weight="bold" text-anchor="middle" fill="#1e293b">TD Residual &#x3B4;<tspan baseline-shift="sub" font-size="75%">t</tspan> Decomposition</text>
-  <text x="110" y="466" font-size="13" fill="#334155">&#x3B4;<tspan baseline-shift="sub" font-size="75%">t</tspan> = r<tspan baseline-shift="sub" font-size="75%">t</tspan> + &#x3B3;V(s<tspan baseline-shift="sub" font-size="75%">t+1</tspan>) &#x2212; V(s<tspan baseline-shift="sub" font-size="75%">t</tspan>)</text>
-  <text x="110" y="494" font-size="12" fill="#64748b">&#x2192; Measures one-step temporal difference</text>
-  <text x="110" y="516" font-size="12" fill="#64748b">&#x2192; Combines reward + value bootstrap</text>
+  <!-- 从 VF 框到主公式 -->
+  <line x1="480" y1="230" x2="480" y2="200" stroke="#6366f1" stroke-width="1.5"/>
+  <polygon points="480,200 476,208 484,208" fill="#6366f1"/>
 
-  <!-- 下方右侧：图例 -->
-  <rect x="530" y="412" width="350" height="120" rx="4" fill="#f1f5f9" stroke="#94a3b8" stroke-width="1"/>
-  <text x="705" y="438" font-size="14" font-weight="bold" text-anchor="middle" fill="#1e293b">Legend</text>
+  <!-- 从熵框到主公式 -->
+  <line x1="770" y1="230" x2="770" y2="200" stroke="#6366f1" stroke-width="1.5"/>
+  <polygon points="770,200 766,208 774,208" fill="#6366f1"/>
 
-  <line x1="550" y1="466" x2="610" y2="466" stroke="#6366f1" stroke-width="2"/>
-  <polygon points="610,462 618,466 610,470" fill="#6366f1"/>
-  <text x="630" y="470" font-size="12" fill="#334155">Core definition / formula</text>
+  <!-- 图例面板 -->
+  <rect x="60" y="460" width="840" height="200" rx="4" fill="#f8fafc" stroke="#e2e8f0" stroke-width="1"/>
+  <text x="480" y="488" font-size="14" font-weight="bold" fill="#1e293b" text-anchor="middle">Algorithm Overview (PPO with Combined Loss)</text>
+  <line x1="80" y1="498" x2="880" y2="498" stroke="#e2e8f0" stroke-width="1"/>
 
-  <line x1="550" y1="494" x2="610" y2="494" stroke="#475569" stroke-width="1.5"/>
-  <polygon points="610,490 618,494 610,498" fill="#475569"/>
-  <text x="630" y="498" font-size="12" fill="#334155">Derived quantity / property</text>
+  <!-- 步骤 1 -->
+  <rect x="80" y="510" width="180" height="60" rx="4" fill="#eef2ff" stroke="#6366f1" stroke-width="1.5"/>
+  <text x="170" y="536" font-size="12" font-weight="bold" fill="#3730a3" text-anchor="middle">1. Collect Trajectories</text>
+  <text x="170" y="556" font-size="10" fill="#64748b" text-anchor="middle">Run π<tspan baseline-shift="sub" font-size="75%">θ_old</tspan> for T timesteps</text>
 
-  <line x1="550" y1="522" x2="610" y2="522" stroke="#94a3b8" stroke-width="1" stroke-dasharray="5,4"/>
-  <polygon points="610,518 618,522 610,526" fill="#94a3b8"/>
-  <text x="630" y="526" font-size="12" fill="#334155">Reference / background</text>
+  <!-- 步骤 2 -->
+  <rect x="290" y="510" width="180" height="60" rx="4" fill="#eef2ff" stroke="#6366f1" stroke-width="1.5"/>
+  <text x="380" y="536" font-size="12" font-weight="bold" fill="#3730a3" text-anchor="middle">2. Compute Advantages</text>
+  <text x="380" y="556" font-size="10" fill="#64748b" text-anchor="middle">Â<tspan baseline-shift="sub" font-size="75%">t</tspan> via GAE or MC</text>
 
-  <!-- 底部说明 -->
-  <text x="480" y="600" font-size="12" text-anchor="middle" fill="#64748b">Truncated GAE enables efficient, unbiased advantage estimation within fixed-length trajectory segments,</text>
-  <text x="480" y="620" font-size="12" text-anchor="middle" fill="#64748b">matching the sampling scheme used in PPO and other on-policy algorithms.</text>
+  <!-- 步骤 3 -->
+  <rect x="500" y="510" width="180" height="60" rx="4" fill="#eef2ff" stroke="#6366f1" stroke-width="1.5"/>
+  <text x="590" y="536" font-size="12" font-weight="bold" fill="#3730a3" text-anchor="middle">3. Optimize Combined Loss</text>
+  <text x="590" y="556" font-size="10" fill="#64748b" text-anchor="middle">SGD on L<tspan baseline-shift="sub" font-size="75%">t</tspan><tspan font-size="75%" baseline-shift="super">CLIP+VF+S</tspan></text>
 
-  <!-- 底部边界线 -->
-  <line x1="80" y1="640" x2="880" y2="640" stroke="#e2e8f0" stroke-width="1"/>
-  <text x="480" y="660" font-size="11" text-anchor="middle" fill="#94a3b8">Figure 1: Truncated Generalized Advantage Estimation for fixed-length segments in PPO.</text>
+  <!-- 步骤 4 -->
+  <rect x="710" y="510" width="180" height="60" rx="4" fill="#eef2ff" stroke="#6366f1" stroke-width="1.5"/>
+  <text x="800" y="536" font-size="12" font-weight="bold" fill="#3730a3" text-anchor="middle">4. Update Policy</text>
+  <text x="800" y="556" font-size="10" fill="#64748b" text-anchor="middle">π<tspan baseline-shift="sub" font-size="75%">θ_old</tspan> ← π<tspan baseline-shift="sub" font-size="75%">θ</tspan></text>
+
+  <!-- 步骤间箭头 -->
+  <line x1="260" y1="540" x2="288" y2="540" stroke="#6366f1" stroke-width="1.5"/>
+  <polygon points="288,540 280,536 280,544" fill="#6366f1"/>
+
+  <line x1="470" y1="540" x2="498" y2="540" stroke="#6366f1" stroke-width="1.5"/>
+  <polygon points="498,540 490,536 490,544" fill="#6366f1"/>
+
+  <line x1="680" y1="540" x2="708" y2="540" stroke="#6366f1" stroke-width="1.5"/>
+  <polygon points="708,540 700,536 700,544" fill="#6366f1"/>
+
+  <!-- 循环箭头 -->
+  <path d="M 800 570 L 800 590 Q 800 600 790 600 L 170 600 Q 160 600 160 590 L 160 570" fill="none" stroke="#94a3b8" stroke-width="1.5" stroke-dasharray="5,4"/>
+  <polygon points="160,570 156,578 164,578" fill="#94a3b8"/>
+  <text x="480" y="618" font-size="11" fill="#64748b" text-anchor="middle">Repeat for K epochs per data batch</text>
+
+  <!-- 图例：箭头含义 -->
+  <text x="80" y="648" font-size="11" fill="#64748b">Arrow legend:</text>
+  <line x1="170" y1="644" x2="210" y2="644" stroke="#6366f1" stroke-width="1.5"/>
+  <polygon points="210,644 204,641 204,647" fill="#6366f1"/>
+  <text x="218" y="648" font-size="10" fill="#64748b">Data flow / forward pass</text>
+
+  <line x1="370" y1="644" x2="410" y2="644" stroke="#94a3b8" stroke-width="1.5" stroke-dasharray="5,4"/>
+  <polygon points="410,644 404,641 404,647" fill="#94a3b8"/>
+  <text x="418" y="648" font-size="10" fill="#64748b">Iteration loop</text>
 </svg>

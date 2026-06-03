@@ -1,208 +1,48 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 960 680" font-family="'Segoe UI','PingFang SC','Microsoft YaHei',sans-serif" width="960" height="680">
-  <rect x="0" y="0" width="960" height="680" fill="#ffffff"/>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 860 360" width="860" height="360" font-family="-apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif">
+  <defs>
+    <marker id="arw" markerWidth="9" markerHeight="9" refX="7" refY="3" orient="auto">
+      <path d="M0,0 L7,3 L0,6 Z" fill="#2c3a66"/>
+    </marker>
+  </defs>
+  <rect x="0" y="0" width="860" height="360" fill="#ffffff"/>
+  <text x="430" y="38" text-anchor="middle" font-size="23" font-weight="700" fill="#211f1b">Scaled Dot-Product Attention</text>
+  <text x="430" y="66" text-anchor="middle" font-size="15" fill="#2c3a66">Attention(Q, K, V) = softmax( Q·K^T / √d_k ) · V</text>
 
-  <!-- 标题 -->
-  <text x="480" y="36" font-size="20" font-weight="bold" fill="#1e293b" text-anchor="middle">Masked Self-Attention in Decoder</text>
-  <text x="480" y="58" font-size="13" fill="#64748b" text-anchor="middle">Auto-regressive property: prediction at position i depends only on outputs at positions &lt; i</text>
-
-  <!-- ===== 左侧主面板：二部图 + 掩码矩阵 ===== -->
-  <rect x="40" y="80" width="620" height="560" fill="#f8fafc" rx="4" stroke="#cbd5e1" stroke-width="1"/>
-
-  <!-- 左列：输出序列（已生成） -->
-  <text x="100" y="110" font-size="13" font-weight="bold" fill="#334155" text-anchor="middle">Output Sequence</text>
-  <text x="100" y="126" font-size="11" fill="#64748b" text-anchor="middle">(positions 1 … i)</text>
-
-  <!-- 输出节点 -->
-  <circle cx="100" cy="160" r="18" fill="#eef2ff" stroke="#6366f1" stroke-width="2"/>
-  <text x="100" y="165" font-size="13" fill="#3730a3" text-anchor="middle" font-weight="bold">y₁</text>
-
-  <circle cx="100" cy="220" r="18" fill="#eef2ff" stroke="#6366f1" stroke-width="2"/>
-  <text x="100" y="225" font-size="13" fill="#3730a3" text-anchor="middle" font-weight="bold">y₂</text>
-
-  <circle cx="100" cy="280" r="18" fill="#eef2ff" stroke="#6366f1" stroke-width="2"/>
-  <text x="100" y="285" font-size="13" fill="#3730a3" text-anchor="middle" font-weight="bold">y₃</text>
-
-  <circle cx="100" cy="340" r="18" fill="#eef2ff" stroke="#6366f1" stroke-width="2"/>
-  <text x="100" y="345" font-size="13" fill="#3730a3" text-anchor="middle" font-weight="bold">y₄</text>
-
-  <circle cx="100" cy="400" r="18" fill="#eef2ff" stroke="#6366f1" stroke-width="2"/>
-  <text x="100" y="405" font-size="13" fill="#3730a3" text-anchor="middle" font-weight="bold">y₅</text>
-
-  <text x="100" cy="460" font-size="13" fill="#64748b" text-anchor="middle">⋮</text>
-  <text x="100" y="490" font-size="13" fill="#64748b" text-anchor="middle">⋮</text>
-
-  <circle cx="100" cy="530" r="18" fill="#eef2ff" stroke="#6366f1" stroke-width="2"/>
-  <text x="100" y="535" font-size="13" fill="#3730a3" text-anchor="middle" font-weight="bold">yᵢ</text>
-
-  <!-- 右列：预测目标（当前 i） -->
-  <text x="560" y="110" font-size="13" font-weight="bold" fill="#334155" text-anchor="middle">Prediction Target</text>
-  <text x="560" y="126" font-size="11" fill="#64748b" text-anchor="middle">(position i)</text>
-
-  <circle cx="560" cy="530" r="18" fill="#f1f5f9" stroke="#475569" stroke-width="2"/>
-  <text x="560" y="535" font-size="13" fill="#1e293b" text-anchor="middle" font-weight="bold">ŷᵢ</text>
-
-  <!-- 箭头：从 y₁…yᵢ₋₁ 到 ŷᵢ（实线） -->
-  <!-- y₁ → ŷᵢ -->
-  <line x1="118" y1="160" x2="542" y2="530" stroke="#6366f1" stroke-width="1.5"/>
-  <polygon points="542,530 530,522 534,534" fill="#6366f1"/>
-
-  <!-- y₂ → ŷᵢ -->
-  <line x1="118" y1="220" x2="542" y2="530" stroke="#6366f1" stroke-width="1.5"/>
-  <polygon points="542,530 530,522 534,534" fill="#6366f1"/>
-
-  <!-- y₃ → ŷᵢ -->
-  <line x1="118" y1="280" x2="542" y2="530" stroke="#6366f1" stroke-width="1.5"/>
-  <polygon points="542,530 530,522 534,534" fill="#6366f1"/>
-
-  <!-- y₄ → ŷᵢ -->
-  <line x1="118" y1="340" x2="542" y2="530" stroke="#6366f1" stroke-width="1.5"/>
-  <polygon points="542,530 530,522 534,534" fill="#6366f1"/>
-
-  <!-- y₅ → ŷᵢ -->
-  <line x1="118" y1="400" x2="542" y2="530" stroke="#6366f1" stroke-width="1.5"/>
-  <polygon points="542,530 530,522 534,534" fill="#6366f1"/>
-
-  <!-- 从 yᵢ 到 ŷᵢ 的虚线（被掩码） -->
-  <line x1="118" y1="530" x2="542" y2="530" stroke="#94a3b8" stroke-width="1.5" stroke-dasharray="5,4"/>
-  <polygon points="542,530 530,522 534,534" fill="#94a3b8"/>
-
-  <!-- 掩码指示：在 yᵢ 旁画一个叉 -->
-  <text x="118" y="530" font-size="14" fill="#dc2626" text-anchor="start" font-weight="bold">✕</text>
-
-  <!-- 掩码矩阵（小网格） -->
-  <text x="340" y="160" font-size="13" font-weight="bold" fill="#334155" text-anchor="middle">Mask Matrix (i &#215; i)</text>
-
-  <!-- 网格：5×5 示例 -->
-  <g transform="translate(240, 180)">
-    <!-- 行标签 -->
-    <text x="-20" y="20" font-size="11" fill="#64748b" text-anchor="end">y₁</text>
-    <text x="-20" y="44" font-size="11" fill="#64748b" text-anchor="end">y₂</text>
-    <text x="-20" y="68" font-size="11" fill="#64748b" text-anchor="end">y₃</text>
-    <text x="-20" y="92" font-size="11" fill="#64748b" text-anchor="end">y₄</text>
-    <text x="-20" y="116" font-size="11" fill="#64748b" text-anchor="end">y₅</text>
-
-    <!-- 列标签 -->
-    <text x="20" y="-6" font-size="11" fill="#64748b" text-anchor="middle">y₁</text>
-    <text x="44" y="-6" font-size="11" fill="#64748b" text-anchor="middle">y₂</text>
-    <text x="68" y="-6" font-size="11" fill="#64748b" text-anchor="middle">y₃</text>
-    <text x="92" y="-6" font-size="11" fill="#64748b" text-anchor="middle">y₄</text>
-    <text x="116" y="-6" font-size="11" fill="#64748b" text-anchor="middle">y₅</text>
-
-    <!-- 单元格：上三角为 ✓，下三角为 ✕ -->
-    <!-- 第1行 -->
-    <rect x="8" y="8" width="24" height="24" fill="#eef2ff" stroke="#6366f1" stroke-width="1"/>
-    <text x="20" y="25" font-size="12" fill="#3730a3" text-anchor="middle">✓</text>
-    <rect x="32" y="8" width="24" height="24" fill="#f1f5f9" stroke="#cbd5e1" stroke-width="1"/>
-    <text x="44" y="25" font-size="12" fill="#94a3b8" text-anchor="middle">✕</text>
-    <rect x="56" y="8" width="24" height="24" fill="#f1f5f9" stroke="#cbd5e1" stroke-width="1"/>
-    <text x="68" y="25" font-size="12" fill="#94a3b8" text-anchor="middle">✕</text>
-    <rect x="80" y="8" width="24" height="24" fill="#f1f5f9" stroke="#cbd5e1" stroke-width="1"/>
-    <text x="92" y="25" font-size="12" fill="#94a3b8" text-anchor="middle">✕</text>
-    <rect x="104" y="8" width="24" height="24" fill="#f1f5f9" stroke="#cbd5e1" stroke-width="1"/>
-    <text x="116" y="25" font-size="12" fill="#94a3b8" text-anchor="middle">✕</text>
-
-    <!-- 第2行 -->
-    <rect x="8" y="32" width="24" height="24" fill="#eef2ff" stroke="#6366f1" stroke-width="1"/>
-    <text x="20" y="49" font-size="12" fill="#3730a3" text-anchor="middle">✓</text>
-    <rect x="32" y="32" width="24" height="24" fill="#eef2ff" stroke="#6366f1" stroke-width="1"/>
-    <text x="44" y="49" font-size="12" fill="#3730a3" text-anchor="middle">✓</text>
-    <rect x="56" y="32" width="24" height="24" fill="#f1f5f9" stroke="#cbd5e1" stroke-width="1"/>
-    <text x="68" y="49" font-size="12" fill="#94a3b8" text-anchor="middle">✕</text>
-    <rect x="80" y="32" width="24" height="24" fill="#f1f5f9" stroke="#cbd5e1" stroke-width="1"/>
-    <text x="92" y="49" font-size="12" fill="#94a3b8" text-anchor="middle">✕</text>
-    <rect x="104" y="32" width="24" height="24" fill="#f1f5f9" stroke="#cbd5e1" stroke-width="1"/>
-    <text x="116" y="49" font-size="12" fill="#94a3b8" text-anchor="middle">✕</text>
-
-    <!-- 第3行 -->
-    <rect x="8" y="56" width="24" height="24" fill="#eef2ff" stroke="#6366f1" stroke-width="1"/>
-    <text x="20" y="73" font-size="12" fill="#3730a3" text-anchor="middle">✓</text>
-    <rect x="32" y="56" width="24" height="24" fill="#eef2ff" stroke="#6366f1" stroke-width="1"/>
-    <text x="44" y="73" font-size="12" fill="#3730a3" text-anchor="middle">✓</text>
-    <rect x="56" y="56" width="24" height="24" fill="#eef2ff" stroke="#6366f1" stroke-width="1"/>
-    <text x="68" y="73" font-size="12" fill="#3730a3" text-anchor="middle">✓</text>
-    <rect x="80" y="56" width="24" height="24" fill="#f1f5f9" stroke="#cbd5e1" stroke-width="1"/>
-    <text x="92" y="73" font-size="12" fill="#94a3b8" text-anchor="middle">✕</text>
-    <rect x="104" y="56" width="24" height="24" fill="#f1f5f9" stroke="#cbd5e1" stroke-width="1"/>
-    <text x="116" y="73" font-size="12" fill="#94a3b8" text-anchor="middle">✕</text>
-
-    <!-- 第4行 -->
-    <rect x="8" y="80" width="24" height="24" fill="#eef2ff" stroke="#6366f1" stroke-width="1"/>
-    <text x="20" y="97" font-size="12" fill="#3730a3" text-anchor="middle">✓</text>
-    <rect x="32" y="80" width="24" height="24" fill="#eef2ff" stroke="#6366f1" stroke-width="1"/>
-    <text x="44" y="97" font-size="12" fill="#3730a3" text-anchor="middle">✓</text>
-    <rect x="56" y="80" width="24" height="24" fill="#eef2ff" stroke="#6366f1" stroke-width="1"/>
-    <text x="68" y="97" font-size="12" fill="#3730a3" text-anchor="middle">✓</text>
-    <rect x="80" y="80" width="24" height="24" fill="#eef2ff" stroke="#6366f1" stroke-width="1"/>
-    <text x="92" y="97" font-size="12" fill="#3730a3" text-anchor="middle">✓</text>
-    <rect x="104" y="80" width="24" height="24" fill="#f1f5f9" stroke="#cbd5e1" stroke-width="1"/>
-    <text x="116" y="97" font-size="12" fill="#94a3b8" text-anchor="middle">✕</text>
-
-    <!-- 第5行 -->
-    <rect x="8" y="104" width="24" height="24" fill="#eef2ff" stroke="#6366f1" stroke-width="1"/>
-    <text x="20" y="121" font-size="12" fill="#3730a3" text-anchor="middle">✓</text>
-    <rect x="32" y="104" width="24" height="24" fill="#eef2ff" stroke="#6366f1" stroke-width="1"/>
-    <text x="44" y="121" font-size="12" fill="#3730a3" text-anchor="middle">✓</text>
-    <rect x="56" y="104" width="24" height="24" fill="#eef2ff" stroke="#6366f1" stroke-width="1"/>
-    <text x="68" y="121" font-size="12" fill="#3730a3" text-anchor="middle">✓</text>
-    <rect x="80" y="104" width="24" height="24" fill="#eef2ff" stroke="#6366f1" stroke-width="1"/>
-    <text x="92" y="121" font-size="12" fill="#3730a3" text-anchor="middle">✓</text>
-    <rect x="104" y="104" width="24" height="24" fill="#eef2ff" stroke="#6366f1" stroke-width="1"/>
-    <text x="116" y="121" font-size="12" fill="#3730a3" text-anchor="middle">✓</text>
+  <g stroke="#2c3a66" stroke-width="1.6" fill="none">
+    <path d="M102,138 L148,170" marker-end="url(#arw)"/>
+    <path d="M102,210 L148,182" marker-end="url(#arw)"/>
+    <path d="M254,176 L286,176" marker-end="url(#arw)"/>
+    <path d="M408,176 L440,176" marker-end="url(#arw)"/>
+    <path d="M546,176 L578,176" marker-end="url(#arw)"/>
+    <path d="M712,176 L746,176" marker-end="url(#arw)"/>
+    <path d="M102,282 L578,198" marker-end="url(#arw)"/>
   </g>
 
-  <!-- 掩码说明 -->
-  <text x="340" y="330" font-size="12" fill="#334155" text-anchor="middle">Mask: future positions (j &gt; i) set to −∞</text>
-  <text x="340" y="348" font-size="12" fill="#64748b" text-anchor="middle">before softmax → attention weight = 0</text>
+  <g fill="#ffffff" stroke="#2c3a66" stroke-width="1.6">
+    <rect x="24" y="118" width="78" height="40" rx="9"/>
+    <rect x="24" y="190" width="78" height="40" rx="9"/>
+    <rect x="24" y="262" width="78" height="40" rx="9"/>
+    <rect x="150" y="154" width="104" height="44" rx="9"/>
+    <rect x="288" y="154" width="120" height="44" rx="9"/>
+    <rect x="442" y="154" width="104" height="44" rx="9"/>
+    <rect x="580" y="154" width="132" height="44" rx="9"/>
+    <rect x="748" y="154" width="88" height="44" rx="9"/>
+  </g>
+  <g fill="#211f1b" text-anchor="middle" dominant-baseline="central" font-size="15">
+    <text x="63" y="138">Q</text>
+    <text x="63" y="210">K</text>
+    <text x="63" y="282">V</text>
+    <text x="202" y="176">Q·K^T</text>
+    <text x="348" y="176" font-size="13.5">Scale  1/√d_k</text>
+    <text x="494" y="176">Softmax</text>
+    <text x="646" y="176" font-size="13.5">Weighted sum · V</text>
+    <text x="792" y="176">Output</text>
+  </g>
+  <g fill="#5d5a52" text-anchor="middle" dominant-baseline="central" font-size="11">
+    <text x="63" y="104">queries / keys / values</text>
+    <text x="202" y="142">similarity scores</text>
+    <text x="646" y="142">attention output</text>
+  </g>
 
-  <!-- ===== 右侧面板：公式与图例 ===== -->
-  <rect x="680" y="80" width="250" height="560" fill="#fbfcfe" rx="4" stroke="#cbd5e1" stroke-width="1"/>
-
-  <!-- 核心公式 -->
-  <text x="805" y="116" font-size="14" font-weight="bold" fill="#3730a3" text-anchor="middle">Core Definition</text>
-
-  <rect x="700" y="130" width="210" height="80" fill="#eef2ff" rx="4" stroke="#6366f1" stroke-width="1.5"/>
-  <text x="805" y="156" font-size="13" fill="#1e293b" text-anchor="middle">Attention(Q, K, V)</text>
-  <text x="805" y="176" font-size="13" fill="#1e293b" text-anchor="middle">= softmax( QK&#8868; / &#8730;dₖ ) V</text>
-  <text x="805" y="196" font-size="11" fill="#64748b" text-anchor="middle">Mask: set logits to −∞ for j &gt; i</text>
-
-  <!-- 图例 -->
-  <text x="805" y="250" font-size="13" font-weight="bold" fill="#334155" text-anchor="middle">Legend</text>
-
-  <!-- 实线 -->
-  <line x1="710" y1="278" x2="760" y2="278" stroke="#6366f1" stroke-width="1.5"/>
-  <polygon points="760,278 752,273 754,283" fill="#6366f1"/>
-  <text x="770" y="283" font-size="12" fill="#334155">Allowed attention</text>
-
-  <!-- 虚线 -->
-  <line x1="710" y1="308" x2="760" y2="308" stroke="#94a3b8" stroke-width="1.5" stroke-dasharray="5,4"/>
-  <polygon points="760,308 752,303 754,313" fill="#94a3b8"/>
-  <text x="770" y="313" font-size="12" fill="#334155">Masked (future)</text>
-
-  <!-- 掩码符号 -->
-  <text x="720" y="340" font-size="14" fill="#dc2626" text-anchor="middle">✕</text>
-  <text x="770" y="340" font-size="12" fill="#334155">Blocked connection</text>
-
-  <!-- 矩阵符号 -->
-  <rect x="710" y="358" width="16" height="16" fill="#eef2ff" stroke="#6366f1" stroke-width="1"/>
-  <text x="718" y="370" font-size="10" fill="#3730a3" text-anchor="middle">✓</text>
-  <text x="735" y="370" font-size="12" fill="#334155">Allowed (j ≤ i)</text>
-
-  <rect x="710" y="386" width="16" height="16" fill="#f1f5f9" stroke="#cbd5e1" stroke-width="1"/>
-  <text x="718" y="398" font-size="10" fill="#94a3b8" text-anchor="middle">✕</text>
-  <text x="735" y="398" font-size="12" fill="#334155">Masked (j &gt; i)</text>
-
-  <!-- 机制说明 -->
-  <text x="805" y="440" font-size="13" font-weight="bold" fill="#334155" text-anchor="middle">Mechanism</text>
-
-  <text x="805" y="466" font-size="11" fill="#475569" text-anchor="middle">For each position i:</text>
-  <text x="805" y="484" font-size="11" fill="#475569" text-anchor="middle">• Q = yᵢ (current)</text>
-  <text x="805" y="502" font-size="11" fill="#475569" text-anchor="middle">• K = y₁…yᵢ (past + current)</text>
-  <text x="805" y="520" font-size="11" fill="#475569" text-anchor="middle">• V = y₁…yᵢ (past + current)</text>
-  <text x="805" y="538" font-size="11" fill="#475569" text-anchor="middle">• Mask: set Kⱼ for j &gt; i to −∞</text>
-
-  <text x="805" y="570" font-size="11" fill="#64748b" text-anchor="middle">Ensures auto-regressive:</text>
-  <text x="805" y="588" font-size="11" fill="#64748b" text-anchor="middle">ŷᵢ = f(y₁, …, yᵢ₋₁)</text>
-
-  <!-- 底部引用 -->
-  <text x="480" y="660" font-size="11" fill="#94a3b8" text-anchor="middle">Figure 3: Masked self-attention in the decoder. Future positions are masked to preserve the auto-regressive property.</text>
+  <text x="430" y="340" text-anchor="middle" font-size="13" fill="#5d5a52">Scaling by √d_k keeps softmax gradients from vanishing when d_k is large.</text>
 </svg>

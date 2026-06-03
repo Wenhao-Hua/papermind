@@ -2,125 +2,146 @@
   <rect x="0" y="0" width="960" height="680" fill="#ffffff"/>
 
   <!-- 标题 -->
-  <text x="480" y="36" font-size="20" font-weight="bold" fill="#1e293b" text-anchor="middle">Vision Transformer (ViT) Encoder Block — Pre-Normalization</text>
+  <text x="480" y="32" font-size="18" font-weight="700" fill="#1e293b" text-anchor="middle">Masked Patch Prediction (Self-Supervised Pre-training)</text>
 
-  <!-- 主面板：Transformer Encoder 结构（居中纵向） -->
-  <!-- 输入 z_{ℓ-1} -->
-  <rect x="380" y="60" width="200" height="40" rx="4" fill="#f1f5f9" stroke="#475569" stroke-width="1.5"/>
-  <text x="480" y="86" font-size="14" fill="#1e293b" text-anchor="middle">z<![CDATA[<tspan baseline-shift="sub" font-size="75%">ℓ-1</tspan>]]></text>
+  <!-- ===== 左侧主流程：自上而下 ===== -->
+  <!-- 步骤1：输入图像 -->
+  <rect x="120" y="56" width="240" height="36" rx="4" fill="#f1f5f9" stroke="#475569" stroke-width="1.5"/>
+  <text x="240" y="79" font-size="14" fill="#1e293b" text-anchor="middle">Input Image (224&#215;224)</text>
 
-  <!-- 箭头：z_{ℓ-1} → LN -->
-  <line x1="480" y1="100" x2="480" y2="128" stroke="#475569" stroke-width="1.5"/>
-  <polygon points="480,132 476,124 484,124" fill="#475569"/>
+  <!-- 箭头1 -->
+  <line x1="240" y1="92" x2="240" y2="112" stroke="#475569" stroke-width="1.5"/>
+  <polygon points="240,116 236,108 244,108" fill="#475569"/>
 
-  <!-- LN -->
-  <rect x="380" y="132" width="200" height="36" rx="4" fill="#eef2ff" stroke="#6366f1" stroke-width="1.5"/>
-  <text x="480" y="155" font-size="13" fill="#3730a3" text-anchor="middle">LayerNorm</text>
+  <!-- 步骤2：切块 + 线性嵌入 -->
+  <rect x="120" y="120" width="240" height="36" rx="4" fill="#f1f5f9" stroke="#475569" stroke-width="1.5"/>
+  <text x="240" y="143" font-size="14" fill="#1e293b" text-anchor="middle">Patchify + Linear Embedding (16&#215;16)</text>
 
-  <!-- 箭头：LN → MSA -->
-  <line x1="480" y1="168" x2="480" y2="196" stroke="#475569" stroke-width="1.5"/>
-  <polygon points="480,200 476,192 484,192" fill="#475569"/>
+  <!-- 箭头2 -->
+  <line x1="240" y1="156" x2="240" y2="176" stroke="#475569" stroke-width="1.5"/>
+  <polygon points="240,180 236,172 244,172" fill="#475569"/>
 
-  <!-- MSA -->
-  <rect x="380" y="200" width="200" height="36" rx="4" fill="#eef2ff" stroke="#6366f1" stroke-width="1.5"/>
-  <text x="480" y="223" font-size="13" fill="#3730a3" text-anchor="middle">Multi-Head Self-Attention</text>
+  <!-- 步骤3：随机遮挡50% -->
+  <rect x="120" y="184" width="240" height="36" rx="4" fill="#eef2ff" stroke="#6366f1" stroke-width="2"/>
+  <text x="240" y="207" font-size="14" fill="#3730a3" text-anchor="middle">Random Mask 50% of Patches</text>
 
-  <!-- 残差连接：从 z_{ℓ-1} 到 MSA 输出 -->
-  <path d="M 585 80 L 620 80 L 620 218 L 585 218" fill="none" stroke="#94a3b8" stroke-width="1.2" stroke-dasharray="5,4"/>
-  <text x="628" y="150" font-size="11" fill="#64748b" text-anchor="middle" transform="rotate(90,628,150)">residual</text>
+  <!-- 箭头3 -->
+  <line x1="240" y1="220" x2="240" y2="240" stroke="#475569" stroke-width="1.5"/>
+  <polygon points="240,244 236,236 244,236" fill="#475569"/>
 
-  <!-- 加法节点 -->
-  <circle cx="480" cy="240" r="8" fill="#f1f5f9" stroke="#475569" stroke-width="1.2"/>
-  <text x="480" y="244" font-size="10" fill="#1e293b" text-anchor="middle">+</text>
+  <!-- 步骤4：Transformer Encoder -->
+  <rect x="120" y="248" width="240" height="36" rx="4" fill="#f1f5f9" stroke="#475569" stroke-width="1.5"/>
+  <text x="240" y="271" font-size="14" fill="#1e293b" text-anchor="middle">Transformer Encoder (L layers)</text>
 
-  <!-- 箭头：加法 → z'_ℓ -->
-  <line x1="480" y1="248" x2="480" y2="270" stroke="#475569" stroke-width="1.5"/>
-  <polygon points="480,274 476,266 484,266" fill="#475569"/>
+  <!-- 箭头4 -->
+  <line x1="240" y1="284" x2="240" y2="304" stroke="#475569" stroke-width="1.5"/>
+  <polygon points="240,308 236,300 244,300" fill="#475569"/>
 
-  <!-- z'_ℓ -->
-  <rect x="380" y="274" width="200" height="36" rx="4" fill="#f8fafc" stroke="#475569" stroke-width="1.2"/>
-  <text x="480" y="297" font-size="13" fill="#1e293b" text-anchor="middle">z<![CDATA[<tspan baseline-shift="sub" font-size="75%">ℓ</tspan>]]><![CDATA[<tspan font-size="75%">'</tspan>]]></text>
+  <!-- 步骤5：输出表示 -->
+  <rect x="120" y="312" width="240" height="36" rx="4" fill="#f1f5f9" stroke="#475569" stroke-width="1.5"/>
+  <text x="240" y="335" font-size="14" fill="#1e293b" text-anchor="middle">Output Representations (per patch)</text>
 
-  <!-- 箭头：z'_ℓ → LN -->
-  <line x1="480" y1="310" x2="480" y2="338" stroke="#475569" stroke-width="1.5"/>
-  <polygon points="480,342 476,334 484,334" fill="#475569"/>
+  <!-- 箭头5 -->
+  <line x1="240" y1="348" x2="240" y2="368" stroke="#475569" stroke-width="1.5"/>
+  <polygon points="240,372 236,364 244,364" fill="#475569"/>
 
-  <!-- LN -->
-  <rect x="380" y="342" width="200" height="36" rx="4" fill="#eef2ff" stroke="#6366f1" stroke-width="1.5"/>
-  <text x="480" y="365" font-size="13" fill="#3730a3" text-anchor="middle">LayerNorm</text>
+  <!-- 步骤6：分类头 -->
+  <rect x="120" y="376" width="240" height="36" rx="4" fill="#f1f5f9" stroke="#475569" stroke-width="1.5"/>
+  <text x="240" y="399" font-size="14" fill="#1e293b" text-anchor="middle">Linear Head (512 classes)</text>
 
-  <!-- 箭头：LN → MLP -->
-  <line x1="480" y1="378" x2="480" y2="406" stroke="#475569" stroke-width="1.5"/>
-  <polygon points="480,410 476,402 484,402" fill="#475569"/>
+  <!-- 箭头6 -->
+  <line x1="240" y1="412" x2="240" y2="432" stroke="#475569" stroke-width="1.5"/>
+  <polygon points="240,436 236,428 244,428" fill="#475569"/>
 
-  <!-- MLP -->
-  <rect x="380" y="410" width="200" height="36" rx="4" fill="#eef2ff" stroke="#6366f1" stroke-width="1.5"/>
-  <text x="480" y="433" font-size="13" fill="#3730a3" text-anchor="middle">MLP (Linear&#8594;GELU&#8594;Linear)</text>
+  <!-- 步骤7：损失 -->
+  <rect x="120" y="440" width="240" height="36" rx="4" fill="#eef2ff" stroke="#6366f1" stroke-width="2"/>
+  <text x="240" y="463" font-size="14" fill="#3730a3" text-anchor="middle">Cross-Entropy Loss (3-bit avg color)</text>
 
-  <!-- 残差连接：从 z'_ℓ 到 MLP 输出 -->
-  <path d="M 585 292 L 620 292 L 620 428 L 585 428" fill="none" stroke="#94a3b8" stroke-width="1.2" stroke-dasharray="5,4"/>
-  <text x="628" y="362" font-size="11" fill="#64748b" text-anchor="middle" transform="rotate(90,628,362)">residual</text>
+  <!-- ===== 右侧：掩码策略图例 ===== -->
+  <rect x="440" y="56" width="480" height="160" rx="6" fill="#f8fafc" stroke="#cbd5e1" stroke-width="1"/>
+  <text x="680" y="80" font-size="15" font-weight="700" fill="#1e293b" text-anchor="middle">Masking Strategy (per masked patch)</text>
 
-  <!-- 加法节点 -->
-  <circle cx="480" cy="450" r="8" fill="#f1f5f9" stroke="#475569" stroke-width="1.2"/>
-  <text x="480" y="454" font-size="10" fill="#1e293b" text-anchor="middle">+</text>
+  <!-- 80% [mask] -->
+  <rect x="460" y="96" width="200" height="28" rx="3" fill="#eef2ff" stroke="#6366f1" stroke-width="1.5"/>
+  <text x="560" y="115" font-size="13" fill="#3730a3" text-anchor="middle">80% &#8594; learnable [mask]</text>
 
-  <!-- 箭头：加法 → z_ℓ -->
-  <line x1="480" y1="458" x2="480" y2="480" stroke="#475569" stroke-width="1.5"/>
-  <polygon points="480,484 476,476 484,476" fill="#475569"/>
+  <!-- 10% random -->
+  <rect x="460" y="132" width="200" height="28" rx="3" fill="#f1f5f9" stroke="#475569" stroke-width="1.5"/>
+  <text x="560" y="151" font-size="13" fill="#1e293b" text-anchor="middle">10% &#8594; random patch</text>
 
-  <!-- z_ℓ -->
-  <rect x="380" y="484" width="200" height="36" rx="4" fill="#f8fafc" stroke="#475569" stroke-width="1.2"/>
-  <text x="480" y="507" font-size="13" fill="#1e293b" text-anchor="middle">z<![CDATA[<tspan baseline-shift="sub" font-size="75%">ℓ</tspan>]]></text>
+  <!-- 10% unchanged -->
+  <rect x="460" y="168" width="200" height="28" rx="3" fill="#f1f5f9" stroke="#475569" stroke-width="1.5"/>
+  <text x="560" y="187" font-size="13" fill="#1e293b" text-anchor="middle">10% &#8594; unchanged</text>
 
-  <!-- 右侧图例/说明面板 -->
-  <rect x="720" y="60" width="220" height="460" rx="6" fill="#f8fafc" stroke="#cbd5e1" stroke-width="1.2"/>
+  <!-- 右侧说明 -->
+  <text x="700" y="115" font-size="12" fill="#64748b" text-anchor="start">Replace with special [mask] token</text>
+  <text x="700" y="151" font-size="12" fill="#64748b" text-anchor="start">Replace with random patch embedding</text>
+  <text x="700" y="187" font-size="12" fill="#64748b" text-anchor="start">Keep original patch embedding</text>
 
-  <!-- 图例标题 -->
-  <text x="830" y="86" font-size="14" font-weight="bold" fill="#1e293b" text-anchor="middle">Figure Legend</text>
+  <!-- ===== 右侧：目标定义 ===== -->
+  <rect x="440" y="232" width="480" height="120" rx="6" fill="#f8fafc" stroke="#cbd5e1" stroke-width="1"/>
+  <text x="680" y="256" font-size="15" font-weight="700" fill="#1e293b" text-anchor="middle">Prediction Target: 3-bit Average Color</text>
 
-  <!-- 图例项 -->
-  <line x1="740" y1="110" x2="780" y2="110" stroke="#475569" stroke-width="1.5"/>
-  <polygon points="780,114 776,106 784,106" fill="#475569"/>
-  <text x="790" y="115" font-size="12" fill="#334155">Data flow</text>
+  <text x="680" y="286" font-size="13" fill="#334155" text-anchor="middle">Each masked patch &#8594; quantize its mean RGB into 8&#215;8&#215;8 = 512 bins</text>
+  <text x="680" y="310" font-size="13" fill="#334155" text-anchor="middle">(3 bits per channel &#8594; 512 classes)</text>
+  <text x="680" y="334" font-size="13" fill="#64748b" text-anchor="middle">Cross-entropy loss between predicted and true bin</text>
 
-  <line x1="740" y1="140" x2="780" y2="140" stroke="#94a3b8" stroke-width="1.2" stroke-dasharray="5,4"/>
-  <text x="790" y="145" font-size="12" fill="#334155">Residual connection</text>
+  <!-- ===== 右侧：映射示意 ===== -->
+  <rect x="440" y="368" width="480" height="160" rx="6" fill="#f8fafc" stroke="#cbd5e1" stroke-width="1"/>
+  <text x="680" y="392" font-size="15" font-weight="700" fill="#1e293b" text-anchor="middle">Patch &#8594; Color Bin Mapping (example)</text>
 
-  <rect x="740" y="160" width="40" height="16" rx="3" fill="#eef2ff" stroke="#6366f1" stroke-width="1.5"/>
-  <text x="790" y="173" font-size="12" fill="#334155">Pre-Norm block</text>
+  <!-- 左侧：patch表示 -->
+  <text x="500" y="420" font-size="13" fill="#334155" text-anchor="middle">Output rep. z_i</text>
+  <rect x="460" y="428" width="80" height="28" rx="3" fill="#eef2ff" stroke="#6366f1" stroke-width="1.5"/>
+  <text x="500" y="447" font-size="12" fill="#3730a3" text-anchor="middle">z_i</text>
 
-  <rect x="740" y="190" width="40" height="16" rx="3" fill="#f8fafc" stroke="#475569" stroke-width="1.2"/>
-  <text x="790" y="203" font-size="12" fill="#334155">Intermediate state</text>
+  <!-- 箭头 -->
+  <line x1="540" y1="442" x2="580" y2="442" stroke="#475569" stroke-width="1.5"/>
+  <polygon points="584,442 576,438 576,446" fill="#475569"/>
 
-  <!-- 关键公式 -->
-  <text x="830" y="240" font-size="13" font-weight="bold" fill="#1e293b" text-anchor="middle">Core Equations</text>
+  <!-- 右侧：线性头 + 512类 -->
+  <text x="660" y="420" font-size="13" fill="#334155" text-anchor="middle">Linear Head</text>
+  <rect x="590" y="428" width="140" height="28" rx="3" fill="#f1f5f9" stroke="#475569" stroke-width="1.5"/>
+  <text x="660" y="447" font-size="12" fill="#1e293b" text-anchor="middle">W &#8712; &#8477;^(512&#215;D)</text>
 
-  <text x="830" y="270" font-size="12" fill="#3730a3" text-anchor="middle">z<![CDATA[<tspan baseline-shift="sub" font-size="75%">ℓ</tspan>]]><![CDATA[<tspan font-size="75%">'</tspan>]]> = MSA(LN(z<![CDATA[<tspan baseline-shift="sub" font-size="75%">ℓ-1</tspan>]]>)) + z<![CDATA[<tspan baseline-shift="sub" font-size="75%">ℓ-1</tspan>]]></text>
+  <!-- 箭头 -->
+  <line x1="730" y1="442" x2="770" y2="442" stroke="#475569" stroke-width="1.5"/>
+  <polygon points="774,442 766,438 766,446" fill="#475569"/>
 
-  <text x="830" y="300" font-size="12" fill="#3730a3" text-anchor="middle">z<![CDATA[<tspan baseline-shift="sub" font-size="75%">ℓ</tspan>]]> = MLP(LN(z<![CDATA[<tspan baseline-shift="sub" font-size="75%">ℓ</tspan>]]><![CDATA[<tspan font-size="75%">'</tspan>]]>)) + z<![CDATA[<tspan baseline-shift="sub" font-size="75%">ℓ</tspan>]]><![CDATA[<tspan font-size="75%">'</tspan>]]></text>
+  <!-- 右侧：512类输出 -->
+  <text x="840" y="420" font-size="13" fill="#334155" text-anchor="middle">512 logits</text>
+  <rect x="780" y="428" width="120" height="28" rx="3" fill="#f1f5f9" stroke="#475569" stroke-width="1.5"/>
+  <text x="840" y="447" font-size="12" fill="#1e293b" text-anchor="middle">softmax</text>
 
-  <!-- MLP 结构说明 -->
-  <text x="830" y="340" font-size="13" font-weight="bold" fill="#1e293b" text-anchor="middle">MLP Detail</text>
+  <!-- 示例：3-bit颜色 -->
+  <text x="680" y="500" font-size="13" fill="#334155" text-anchor="middle">Example: patch with avg RGB = (120, 200, 50)</text>
+  <text x="680" y="520" font-size="12" fill="#64748b" text-anchor="middle">Quantize: R=120/32=3, G=200/32=6, B=50/32=1 &#8594; bin index = 3&#215;64+6&#215;8+1 = 241</text>
 
-  <rect x="740" y="356" width="180" height="24" rx="3" fill="#f1f5f9" stroke="#cbd5e1" stroke-width="1"/>
-  <text x="830" y="373" font-size="11" fill="#334155" text-anchor="middle">Linear (D &#8594; 4D)</text>
+  <!-- ===== 底部：图例 ===== -->
+  <rect x="120" y="500" width="800" height="60" rx="6" fill="#f8fafc" stroke="#cbd5e1" stroke-width="1"/>
+  <text x="140" y="524" font-size="13" font-weight="600" fill="#1e293b">Legend</text>
 
-  <rect x="740" y="384" width="180" height="24" rx="3" fill="#f1f5f9" stroke="#cbd5e1" stroke-width="1"/>
-  <text x="830" y="401" font-size="11" fill="#334155" text-anchor="middle">GELU activation</text>
+  <!-- 实线箭头 -->
+  <line x1="140" y1="544" x2="180" y2="544" stroke="#475569" stroke-width="1.5"/>
+  <polygon points="184,544 176,540 176,548" fill="#475569"/>
+  <text x="196" y="548" font-size="12" fill="#334155">Data flow</text>
 
-  <rect x="740" y="412" width="180" height="24" rx="3" fill="#f1f5f9" stroke="#cbd5e1" stroke-width="1"/>
-  <text x="830" y="429" font-size="11" fill="#334155" text-anchor="middle">Linear (4D &#8594; D)</text>
+  <!-- 强调框 -->
+  <rect x="320" y="532" width="16" height="16" rx="2" fill="#eef2ff" stroke="#6366f1" stroke-width="1.5"/>
+  <text x="344" y="546" font-size="12" fill="#334155">Key component / loss</text>
 
-  <!-- 记号说明 -->
-  <text x="830" y="470" font-size="13" font-weight="bold" fill="#1e293b" text-anchor="middle">Notation</text>
-  <text x="830" y="492" font-size="11" fill="#334155" text-anchor="middle">z<![CDATA[<tspan baseline-shift="sub" font-size="75%">ℓ</tspan>]]>: output of block ℓ</text>
-  <text x="830" y="510" font-size="11" fill="#334155" text-anchor="middle">D: latent dimension (e.g., 768)</text>
+  <!-- 普通框 -->
+  <rect x="520" y="532" width="16" height="16" rx="2" fill="#f1f5f9" stroke="#475569" stroke-width="1.5"/>
+  <text x="544" y="546" font-size="12" fill="#334155">Intermediate operation</text>
 
-  <!-- 底部说明 -->
-  <text x="480" y="560" font-size="12" fill="#64748b" text-anchor="middle">Pre-normalization: LayerNorm applied before each sub-layer (MSA/MLP), not after.</text>
-  <text x="480" y="580" font-size="12" fill="#64748b" text-anchor="middle">Residual connections add the sub-layer input to its output, enabling gradient flow.</text>
+  <!-- 虚线框 -->
+  <rect x="700" y="532" width="16" height="16" rx="2" fill="#f8fafc" stroke="#cbd5e1" stroke-width="1" stroke-dasharray="4,3"/>
+  <text x="724" y="546" font-size="12" fill="#334155">Explanation panel</text>
 
-  <!-- 底部引用 -->
-  <text x="480" y="620" font-size="11" fill="#94a3b8" text-anchor="middle">Based on Vaswani et al. (2017) and ViT (Dosovitskiy et al., 2021)</text>
+  <!-- ===== 底部说明 ===== -->
+  <text x="480" y="600" font-size="12" fill="#64748b" text-anchor="middle">Figure: Self-supervised pre-training via masked patch prediction. 50% of patches are randomly masked; the model predicts the 3-bit average color</text>
+  <text x="480" y="618" font-size="12" fill="#64748b" text-anchor="middle">(quantized into 512 bins) for each masked patch. Masking strategy follows BERT (Devlin et al., 2019): 80% [mask], 10% random, 10% unchanged.</text>
+
+  <!-- 论文引用 -->
+  <text x="480" y="650" font-size="11" fill="#94a3b8" text-anchor="middle">Dosovitskiy et al., ICLR 2021 — An Image is Worth 16x16 Words: Transformers for Image Recognition at Scale</text>
 </svg>

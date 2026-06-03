@@ -11,103 +11,115 @@
 
 ## 🎯 贡献与创新点
 
-**核心贡献:** 提出在预训练自编码器的潜在空间中训练扩散模型（Latent Diffusion Models），在显著降低训练和推理计算开销的同时，首次达到复杂度降低与细节保留之间的近最优平衡。
+**核心贡献:** 
 
-**新颖之处:** 与先前需要过度空间压缩的潜在生成模型（如 VQ-VAE、VQGAN）不同，本方法凭借扩散模型的卷积 UNet 对空间数据的归纳偏置，可在温和压缩的潜在空间中工作，避免因过高压缩率导致的细节损失，且无需在重构与生成能力之间进行精细加权。
+**新颖之处:** 
 
-**解决的问题:** 解决了像素空间扩散模型优化消耗数百 GPU 天、推理评估缓慢且耗费大量资源的问题，使有限计算资源下的高分辨率图像合成训练成为可能。
-
-> **原文出处:**
-> - [Frontmatter (p.1)](https://arxiv.org/pdf/2112.10752.pdf#page=1): To enable DM training on limited computational resources while retaining their quality and flexibility, we apply them in the latent space of powerful pretrained autoencoders. In contrast to previous work, training diffusion models on such a representation allows for the first time to reach a near-optimal point between complexity reduction and detail preservation, greatly boosting visual fidelity.
-> - [Abstract (p.2)](https://arxiv.org/pdf/2112.10752.pdf#page=2): Importantly, and in contrast to previous work [23,66], we do not need to rely on excessive spatial compression, as we train DMs in the learned latent space, which exhibits better scaling properties with respect to the spatial dimensionality.
-> - [Abstract (p.2)](https://arxiv.org/pdf/2112.10752.pdf#page=2): We propose latent diffusion models (LDMs) as an effective generative model and a separate mild compression stage that only eliminates imperceptible details.
+**解决的问题:** 
 
 <a id="technical"></a>
 
 ## 🔬 技术细节解释
 
-### 1. Conditioning via Cross-Attention Layers  `🔴 high`
+### 1. Cross-Attention Conditioning Mechanism  `🔴 high`
 
-通过在 U-Net 的中间层插入交叉注意力机制，将任意形式的条件（如文本、边界框）编码后注入去噪过程。具体地，用 U-Net 的中间特征作为查询 $Q$，将条件信息的嵌入作为键 $K$ 和值 $V$，计算 $\text{Attention}(Q,K,V)=\text{softmax}(\frac{QK^\top}{\sqrt{d_k}})V$，使生成过程每一步都能关注条件信息。该方法使得单个模型可灵活处理多模态条件，无需重新训练。
+将不同模态的条件输入 $y$（如文本、边界框）通过领域特定编码器 $\tau_\theta$ 投影为中间表示 $\tau_\theta(y) \in \mathbb{R}^{M \times d_\tau}$，然后通过多个交叉注意力层注入到 UNet 中间特征 $\phi_i(z_t)$ 中。每个交叉注意力层计算 $\text{Attention}(Q,K,V) = \text{softmax}(QK^\top/\sqrt{d})V$，其中 $Q$ 来自 UNet 特征，$K,V$ 来自条件投影。这样模型可以一个框架支持多种条件方式，且无需重训练。
 
 $$
-\text{Attention}(Q,K,V)=\text{softmax}\left(\frac{QK^\top}{\sqrt{d_k}}\right)V
+\text{Attention}(Q,K,V)=\text{softmax}(\frac{QK^\top}{\sqrt{d}})V,\ Q=W_Q^{(i)}\cdot\phi_i(z_t),\ K=W_K^{(i)}\cdot\tau_\theta(y),\ V=W_V^{(i)}\cdot\tau_\theta(y)
 $$
 
-> 💡 **类比:** 就像在写一篇文章时，不断参考一份提纲（条件），每次决定下一个词时都对照提纲的相关部分，以确保生成内容与提纲一致。
+> 💡 **类比:** 好比在翻译句子时，解码器（UNet）生成图像，而源语言（条件）通过一个翻译器（编码器）转化为“上下文表示”，解码器每步都参考这个表示来生成更符合要求的图像。
 
-📍 出处: [4.3 (p.7)](https://arxiv.org/pdf/2112.10752.pdf#page=7)
+📍 出处: [3.3 (p.6)](https://arxiv.org/pdf/2112.10752.pdf#page=6)
 
-### 2. Convolutional Sampling for High-Resolution Synthesis  `🔴 high`
+![教学示意图：Cross-Attention Conditioning Mechanism](figures/latent-diffusion-fig1.svg)
+*教学示意图：Cross-Attention Conditioning Mechanism（教学示意图）*
 
-对于超分辨率和修复等密集条件任务，利用 U-Net 的全卷积性质，在推理时将模型以滑动窗口的形式应用于任意尺寸的潜在表示，逐块去噪并拼接，从而合成远超训练分辨率的图像（如 1024² 像素）。该方法无需修改模型架构即可实现从低分辨率到超高分辨率的泛化。
+> **读图**：交叉注意力机制将多种条件注入潜扩散模型
+>
+> - 条件编码器将文本/边界框等投影为M×dτ矩阵
+> - 交叉注意力层用UNet特征作Q，条件投影作K,V
+> - 注意力权重最大映射高亮显示条件与特征的对应
+>
+> **关键**：一个模型无需重训练即可处理多种条件输入
 
-> 💡 **类比:** 类似拼图：模型只学会了恢复单个小块，但在恢复整张大图时，可以一格一格地处理，最后拼接成完整的大图。
+### 2. Latent Diffusion Model Training Objective  `🔴 high`
 
-📍 出处: [4.3.2 (p.7)](https://arxiv.org/pdf/2112.10752.pdf#page=7)
+在预训练自编码器的潜在空间中训练扩散模型，学习去噪函数 $\epsilon_\theta(z_t, t)$ 以重建被高斯噪声污染的潜在变量 $z_t$。优化目标简化为 $L_{\text{LDM}} = \mathbb{E}_{E(x),\epsilon\sim\mathcal{N}(0,1),t}\big[\|\epsilon - \epsilon_\theta(z_t, t)\|_2^2\big]$，其中 $z_t$ 由正向扩散过程从编码特征 $E(x)$ 生成。这大幅减少了高分辨率图像训练的计算量。
 
-![Figure 9. A LDM trained on 2562 resolution can generalize to larger resolution (here: 512×1024) for spatially conditioned tasks such as semantic synthesis of landscape images. See Sec. 4.3.2.](figures/latent-diffusion-orig1.jpeg)
-*Figure 9. A LDM trained on 2562 resolution can generalize to larger resolution (here: 512×1024) for spatially conditioned tasks such as semantic synthesis of landscape images. See Sec. 4.3.2. (论文原图)*
+$$
+L_{\text{LDM}} := \mathbb{E}_{E(x),\epsilon\sim\mathcal{N}(0,1),t}\big[\|\epsilon - \epsilon_\theta(z_t, t)\|_2^2\big]
+$$
 
-### 3. Latent Diffusion Models  `🔴 high`
-
-将扩散模型从高维像素空间迁移到预训练自编码器压缩得到的低维潜在空间中进行训练和推理。首先，一个感知优化的自编码器将图像 $x$ 编码为潜在表示 $z = E(x)$，解码器 $D$ 可实现 $D(z) \approx x$；然后，扩散模型在这个潜在空间上学习去噪过程。这种解耦使得扩散模型专注于语义生成，同时大幅降低计算开销，并可通过一次自编码器训练支持多个下游扩散模型。
-
-> 💡 **类比:** 好比先用有损压缩将高清图片变成占用空间更小的 JPEG 文件，然后训练一个智能绘图程序直接从这个压缩文件生成图像，最后再解压得到高清结果，既快又省资源。
+> 💡 **类比:** 类似于先让一个画家（自编码器）把复杂的街景画成简笔画（低维潜在），再教另一个画家（扩散模型）在简笔画上练习去噪与创作，最后将简笔画还原成精细油画。
 
 📍 出处: [3.2 (p.4)](https://arxiv.org/pdf/2112.10752.pdf#page=4)
 
-![Figure 4. Samples from LDMs trained on CelebAHQ [39], FFHQ [41], LSUN-Churches [102], LSUN-Bedrooms [102] and class- conditional ImageNet [12], each with a resolution of 256 × 256. Best viewed when zoomed in. For more samples cf. the supplement.](figures/latent-diffusion-orig2.jpeg)
-*Figure 4. Samples from LDMs trained on CelebAHQ [39], FFHQ [41], LSUN-Churches [102], LSUN-Bedrooms [102] and class- conditional ImageNet [12], each with a resolution of 256 × 256. Best viewed when zoomed in. For more samples cf. the supplement. (论文原图)*
+![教学示意图：Latent Diffusion Model Training Objective](figures/latent-diffusion-fig2.svg)
+*教学示意图：Latent Diffusion Model Training Objective（教学示意图）*
 
-### 4. Perceptual Compression Tradeoff  `🟡 mid`
+> **读图**：潜在扩散模型训练目标：学习去噪函数重建潜在变量。
+>
+> - E(x)编码图像为潜在表示z。
+> - 正向扩散从z生成噪声潜在zt。
+> - 去噪器εθ从zt预测噪声ε。
+> - 损失L_LDM为预测与真实噪声的MSE。
+>
+> **关键**：在潜在空间训练扩散模型，降低计算成本。
 
-通过对下采样因子 $f$ 的控制，在自动编码器的重建保真度和扩散模型的学习效率之间取得平衡。较小的 $f$（例如 $f=4$）保留了更丰富的细节，使得扩散模型能够生成更高质量的图像，但潜在空间维度仍远小于像素空间。实验表明，过于激进的压缩（$f=16$）会损害可达到的生成质量上限。
+### 3. Downsampling Factor Trade‑off in Perceptual Compression  `🟡 mid`
 
-> 💡 **类比:** 类似照片压缩：压缩率太高会丢失人脸细节，压缩率太低文件仍然很大；找到一个恰当的压缩率能让照片看起来几乎无损，同时文件变得很小。
+自编码器将 $H\times W\times 3$ 的输入图像编码为 $h\times w\times c$ 的潜在表示，下采样因子 $f = H/h = W/w$，选取 $f=2^m$。较大的 $f$ 更压缩，训练更快，但细节保留较差；较小的 $f$ 细节好但计算消耗大。研究发现 $f=4$ 或 $f=8$ 在降低计算复杂度和保留视觉保真度之间达到接近最优的平衡。
+
+> 💡 **类比:** 像给一张高清照片制作缩略图：缩略图太小（f 大）虽省内存，但放大后模糊；太大（f 小）接近原图，处理耗时；合适大小才能既快速浏览又看清内容。
 
 📍 出处: [4.1 (p.5)](https://arxiv.org/pdf/2112.10752.pdf#page=5)
 
-![Figure 2. Illustrating perceptual and semantic compression: Most bits of a digital image correspond to imperceptible details. While DMs allow to suppress this semantically meaningless information by minimizing the responsible loss term, gradients (during train- ing) and the neural network backbone (training and inference) still need to be evaluated on all pixels, leading to superﬂuous compu- tatio](figures/latent-diffusion-orig3.jpeg)
-*Figure 2. Illustrating perceptual and semantic compression: Most bits of a digital image correspond to imperceptible details. While DMs allow to suppress this semantically meaningless information by minimizing the responsible loss term, gradients (during train- ing) and the neural network backbone (training and inference) still need to be evaluated on all pixels, leading to superﬂuous compu- tatio (论文原图)*
+![Figure 6. Analyzing the training of class-conditional LDMs with different downsampling factors f over 2M train steps on the Im- ageNet dataset. Pixel-based LDM-1 requires substantially larger train times compared to models with larger downsampling factors (LDM-{4-16}). Too much perceptual compression as in LDM-32 limits the overall sample quality. All models are trained on a sin- gle NVIDIA A100 w](figures/latent-diffusion-orig1.jpeg)
+*Figure 6. Analyzing the training of class-conditional LDMs with different downsampling factors f over 2M train steps on the Im- ageNet dataset. Pixel-based LDM-1 requires substantially larger train times compared to models with larger downsampling factors (LDM-{4-16}). Too much perceptual compression as in LDM-32 limits the overall sample quality. All models are trained on a sin- gle NVIDIA A100 w (论文原图)*
 
-### 5. Reweighted Variational Objective  `🟡 mid`
+### 4. Convolutional Sampling for High‑Resolution Synthesis  `🟡 mid`
 
-扩散模型训练时采用重新加权的变分目标，通过对不同时间步的损失赋予不同权重并欠采样初始去噪步骤，使模型忽略那些难以感知的高频细节，将建模能力集中于语义内容。这相当于让扩散模型扮演一个有损压缩器的角色，在训练过程中自动抑制不可感知的信息。
+在密集条件任务（如超分辨率、修复）中，模型可以在潜在空间上以卷积方式滑动应用，每次处理一个局部块，然后拼接生成远大于训练尺寸的图像。由于潜在空间已压缩，这种方式可高效合成 $\sim 1024^2$ 像素的大图，并保持全局一致性。
 
-> 💡 **类比:** 好比老师批改作文时，重点看逻辑和情节，而不过分计较每一个字的笔画轻微抖动，从而让学生更专注于内容表达。
+> 💡 **类比:** 就像用一台只能打印 A4 的打印机输出海报，将图像分割为多个重叠的 A4 块逐块打印，再拼接复原，因为潜在表示的压缩特性，拼接处自然无痕。
 
-📍 出处: [2. Related Work (p.2)](https://arxiv.org/pdf/2112.10752.pdf#page=2)
+📍 出处: [4.3.2 (p.7)](https://arxiv.org/pdf/2112.10752.pdf#page=7)
 
-![教学示意图：Reweighted Variational Objective](figures/latent-diffusion-fig1.svg)
-*教学示意图：Reweighted Variational Objective（教学示意图）*
+![Figure 12. Convolutional samples from the semantic landscapes model as in Sec. 4.3.2, ﬁnetuned on 5122 images.](figures/latent-diffusion-orig2.jpeg)
+*Figure 12. Convolutional samples from the semantic landscapes model as in Sec. 4.3.2, ﬁnetuned on 5122 images. (论文原图)*
 
-> **读图**：重新加权变分目标使扩散模型聚焦语义、抑制高频细节。
+### 5. Generalized Super‑Resolution via Diverse Image Degradation (LDM‑BSR)  `🟢 low`
+
+标准的超分辨模型仅训练于双三次下采样的低清图像，对真实世界复杂退化泛化差。LDM‑BSR 在训练时采用 BSR 退化流水线，随机施加 JPEG 压缩、噪声、模糊、插值等方式，使模型学会处理多种退化形式，从而能对任意输入（如网络图片、合成图像）生成清晰的高分辨率结果。
+
+> 💡 **类比:** 平时只练习从标准低清照片恢复细节的学生，遇到带噪点、压缩痕迹的老照片就手足无措；若训练时故意用各种“损坏”方式模拟真实世界低清图像，学生就能应对各种旧照片修复任务。
+
+📍 出处: [D.6.1 (p.22)](https://arxiv.org/pdf/2112.10752.pdf#page=22)
+
+![Figure 18. LDM-BSR generalizes to arbitrary inputs and can be used as a general-purpose upsampler, upscaling samples from a class- conditional LDM (image cf. Fig. 4) to 10242 resolution. In contrast, using a ﬁxed degradation process (see Sec. 4.4) hinders generalization.](figures/latent-diffusion-orig3.png)
+*Figure 18. LDM-BSR generalizes to arbitrary inputs and can be used as a general-purpose upsampler, upscaling samples from a class- conditional LDM (image cf. Fig. 4) to 10242 resolution. In contrast, using a ﬁxed degradation process (see Sec. 4.4) hinders generalization. (论文原图)*
+
+### 6. KL‑Regularization vs. VQ‑Regularization  `🟢 low`
+
+为防止潜在空间方差过高，论文比较了两种正则化：KL‑reg 在编码输出上施加轻微惩罚使其靠近标准正态分布，类似 VAE；VQ‑reg 则在解码器中引入向量量化层，将连续表示映射到离散码本。实验表明 VQ‑reg 能更好地保留图像细节（如表 8 所示），且无需精细平衡重建与生成能力。
+
+> 💡 **类比:** 好比整理一个杂乱的工具箱：KL‑reg 是规定每个工具放回大致位置，不过度突出；VQ‑reg 是将工具固定到预定槽位中，归还时对齐更精准，用起来更顺手。
+
+📍 出处: [3.1 (p.4)](https://arxiv.org/pdf/2112.10752.pdf#page=4)
+
+![教学示意图：KL‑Regularization vs. VQ‑Regularization](figures/latent-diffusion-fig3.svg)
+*教学示意图：KL‑Regularization vs. VQ‑Regularization（教学示意图）*
+
+> **读图**：比较KL与VQ正则化在潜扩散模型中的机制与效果。
 >
-> - w(t)欠采样初始去噪步骤(t→0)，抑制不可感知高频细节。
-> - 模型聚焦中高时间步(t>T/2)的语义内容。
-> - 扩散模型扮演有损压缩器，自动抑制不可感知信息。
+> - KL正则化：编码器输出向N(0,I)惩罚，类似VAE。
+> - VQ正则化：连续潜变量映射到离散码本。
+> - 损失函数：KL含λ·KL项，VQ含量化损失项。
+> - 关键性质：VQ保留更多图像细节，无需精细权衡。
 >
-> **关键**：权重调度w(t)引导模型忽略噪声，专注语义压缩。
-
-### 6. Two-Stage Training Strategy  `🟢 low`
-
-将生成任务明确分解为两个独立阶段：第一阶段训练一个通用的感知压缩自编码器，学习出一个感知等价但维度更低的表示空间；第二阶段在该固定编码器的潜在空间中训练扩散模型。这种分离不仅降低了单个阶段的训练难度，还使得编码器可跨任务复用，并允许扩散模型专注于捕获语义和概念的分布。
-
-> 💡 **类比:** 类似先建立一个标准化的压缩工具，之后不同的创作任务（如写实绘画、卡通生成）都直接在这个压缩后的草稿上进行，节省了每次从头建立底稿的成本。
-
-📍 出处: [3.1, 3.2 (p.4)](https://arxiv.org/pdf/2112.10752.pdf#page=4)
-
-![教学示意图：Two-Stage Training Strategy](figures/latent-diffusion-fig2.svg)
-*教学示意图：Two-Stage Training Strategy（教学示意图）*
-
-> **读图**：LDM两阶段训练：感知压缩+潜在空间扩散
->
-> - Stage1: 自编码器将图像压缩为低维潜在表示z
-> - Stage2: 在固定潜在空间训练扩散模型去噪
-> - 下采样因子f控制压缩率与重建质量权衡
->
-> **关键**：分离感知压缩与语义生成，降低训练难度
+> **关键**：VQ正则化优于KL，细节保留更好，见表8。
 
 <a id="connections"></a>
 
@@ -115,19 +127,19 @@ $$
 
 | 概念 | 相关论文 | 关系 |
 | --- | --- | --- |
-| Diffusion Probabilistic Models | [Ho et al. 2020](https://arxiv.org/abs/2006.11239) | 继承其去噪扩散框架，但将生成过程从像素空间移至潜在空间，以降低计算成本并保持质量。 |
-| Perceptual Image Compression with Autoencoders | [Esser et al. 2020 (Taming Transformers)](https://arxiv.org/abs/2012.09841) | 继承其以感知损失和对抗损失训练的自编码器作为压缩阶段，但不使用离散潜在空间，改为连续表示以适配扩散模型。 |
-| Cross-Attention for Conditional Generation | [Vaswani et al. 2017](https://arxiv.org/abs/1706.03762) | 引入Transformer中的交叉注意力机制，将其融入UNet backbone，实现文本、边界框等多种模态的通用条件生成。 |
-| Class-Conditional Diffusion Models in Pixel Space | [Dhariwal & Nichol 2021](https://arxiv.org/abs/2105.05233) | 与之对比，本文LDMs在潜在空间训练和采样，显著降低计算开销，同时达到可比或更优的生成质量。 |
-| Classifier-Free Guidance | [Ho & Salimans 2021](https://arxiv.org/abs/2207.12598) | 继承其无分类器引导技术，用于条件扩散模型的采样阶段，提升生成样本的保真度与一致性。 |
-| Two-Stage Generative Models with Discrete Latent Spaces | [Razavi et al. 2019 (VQ-VAE-2)](https://arxiv.org/abs/1906.00446) | 对比基于自回归先验的两阶段方法，LDMs利用连续潜在空间和扩散模型，在更温和的压缩率下实现高效生成与细节保持。 |
+| 去噪扩散概率模型（Denoising Diffusion Probabilistic Models） | [Ho et al. 2020](https://arxiv.org/abs/2006.11239) | 改进：将扩散模型的训练与推理从像素空间迁移到感知压缩的潜在空间，显著降低计算消耗。 |
+| 感知图像压缩自编码器 | [Esser et al. 2020](https://arxiv.org/abs/2012.09841) | 继承：采用基于VQGAN的编码器-解码器结构，并研究KL-reg与VQ-reg两种正则化方式对重建质量的影响。 |
+| 交叉注意力机制（Cross-Attention） | [Vaswani et al. 2017](https://arxiv.org/abs/1706.03762) | 应用/改进：将交叉注意力引入扩散模型的UNet骨干网络，实现文本、布局等多模态条件的灵活生成。 |
+| 扩散模型在图像生成中的性能基准（ADM） | [Dhariwal & Nichol 2021](https://arxiv.org/abs/2105.05233) | 对比：所提潜在扩散模型在ImageNet类别条件生成等任务上达到更低的FID，同时大幅降低推理成本。 |
+| 感知相似度损失（Perceptual Loss） | [Dosovitskiy & Brox 2016](https://arxiv.org/abs/1602.02668) | 继承：在自编码器训练中引入基于深层网络的感知损失，以提升压缩图像的视觉保真度。 |
+| Patch-GAN对抗损失 | [Isola et al. 2017](https://arxiv.org/abs/1611.07004) | 继承：采用基于图像块的对抗训练策略，增强自编码器重建的局部真实感。 |
 
 <a id="reproduction"></a>
 
 ## 🛠️ 复现指南
 
-- **官方代码（已核实 · 论文原文链接 ✓官方 · ★14053）:** [https://github.com/CompVis/latent-diffusion](https://github.com/CompVis/latent-diffusion)
-- **安装 / 运行（取自仓库）:**
+- **代码仓库（论文原文链接 · ★14053）:** [https://github.com/CompVis/latent-diffusion](https://github.com/CompVis/latent-diffusion)
+- **安装 / 运行（取自该仓库，非模型生成）:**
   - `conda env create -f environment.yaml`
   - `python scripts/knn2img.py  --prompt "a happy bear reading a newspaper, oil on canvas"`
   - `python scripts/train_searcher.py`
@@ -135,77 +147,93 @@ $$
   - `python scripts/txt2img.py --prompt "a virus monster is playing guitar, oil on canvas" --ddim_eta 0.0 --n_samples 4 --n_iter 4 --scale 5.0  --ddim_steps 50`
   - `python scripts/txt2img.py --prompt "a sunset behind a mountain range, vector image" --ddim_eta 1.0 --n_samples 1 --n_iter 1 --H 384 --W 1024 --scale 5.0`
   - `python scripts/inpaint.py --indir data/inpainting_examples/ --outdir outputs/inpainting_results`
-- **环境要求:** PyTorch >= 1.10, CUDA >= 11.0 (recommended), Python 3.8+
-- **推荐硬件:** NVIDIA V100 or A100 GPU (at least 32GB VRAM for training large models)
-- **关键超参数:** `f=4`, `cross_attention=True`
+- **环境要求:** Python >= 3.8, PyTorch >= 1.10, CUDA >= 11.3
+- **推荐硬件:** NVIDIA A100 (80GB) or V100 (32GB)
+- **关键超参数:** `f=4 or 8 (downsampling factor)`, `diffusion_steps=1000`, `noise_schedule=linear`, `learning_rate=1e-4`, `batch_size=64 (varies per task)`, `DDIM_steps=100-250`
 
 ### 环境配置步骤
 
-**1. 克隆仓库**
+**1. 克隆仓库并创建环境**
 
-获取官方代码
-
-```bash
-git clone https://github.com/CompVis/latent-diffusion.git && cd latent-diffusion
-```
-
-**2. 创建 Conda 环境**
-
-使用 Python 3.8 创建虚拟环境
+克隆官方代码并创建conda环境
 
 ```bash
-conda create -n ldm python=3.8 -y && conda activate ldm
+git clone https://github.com/CompVis/latent-diffusion.git && cd latent-diffusion && conda create -n ldm python=3.8 && conda activate ldm
 ```
 
-**3. 安装 PyTorch**
+**2. 安装PyTorch**
 
-根据 CUDA 版本安装 PyTorch，以下示例为 CUDA 11.3
+根据CUDA版本安装PyTorch
 
 ```bash
-pip install torch==1.10.0+cu113 torchvision==0.11.0+cu113 -f https://download.pytorch.org/whl/torch_stable.html
+pip install torch==1.12.1+cu113 torchvision==0.13.1+cu113 --extra-index-url https://download.pytorch.org/whl/cu113
 ```
 
-**4. 安装项目依赖**
+**3. 安装依赖**
 
-使用 requirements.txt 安装其余依赖
+安装其余Python依赖
 
 ```bash
-pip install -r requirements.txt
+pip install -r requirements.txt && pip install -e .
 ```
 
-**5. 下载预训练模型**
+**4. 下载预训练自动编码器**
 
-根据官方 README 下载 autoencoder 和 diffusion 模型权重，或使用项目提供的下载脚本
+下载用于潜在空间压缩的预训练自动编码器权重
+
+```bash
+mkdir -p models/autoencoder && wget -O models/autoencoder/autoencoder_kl_64x64x3.ckpt https://ommer-lab.com/files/latent-diffusion/autoencoder_kl_64x64x3.ckpt
+```
+
+**5. 准备数据集**
+
+下载并调整数据集目录结构，如ImageNet、CelebA-HQ等（具体参见README）
+
+```bash
+# 示例：下载CelebA-HQ并放置于 data/celebahq
+```
 
 ### 性能基准
 
 | 设置 | Baseline | 结果 | 加速 | 显存 |
 | --- | --- | --- | --- | --- |
-| ImageNet 256x256 class-conditional, f=4 | - | PSNR: 27.4, R-FID: 0.58 (reconstruction from latent) | - | - |
+| Class-conditional ImageNet 256x256 | ADM-G: FID 4.59, 608M params, 250 DDIM steps | LDM-4-G: FID 3.60, 400M params, 250 DDIM steps | ~1.5x fewer params | - |
+| ImageNet 256x256 Super-Resolution (×4) | SR3: FID 5.2, PSNR 26.4 | LDM-4: FID 2.8, PSNR 24.4 | - | Significantly faster sampling than pixel-space DM |
+| Unconditional CelebA-HQ 256x256 | StyleGAN2: FID 5.0 (approx.) | LDM-4: FID 5.11 (from Tab. 1) | Training on single GPU (A100) | - |
 
 ### 数据集
 
-- **[ImageNet](http://www.image-net.org)** — 类条件图像生成、无条件图像生成、超分辨率评估
-- **[DIV2K](https://data.vision.ee.ethz.ch/cvl/DIV2K/)** — 超分辨率训练与评估
-- **[MS-COCO](https://cocodataset.org/)** — 文本到图像生成、布局到图像生成
+- **[ImageNet ILSVRC 2012](https://image-net.org/challenges/LSVRC/2012/)** — Class-conditional generation, super-resolution
+- **[CelebA-HQ](https://github.com/tkarras/progressive_growing_of_gans)** — Unconditional face generation
+- **[FFHQ](https://github.com/NVlabs/ffhq-dataset)** — Unconditional face generation
+- **[LSUN (churches, bedrooms)](https://www.yf.io/p/lsun)** — Unconditional scene generation
+- **[MS-COCO 2017](https://cocodataset.org/)** — Text-to-image, layout-to-image
+- **[OpenImages](https://storage.googleapis.com/openimages/web/index.html)** — Layout-to-image
+- **[Places365](http://places2.csail.mit.edu/)** — Image inpainting
+- **[LAION-400M](https://laion.ai/blog/laion-400-open-dataset/)** — Text-to-image training
 
 ### 常见报错与解决
 
 - **报错:** `RuntimeError: CUDA out of memory`
-  - 原因: 批次大小或图像分辨率过大，超出 GPU 显存
-  - 修复: `减小配置文件中的 batch_size 或图像尺寸，或使用梯度累积`
-- **报错:** `ModuleNotFoundError: No module named 'omegaconf'`
-  - 原因: 缺少依赖，未正确安装 requirements.txt
-  - 修复: `pip install omegaconf`
-- **报错:** `RuntimeError: Unable to download model weights`
-  - 原因: 网络问题或链接失效
-  - 修复: `检查官方仓库的下载链接，或手动下载并放置在正确路径`
+  - 原因: 模型或batch size过大，超出显存
+  - 修复: `减小batch size（如设置 `--batch_size 32`）或启用gradient checkpointing（`--use_checkpoint`）`
+- **报错:** `ModuleNotFoundError: No module named 'taming'`
+  - 原因: 依赖的taming-transformers未安装
+  - 修复: `pip install taming-transformers==0.0.1 (或从源码安装: pip install git+https://github.com/CompVis/taming-transformers.git)`
+- **报错:** `KeyError: 'ckpt_path' when loading autoencoder`
+  - 原因: 配置文件与预训练模型不匹配或路径错误
+  - 修复: `检查 configs/autoencoder/ 下的配置是否与下载的.ckpt对应，确保 `ckpt_path` 正确`
+- **报错:** `Validation FID not improving / nan values`
+  - 原因: 学习率过高或数据预处理问题
+  - 修复: `降低学习率（如1e-5），并检查图像是否归一化到[-1,1]且无NaN输入`
 
 ### ⚠️ 坑点提示
 
-- 高分辨率合成（>256x256）需要大量 GPU 显存，建议使用 A100 或 V100 32GB 以上
-- 预训练自编码器权重需与扩散模型使用的下采样因子 f 匹配，不可混用
-- 条件生成时，文本编码器（如 CLIP）可能需要单独下载并放置在指定目录
+- 训练前必须先下载对应自动编码器的预训练权重，编码器始终保持冻结状态
+- 下采样因子f决定潜在空间大小，例如f=4时256×256图像变为64×64×3，需确保UNet的通道和分辨率匹配
+- 扩散模型默认使用1000步线性噪声调度，采样时可以用更少的DDIM步（如100步）大幅加速
+- 条件生成任务（文本、布局）需使用交叉注意力机制，对应的τ_θ编码器需要与UNet联合训练或预训练
+- 评估FID/IS时需使用与参考方法一致的预处理（如torch-fidelity包），不同实现可能导致数值偏差
 
 
 ---

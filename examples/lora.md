@@ -4,229 +4,261 @@
 
 - [🎯 贡献与创新点](#contributions)
 - [🔬 技术细节解释](#technical)
+- [🔗 知识关联](#connections)
 - [🛠️ 复现指南](#reproduction)
 
 <a id="contributions"></a>
 
 ## 🎯 贡献与创新点
 
-**核心贡献:** 提出 Low-Rank Adaptation (LoRA) 方法，冻结预训练模型权重，注入可训练的低秩分解矩阵，极大减少下游任务可训练参数，且无推理延迟。
+**核心贡献:** 提出LoRA（低秩适应），冻结预训练权重并注入可训练的低秩分解矩阵，极大减少下游任务可训练参数数量，同时保持或提升模型质量，且不引入推理延迟。
 
-**新颖之处:** 将权重更新表示为低秩分解，并行于原权重，可在部署时合并，从而避免 adapter 等方法引入的推理延迟，同时参数效率远超 full fine-tuning。
+**新颖之处:** LoRA将权重更新参数化为低秩分解，以并行的方式添加，与顺序插入的适配器不同，实现了零额外推理延迟。
 
-**解决的问题:** 解决大模型全微调部署成本高昂的问题，以及现有参数高效方法（如 adapter 增加推理延迟、prefix tuning 难优化）的缺陷。
+**解决的问题:** 全量微调大语言模型（如GPT-3 175B）导致的高昂部署成本和内存需求，以及适配器引入的推理延迟问题。
 
 > **原文出处:**
-> - [Abstract (p.1)](https://arxiv.org/pdf/2106.09685.pdf#page=1): ⚠️ 未核实 · We propose Low-Rank Adaptation, or LoRA, which freezes the pre-trained model weights and injects trainable rank decomposition matrices into each layer of the Transformer architecture, greatly reducing the number of trainable parameters for downstream tasks. ... LoRA performs on-par or better than fine-tuning ... and, unlike adapters, no additional inference latency.
-> - [4.1 LOW-RANK-PARAMETRIZED UPDATE MATRICES (p.4)](https://arxiv.org/pdf/2106.09685.pdf#page=4): No Additional Inference Latency. When deployed in production, we can explicitly compute and store W = W0 + BA and perform inference as usual.
-> - [3 AREN’T EXISTING SOLUTIONS GOOD ENOUGH? (p.3)](https://arxiv.org/pdf/2106.09685.pdf#page=3): adapter layers have to be processed sequentially. This makes a difference in the online inference setting ... we see a noticeable increase in latency when using adapters
-> - [Frontmatter (p.1)](https://arxiv.org/pdf/2106.09685.pdf#page=1): full fine-tuning, which retrains all model parameters, becomes less feasible. Using GPT-3 175B as an example -- deploying independent instances of fine-tuned models, each with 175B parameters, is prohibitively expensive.
+> - [Frontmatter (p.1)](https://arxiv.org/pdf/2106.09685.pdf#page=1): We propose Low-Rank Adaptation, or LoRA, which freezes the pre-trained model weights and injects trainable rank decomposition matrices into each layer of the Transformer architecture, greatly reducing the number of trainable parameters for downstream tasks. Compared to GPT-3 175B fine-tuned with Adam, LoRA can reduce the number of trainable parameters by 10,000 times and the GPU memory requirement by 3 times. LoRA performs on-par or better than fine-tuning in model quality on RoBERTa, DeBERTa, GPT-2, and GPT-3, despite having fewer trainable parameters, a higher training throughput, and, unlike adapters, no additional inference latency.
 
 <a id="technical"></a>
 
 ## 🔬 技术细节解释
 
-### 1. 低秩参数化更新矩阵  `🔴 high`
+### 1. 缩放因子 α/r 与优化器交互  `🔴 high`
 
-对于预训练权重矩阵 $W_0 \in \mathbb{R}^{d \times k}$，LoRA 将其适应过程中的更新 $\Delta W$ 约束为低秩分解 $BA$，其中 $B \in \mathbb{R}^{d \times r}$，$A \in \mathbb{R}^{r \times k}$，$r \ll \min(d,k)$。前向传播变为 $h = W_0 x + BA x$，训练时 $W_0$ 冻结，仅优化 $A$ 和 $B$。这极大减少了可训练参数的数量，同时保留了模型对下游任务的适应能力。
+在计算 $\Delta W x$ 后乘以 $\alpha/r$，其中 $\alpha$ 是与 $r$ 无关的常数。使用 Adam 优化器时，若适当缩放初始化，调整 $\alpha$ 与调整学习率效果大致相同。因此作者将 $\alpha$ 固定为第一个尝试的 $r$ 对应的值，不再单独调节。
 
 $$
-h = W_0 x + B A x
+\Delta W x \cdot \frac{\alpha}{r}
 $$
 
-> 💡 **类比:** 就像在不改变原有雕像的前提下，仅添加一些小巧的黏土补件来修改雕像的外观，这些补件本身由更少的参数描述。
+> 💡 **类比:** 就像调节水龙头流量，改变 $\alpha$ 和调节学习率的效果类似，所以只需固定一个合适的 $\alpha$，通过调节学习率来优化，省去了额外的超参数搜索。
 
 📍 出处: [Section 4.1 (p.4)](https://arxiv.org/pdf/2106.09685.pdf#page=4)
 
-![教学示意图：低秩参数化更新矩阵](figures/lora-fig1.svg)
+![教学示意图：缩放因子 α/r 与优化器交互](figures/lora-fig1.svg)
+*教学示意图：缩放因子 α/r 与优化器交互（教学示意图）*
+
+> **读图**：LoRA中缩放因子α/r与Adam优化器的交互机制
+>
+> - 前向传播：h = W₀x + (BA)x × (α/r)
+> - 缩放因子α/r：常数α除以秩r，补偿低秩瓶颈
+> - Adam优化器下，调α≈调学习率（若初始化缩放）
+> - 固定α为首次尝试的r对应值，无需单独调节
+>
+> **关键**：α/r缩放使不同r的调参简化，性能稳定
+
+### 2. 适应矩阵 ΔW 与原始权重 W 的比较  `🔴 high`
+
+通过计算 $\Delta W_q$ 或 $W_q$ 在对方子空间上的弗罗贝尼乌斯范数，发现 $\Delta W$ 与 $W$ 的相关性强于随机矩阵，表明 $\Delta W$ 放大了一些已存在于 $W$ 中的特征。但它不重复 $W$ 的主要奇异方向，而是强化那些 $W$ 中未强调的方向，放大因子很大（如秩 $4$ 时约 $21.5$）。
+
+$$
+\|U^\top W_q V^\top\|_F
+$$
+
+> 💡 **类比:** 就像老师给学生补习，不重复课堂上的重点，而是针对学生薄弱但确实有用的知识点进行强化，且强度很大。
+
+📍 出处: [Section 7.3 (p.11)](https://arxiv.org/pdf/2106.09685.pdf#page=11)
+
+![教学示意图：适应矩阵 ΔW 与原始权重 W 的比较](figures/lora-fig2.svg)
+*教学示意图：适应矩阵 ΔW 与原始权重 W 的比较（教学示意图）*
+
+> **读图**：ΔW 放大 W 中非主导方向，而非重复主导方向。
+>
+> - Wq: 预训练查询权重矩阵。
+> - ΔWq: 低秩更新 BA，秩 r。
+> - U, V: Wq 的左右奇异向量。
+> - ‖U⊤ΔWqV⊤‖F: ΔW 在 W 子空间上的投影范数。
+>
+> **关键**：ΔW 放大因子大（r=4 时约 21.5），强化弱方向。
+
+### 3. 低秩参数化更新矩阵  `🟡 mid`
+
+冻结预训练权重 $W_0 \in \mathbb{R}^{d \times k}$，引入可训练的低秩矩阵 $B \in \mathbb{R}^{d \times r}$ 和 $A \in \mathbb{R}^{r \times k}$，$r \ll \min(d,k)$，前向传播变为 $h = W_0 x + BA x$。$A$ 用高斯随机初始化，$B$ 用零初始化，训练开始时 $\Delta W = BA = 0$。这极大减少了可训练参数量，且推理时可合并 $W_0$ 与 $BA$ 而不增加延迟。
+
+$$
+h = W_0 x + BA x
+$$
+
+> 💡 **类比:** 就像在原有的大楼框架上安装可拆卸的装饰板，而不是拆掉重建，既省材料又能在展示效果后轻松复原。
+
+📍 出处: [Section 4.1 (p.4)](https://arxiv.org/pdf/2106.09685.pdf#page=4)
+
+![教学示意图：低秩参数化更新矩阵](figures/lora-fig3.svg)
 *教学示意图：低秩参数化更新矩阵（教学示意图）*
 
-> **读图**：LoRA通过低秩分解减少微调参数量，冻结预训练权重。
+> **读图**：LoRA通过低秩矩阵分解微调大模型，冻结原权重。
 >
-> - h = W₀ x + B A x：前向传播公式，含低秩更新。
-> - ΔW = B A：低秩分解，r ≪ min(d,k)。
-> - W₀冻结，仅优化A和B，大幅减少参数量。
-> - 对比全微调175B参数，LoRA仅17.5M，显存降约3倍。
+> - 冻结预训练权重W₀，不更新梯度。
+> - 可训练低秩矩阵B和A，r远小于d,k。
+> - 前向传播h=W₀x+BAx，两条路径相加。
+> - 推理时合并为W′=W₀+BA，无额外延迟。
 >
-> **关键**：LoRA在注意力层注入低秩矩阵，高效适配下游任务。
+> **关键**：低秩分解大幅减少参数量，推理零开销。
 
-### 2. LoRA 的缩放因子  `🟡 mid`
+### 4. 应用于 Transformer 的权重矩阵选择  `🟡 mid`
 
-LoRA 将输出 $\Delta W x$ 乘以 $\frac{\alpha}{r}$，其中 $\alpha$ 是常数。论文指出，在使用 Adam 优化器时，调整 $\alpha$ 大致等同于调整学习率，因此他们将 $\alpha$ 固定为首次尝试的秩 $r$ 值，不再专门调节。这一策略减少了在不同 $r$ 下需要重新调参的麻烦。
+LoRA 仅应用于注意力模块的查询 ($W_q$) 和值 ($W_v$) 投影矩阵，冻结其余参数（包括键 $W_k$、输出 $W_o$ 和整个 MLP）。实验表明同时适应 $W_q$ 和 $W_v$ 在相同参数量下效果最好，适应单一类型或所有类型反而可能降低性能。可训练参数量由 $|\Theta| = 2 \times \hat{L}_{LoRA} \times d_{model} \times r$ 决定。
 
 $$
-\text{scaled output} = \frac{\alpha}{r} \Delta W x
+|\Theta| = 2 \times \hat{L}_{LoRA} \times d_{model} \times r
 $$
 
-> 💡 **类比:** 就像在添加黏土补件时，先用一个缩放旋钮控制补件的影响力，这个旋钮与学习率联动，使得更换不同大小的补件时无需重新校准旋钮。
+> 💡 **类比:** 就像修车时只更换最影响性能的火花塞和燃油喷嘴，而不是整个发动机，达到省时省力且效果好的目的。
 
-📍 出处: [Section 4.1 (p.4)](https://arxiv.org/pdf/2106.09685.pdf#page=4)
+📍 出处: [Section 4.2, Section 7.1 (p.5)](https://arxiv.org/pdf/2106.09685.pdf#page=5)
 
-![教学示意图：LoRA 的缩放因子](figures/lora-fig2.svg)
-*教学示意图：LoRA 的缩放因子（教学示意图）*
+![教学示意图：应用于 Transformer 的权重矩阵选择](figures/lora-fig4.svg)
+*教学示意图：应用于 Transformer 的权重矩阵选择（教学示意图）*
 
-> **读图**：LoRA缩放因子α/r的定义与作用
+> **读图**：LoRA仅适应注意力Wq和Wv，冻结其余参数。
 >
-> - 缩放输出：h = W₀x + (α/r)ΔWx
-> - ΔW = BA，秩r远小于d
-> - α为常数，调整α≈调整学习率
-> - 例：α固定=8时，r越大缩放因子越小
+> - LoRA仅应用于Wq和Wv，Wk、Wo和MLP冻结。
+> - 可训练参数量公式：|Θ|=2×L̂_LoRA×d_model×r。
+> - GPT-3 175B实验：同时适应Wq和Wv效果最佳。
+> - 适应单一或全部类型反而可能降低性能。
 >
-> **关键**：α设为首次尝试的r值，避免不同r下重新调参
+> **关键**：同时适应Wq和Wv在相同参数量下效果最佳。
 
-### 3. LoRA 可泛化为全微调  `🟡 mid`
+### 5. 最优秩 r 的选择  `🟡 mid`
 
-当将 LoRA 应用于所有权重矩阵并训练所有偏置项时，若将 LoRA 的秩 $r$ 设置为预训练权重矩阵本身的秩，则可以大致恢复全微调的表达能力。这表明 LoRA 是一种更广义的微调形式，全微调是其特例。
+实验发现，同时适应 $W_q$ 和 $W_v$ 时，秩可以非常小——低至 $1$ 就能获得不错的效果，而仅适应 $W_q$ 时需要较大的 $r$。这验证了 $\Delta W$ 具有很低的本质秩。进一步通过奇异向量子空间相似度分析表明，增加秩并不能覆盖更有意义的子空间，低秩已足够。
 
-> 💡 **类比:** 当补件的复杂程度与原有结构完全相当时，就相当于重新塑造了整个雕像。
+> 💡 **类比:** 就像给衣服缝补丁，有时候只需要很小的一块布（秩 1）就能补好，因为破损处本身就很集中，用更大块的布并不会带来额外好处。
 
-📍 出处: [Section 4.1 (p.4)](https://arxiv.org/pdf/2106.09685.pdf#page=4)
+📍 出处: [Section 7.2 (p.10)](https://arxiv.org/pdf/2106.09685.pdf#page=10)
 
-![教学示意图：LoRA 可泛化为全微调](figures/lora-fig3.svg)
-*教学示意图：LoRA 可泛化为全微调（教学示意图）*
+![教学示意图：最优秩 r 的选择](figures/lora-fig5.svg)
+*教学示意图：最优秩 r 的选择（教学示意图）*
 
-> **读图**：LoRA 可泛化为全微调，全微调是其特例
+> **读图**：LoRA最优秩选择与本质秩分析实验图
 >
-> - LoRA 更新：h = W₀x + BAx，冻结 W₀，训练 A、B
-> - 全微调：h = (W₀ + ΔW_full)x，更新所有参数
-> - 当 r = d 时，LoRA 可表示任意 ΔW，等价全微调
+> - 左表：不同秩r在WikiSQL和MultiNLI上的准确率
+> - 中图：∆W奇异值分布，前r个占主导
+> - 右图：不同秩子空间高度重叠，余弦相似度>0.9
+> - 底部：LoRA低秩更新公式与初始化策略
 >
-> **关键**：LoRA 表达能力 ≥ 全微调（r 足够大时）
+> **关键**：r=1~4已足够，增加秩不覆盖新方向
 
-### 4. LoRA 的初始化策略  `🟢 low`
+### 6. 推理时零延迟的权重合并  `🟢 low`
 
-LoRA 对 $A$ 使用随机高斯初始化，对 $B$ 使用零初始化，因此在训练开始时 $\Delta W = BA = 0$。这保证模型从原始的预训练权重出发，逐步学习任务相关的低秩更新，避免一开始就引入随机扰动。
+训练后，低秩矩阵 $BA$ 可以直接加到原权重 $W_0$ 上：$W = W_0 + BA$。推理时只需使用合并后的权重，与原始模型结构完全一致，因此不引入任何额外延迟，不像适配器层那样需要顺序执行额外模块。
 
 $$
-A \sim \mathcal{N}(0, \sigma^2), B = 0
+W = W_0 + BA
 $$
 
-> 💡 **类比:** 刚开始时，黏土补件是完全透明的，雕像保持原样；随着训练的进行，补件逐渐成型，赋予雕像新的特征。
-
-📍 出处: [Section 4.1 (p.4)](https://arxiv.org/pdf/2106.09685.pdf#page=4)
-
-### 5. LoRA 在 Transformer 上的应用  `🟢 low`
-
-LoRA 仅应用于自注意力模块的权重矩阵（$W_q, W_k, W_v, W_o$），并冻结整个 MLP 模块（即下游任务不训练 MLP 层）。在大多数实验中，只对 $W_q$ 和 $W_v$ 应用 LoRA，以兼顾简单性和参数效率。
-
-> 💡 **类比:** 只修改发动机中几个关键活塞的特性，而保持引擎的其他部分完全不变。
+> 💡 **类比:** 就像把可拆卸的装饰板在展出前固定到墙上，展出时完全看不到额外结构，不会阻碍观众视线。
 
 📍 出处: [Section 4.2 (p.5)](https://arxiv.org/pdf/2106.09685.pdf#page=5)
 
-![教学示意图：LoRA 在 Transformer 上的应用](figures/lora-fig4.svg)
-*教学示意图：LoRA 在 Transformer 上的应用（教学示意图）*
+![教学示意图：推理时零延迟的权重合并](figures/lora-fig6.svg)
+*教学示意图：推理时零延迟的权重合并（教学示意图）*
 
-> **读图**：LoRA通过低秩更新矩阵适配Transformer自注意力层。
+> **读图**：LoRA通过合并权重实现推理零延迟。
 >
-> - 预训练权重W冻结，不更新梯度。
-> - 低秩更新ΔW=BA，B和A可训练，r≪d。
-> - LoRA仅应用于W_q和W_v，MLP冻结。
-> - 输出为Wx+BAx，无推理延迟。
+> - 训练阶段冻结W₀，仅更新低秩矩阵A、B。
+> - 推理时将W₀与BA合并为单矩阵W。
+> - 合并后模型结构与原始模型完全一致。
+> - 无顺序模块，推理零额外延迟。
 >
-> **关键**：LoRA仅微调自注意力的W_q和W_v，大幅减少参数量。
+> **关键**：推理时权重已合并，无额外计算延迟。
 
-### 6. 无额外推理延迟的部署  `🟢 low`
+<a id="connections"></a>
 
-生产部署时，可以预先计算 $W = W_0 + BA$ 并存储，推理时就像使用普通模型一样。切换下游任务时，只需减去旧的 $BA$ 并加上新的 $B'A'$，几乎没有额外内存开销。通过这种构造，LoRA 保证与全微调模型相比不会引入额外的推断延迟。
+## 🔗 知识关联
 
-$$
-W = W_0 + B A
-$$
-
-> 💡 **类比:** 就像提前将新轮胎组装到轮毂上，行驶时无需任何额外操作；换胎只需快速拆装，毫不影响驾驶速度。
-
-📍 出处: [Section 4.1 (p.4)](https://arxiv.org/pdf/2106.09685.pdf#page=4)
-
-![教学示意图：无额外推理延迟的部署](figures/lora-fig5.svg)
-*教学示意图：无额外推理延迟的部署（教学示意图）*
-
-> **读图**：LoRA通过低秩分解实现零额外推理延迟的部署
->
-> - 训练时注入低秩矩阵B和A，前向传播h=W0x+BAx
-> - 部署时合并为单一权重矩阵W=W0+BA，推理零延迟
-> - 任务切换时仅更新BA部分，无需重载预训练权重
-> - 低秩分解(r<<d)将参数量从d²降至2rd
->
-> **关键**：LoRA部署时合并权重，推理延迟与标准模型完全相同
+| 概念 | 相关论文 | 关系 |
+| --- | --- | --- |
+| Transformer | [Vaswani et al. 2017](https://arxiv.org/abs/1706.03762) | LoRA 基于 Transformer 架构，将低秩矩阵注入其注意力权重中 |
+| Full fine-tuning (全微调) | [Brown et al. 2020 (GPT-3)](https://arxiv.org/abs/2005.14165) | 对比：在 GPT-3 175B 上，LoRA 可比全微调减少 10000 倍可训练参数与 3 倍 GPU 内存，且模型质量相当或更优 |
+| Adapter | [Houlsby et al. 2019](https://arxiv.org/abs/1902.00751) | 对比：LoRA 是并行添加的外部模块，没有 Adapter 的额外推理延迟 |
+| Prefix-tuning | [Li & Liang 2021](https://arxiv.org/abs/2101.00190) | 对比：在 GPT-2 和 GPT-3 上直接比较，LoRA 表现更优或持平 |
+| GPT-3 | [Brown et al. 2020](https://arxiv.org/abs/2005.14165) | 以 GPT-3 175B 为核心实验平台，验证 LoRA 的大规模高效适应能力 |
 
 <a id="reproduction"></a>
 
 ## 🛠️ 复现指南
 
-- **官方代码（已核实 · 论文原文链接 ✓官方 · ★13576）:** [https://github.com/microsoft/LoRA](https://github.com/microsoft/LoRA)
-- **安装 / 运行（取自仓库）:**
+- **代码仓库（论文原文链接 · ★13576）:** [https://github.com/microsoft/LoRA](https://github.com/microsoft/LoRA)
+- **安装 / 运行（取自该仓库，非模型生成）:**
   - `pip install -e .`
-- **推荐硬件:** NVIDIA Tesla V100 (as used in experiments) or higher
-- **关键超参数:** `r=4 (for GPT-3 175B, but adjustable; low rank such as 4 or 8 typical)`, `target_modules=['q','v'] (apply LoRA to query and value projection matrices)`, `alpha set equal to first r tried (e.g., 4) and not tuned further`, `dropout applied to LoRA layers (rate unspecified in paper)`
+- **环境要求:** PyTorch (版本未指定), CUDA, transformers, datasets (推测)
+- **推荐硬件:** Multiple A100 80GB GPUs for GPT-3 175B; single GPU for smaller models (RTX 8000 used in latency test)
+- **关键超参数:** `r=4 for GPT-3 175B (other ranks tested: 1, 2, 8, 64)`, `Apply LoRA to Wq and Wv (also tested Wk, Wo, all attention weights)`, `A initialized with random Gaussian, B initialized to zero`, `Scale update by α/r, α set to first r tried (value not reported)`, `Freeze original weights and MLP modules`, `Optimizer: Adam`, `Number of trainable parameters: |Θ| = 2 × ˆL_LoRA × d_model × r`
 
 ### 环境配置步骤
 
-**1. Clone repository**
+**1. 克隆官方仓库**
 
-Clone the official LoRA GitHub repository.
-
-```bash
-git clone https://github.com/microsoft/LoRA.git && cd LoRA
-```
-
-**2. Install PyTorch**
-
-Install PyTorch with CUDA support (version 1.12 or later recommended).
+获取 LoRA 代码
 
 ```bash
-pip install torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cu118
+git clone https://github.com/microsoft/LoRA && cd LoRA
 ```
 
-**3. Install dependencies**
+**2. 安装依赖**
 
-Install required packages, including transformers and datasets.
+安装必要的 Python 包（若仓库含 requirements.txt 则直接安装，否则需手工安装 PyTorch、transformers、datasets 等）
 
 ```bash
 pip install -r requirements.txt
 ```
 
-**4. Verify installation**
+**3. 下载预训练模型**
 
-Run a quick test to ensure LoRA modules can be imported.
+根据任务下载对应的预训练 Transformer 权重（如 GPT-2, RoBERTa, DeBERTa），可通过 HuggingFace Hub 或手动放置
 
 ```bash
-python -c 'import loralib; print("LoRA installed successfully")'
+# 示例：下载 GPT-2 模型
+python -c "from transformers import GPT2Model; GPT2Model.from_pretrained('gpt2')"
+```
+
+**4. 准备数据集**
+
+下载论文中使用的数据集（GLUE, E2E, WikiSQL, SAMSum），并按照仓库说明放置于 data/ 目录
+
+**5. 运行训练示例**
+
+使用仓库提供的脚本进行微调，例如在 GPT-2 上应用 LoRA
+
+```bash
+python run_lora.py --model_type gpt2 --task e2e --rank 4 --apply_to qv
 ```
 
 ### 性能基准
 
 | 设置 | Baseline | 结果 | 加速 | 显存 |
 | --- | --- | --- | --- | --- |
-| GPT-3 175B training throughput | 32.5 tokens/s per V100 GPU (full fine-tuning) | 43.1 tokens/s per V100 GPU (LoRA) | 1.33x (25% training speedup) | - |
-| GPT-3 175B training VRAM | 1.2 TB (full fine-tuning) | 350 GB (LoRA) | - | 3x reduction in GPU memory requirement |
-| GPT-3 175B checkpoint size | 350 GB per model (full fine-tuning) | 35 MB per task (LoRA) | - | ~10,000x reduction in storage for adapted models |
-| GPT-2 medium inference latency (batch=1, seq_len=128) | 23.9±2.1 ms (AdapterL) | 19.8±2.7 ms (Fine-Tune/LoRA) | LoRA matches fine-tuning, ~20.7% faster than AdapterL | - |
+| GPT-3 175B training (full fine-tuning vs LoRA r=4 on Wq and Wv) | VRAM: 1.2 TB; checkpoint: 350 GB; training time: baseline | VRAM: 350 GB; checkpoint: 35 MB; training throughput: 25% speedup | 1.25x | VRAM reduction ~3.4x; checkpoint reduction ~10,000x |
 
 ### 数据集
 
-- **[GLUE benchmark](https://huggingface.co/datasets/glue)** — Natural Language Understanding tasks (MNLI, SST-2, MRPC, CoLA, QNLI, QQP, RTE, STS-B)
-- **[E2E NLG Challenge](http://www.macs.hw.ac.uk/InteractionLab/E2E/)** — End-to-end natural language generation
-- **[WikiSQL](https://huggingface.co/datasets/wikisql)** — Natural language to SQL queries
-- **[SAMSum](https://huggingface.co/datasets/samsum)** — Conversation summarization
+- **GLUE benchmark** — 自然语言理解（用于 RoBERTa, DeBERTa 评估）
+- **E2E NLG Challenge** — 端到端自然语言生成（用于 GPT-2 评估）
+- **WikiSQL** — Text-to-SQL（用于 GPT-3 评估）
+- **MultiNLI (matched)** — 自然语言推断（用于 GPT-3 验证）
+- **SAMSum** — 对话摘要（用于 GPT-3 评估）
 
 ### 常见报错与解决
 
-- **报错:** `CUDA out of memory when training large models (e.g., GPT-3 175B)`
-  - 原因: Model and optimizer states exceed GPU VRAM despite LoRA savings; model parallelism still required for very large models.
-  - 修复: `Reduce batch size, enable gradient accumulation, or increase the number of GPUs with model parallelism (e.g., use DeepSpeed).`
-- **报错:** `KeyError: 'lora_A' when loading a checkpoint`
-  - 原因: Checkpoint was saved with a different LoRA configuration (e.g., different set of target modules or rank).
-  - 修复: `Ensure the model definition matches the checkpoint exactly. Set the same `r` and target modules before loading.`
-- **报错:** `ImportError: No module named 'loralib'`
-  - 原因: The LoRA package is not installed or PYTHONPATH not set.
-  - 修复: `Install from source: pip install -e . inside the cloned repository.`
+- **报错:** `CUDA out of memory during training on GPT-3 175B`
+  - 原因: 即使使用 LoRA，基础模型仍需加载在 GPU 上，内存不足
+  - 修复: `减小 batch size；启用梯度累积；降低秩 r；使用更少 GPU 并行`
+- **报错:** `Trainable parameters count not reduced significantly`
+  - 原因: 未正确冻结 MLP 模块或对过多权重矩阵应用 LoRA
+  - 修复: `检查代码确保仅对 Wq、Wv 注入 LoRA，且冻结其余参数（model.requires_grad_(False) 后单独开启 LoRA 参数）`
+- **报错:** `Inference results worse than expected after merging LoRA weights`
+  - 原因: 合并时未正确应用缩放因子 α/r，或使用了错误的秩
+  - 修复: `按照仓库 merge.py 示例，确保`merged_weight = original_weight + (lora_A @ lora_B) * (alpha / r)``
 
 ### ⚠️ 坑点提示
 
-- Alpha hyperparameter: Set α equal to the first rank you try (e.g., 4) and do not tune it. The scaling factor α/r helps reduce the need to retune learning rates when changing r.
-- Weight matrices choice: Applying LoRA to Wq and Wv is sufficient for most tasks; adding Wk or Wo may improve performance marginally but increases parameters.
-- Rank selection: A very low rank (e.g., r=4 or even r=1 or 2) often works well for large models; higher rank does not necessarily give better performance and may cause overfitting.
-- Inference latency: To avoid extra latency, merge LoRA weights (W0 + BA) before deployment. Do not merge if you need to batch requests for different tasks in a single forward pass.
+- LoRA 并行注入，推理时无额外延迟，但调整缩放因子 α 和学习率需要类似的超参搜索
+- 仅在注意力权重上应用 LoRA（Wq, Wv）已足够，扩展到更多矩阵可能边际收益小
+- 秩 r 极小（甚至为 1）即可产生有效适应，但不同任务最优 r 可能不同
+- 保存和加载任务专属 checkpoint 时，只需保存 LoRA 参数（通常 < 50 MB），便于快速切换
+- 冻结 MLP 模块是人为选择，论文未探索 MLP 上的 LoRA 效果
 
 
 ---
