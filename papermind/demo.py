@@ -165,7 +165,7 @@ def play(console, speed: float = 1.0) -> None:
 
     console.print()
     console.print(
-        "[bold cyan]理解 → 复现，每句话都带原文依据。[/bold cyan]  [dim]pip install papermind[/dim]"
+        "[bold cyan]理解 → 复现，关键判断都带原文依据并核验。[/bold cyan]  [dim]pip install paper-mind[/dim]"
     )
     pause(2.0)  # hold the final frame so it lands in a looping GIF
 

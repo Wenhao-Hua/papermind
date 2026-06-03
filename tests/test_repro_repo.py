@@ -31,13 +31,15 @@ def test_scan_github_recovers_pdf_mangled_urls():
         "https://github.com/goodfeli/adversarial"
 
 
-def test_find_repo_url_prefers_paper_link_without_network():
+def test_find_repo_url_prefers_paper_link_but_does_not_claim_official():
     # A link in the text wins and short-circuits before any PapersWithCode call.
+    # It is "from the paper" but NOT claimed official: papers also cite course repos /
+    # third-party reimplementations, so officialness needs a stronger signal (PwC).
     url, source, official = R.find_repo_url(
         "Our code is available at https://github.com/openai/whisper", None, "2212.04356"
     )
     assert url == "https://github.com/openai/whisper"
-    assert source == "论文原文链接" and official is True
+    assert source == "论文原文链接" and official is False
 
 
 def test_extract_run_commands_is_precise():

@@ -81,7 +81,10 @@ def find_repo_url(text: str, abstract: Optional[str], arxiv_id: Optional[str]) -
     (author-provided, authoritative) over PapersWithCode."""
     url = _scan_github(text) or _scan_github(abstract or "")
     if url:
-        return url, "论文原文链接", True
+        # A link printed in the paper is author-provided, but that does NOT prove it's
+        # the official implementation (papers cite course repos, third-party reimpls,
+        # etc.). Only PapersWithCode's "official" flag claims officialness.
+        return url, "论文原文链接", False
     url, official = _pwc_repo(arxiv_id)
     if url:
         return url, "PapersWithCode", official

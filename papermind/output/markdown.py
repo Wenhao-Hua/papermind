@@ -206,17 +206,17 @@ def _reproduction_md(r: Reproduction) -> List[str]:
     out = ["## 🛠️ 复现指南", ""]
     if r.code_repo is not None:
         cr = r.code_repo
-        badge = " ✓官方" if cr.is_official else ""
+        badge = " · ✓官方实现" if cr.is_official else ""
         star = f" · ★{cr.stars}" if cr.stars else ""
         tag = f" (`{r.version_tag}`)" if r.version_tag else ""
-        out.append(f"- **官方代码（已核实 · {cr.source}{badge}{star}）:** [{cr.url}]({cr.url}){tag}")
+        out.append(f"- **代码仓库（{cr.source}{badge}{star}）:** [{cr.url}]({cr.url}){tag}")
         cmds = list(cr.install_commands) + list(cr.run_commands)
         if cmds:
-            out.append("- **安装 / 运行（取自仓库）:**")
+            out.append("- **安装 / 运行（取自该仓库，非模型生成）:**")
             out += [f"  - `{c}`" for c in cmds]
     elif r.official_code:
         tag = f" (`{r.version_tag}`)" if r.version_tag else ""
-        out.append(f"- **官方代码:** [{r.official_code}]({r.official_code}){tag}")
+        out.append(f"- **代码仓库:** [{r.official_code}]({r.official_code}){tag}")
     if r.requirements:
         out.append(f"- **环境要求:** {r.requirements}")
     if r.recommended_hardware:

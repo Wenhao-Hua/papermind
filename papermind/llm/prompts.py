@@ -151,12 +151,21 @@ def connections_user(context: str, max_items: int = 6) -> str:
 
 
 # Module 4: Reproduction
-def reproduction_user(context: str) -> str:
+def reproduction_user(context: str, repo_url=None) -> str:
+    repo_note = (
+        f"\n\n【代码仓库——已定位】本文的代码仓库已确定为 {repo_url} 。official_code 必须填它；"
+        f"env_setup_steps 的克隆/安装步骤要基于该仓库（如 git clone {repo_url}）；"
+        "不要再推荐或编造任何其它「社区实现 / 参考实现」。\n"
+        if repo_url else
+        "\n\n【代码仓库】若论文未给出明确的代码仓库，official_code 填 null，"
+        "绝不编造仓库地址，也不要推荐来路不明的「社区实现」。\n"
+    )
     return (
         context
-        + "\n\n【任务】产出尽量完整、可操作的复现指南。论文中明确的信息（官方代码、超参、基准）以论文为准；"
+        + "\n\n【任务】产出尽量完整、可操作的复现指南。论文中明确的信息（超参、基准）以论文为准；"
         "环境步骤、常见报错与修复可结合通用工程经验补充，但不要编造不存在的链接或版本号（不确定填 null）。"
-        "命令要可直接复制运行。输出如下 JSON：\n"
+        + repo_note
+        + "命令要可直接复制运行。输出如下 JSON：\n"
         "{\n"
         '  "official_code": "GitHub 链接或 null",\n'
         '  "version_tag": "与论文版本对应的 release/tag 或 null",\n'

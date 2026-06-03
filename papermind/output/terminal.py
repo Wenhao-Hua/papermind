@@ -125,17 +125,17 @@ def _render_reproduction(report: Report, console: Console) -> None:
     info = Text()
     if r.code_repo is not None:
         cr = r.code_repo
-        badge = " ✓官方" if cr.is_official else ""
+        badge = " · ✓官方实现" if cr.is_official else ""
         star = f" · ★{cr.stars}" if cr.stars else ""
-        info.append(f"官方代码 (已核实 · {cr.source}{badge}{star}): ", style="bold")
+        info.append(f"代码仓库 ({cr.source}{badge}{star}): ", style="bold")
         info.append(f"{cr.url}\n")
         cmds = list(cr.install_commands) + list(cr.run_commands)
         if cmds:
-            info.append("安装/运行: ", style="bold")
+            info.append("安装/运行 (取自该仓库): ", style="bold")
             info.append("; ".join(cmds) + "\n")
     elif r.official_code:
         tag = f" ({r.version_tag})" if r.version_tag else ""
-        info.append("官方代码: ", style="bold")
+        info.append("代码仓库: ", style="bold")
         info.append(f"{r.official_code}{tag}\n")
     if r.requirements:
         info.append("环境要求: ", style="bold")

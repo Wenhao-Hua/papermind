@@ -39,8 +39,8 @@ def to_setup_script(report: Report) -> str:
     if r.code_repo is not None:
         cr = r.code_repo
         star = f" · ★{cr.stars}" if cr.stars else ""
-        official = " · 官方" if cr.is_official else ""
-        lines.append(f"# --- 官方代码仓库（已核实：{cr.source}{official}{star}） ---")
+        official = " · 官方实现" if cr.is_official else ""
+        lines.append(f"# --- 代码仓库（{cr.source}{official}{star}） ---")
         if cr.description:
             lines.append(f"# {cr.description}")
         lines.append(f"git clone {cr.url}")
@@ -99,8 +99,8 @@ def to_notebook(report: Report) -> dict:
         if r.code_repo is not None:
             cr = r.code_repo
             star = f" · ★{cr.stars}" if cr.stars else ""
-            official = " · 官方" if cr.is_official else ""
-            cells.append(_md(f"## 官方代码仓库（已核实：{cr.source}{official}{star}）\n\n<{cr.url}>"))
+            official = " · 官方实现" if cr.is_official else ""
+            cells.append(_md(f"## 代码仓库（{cr.source}{official}{star}）\n\n<{cr.url}>"))
             repo_dir = cr.url.rstrip("/").rsplit("/", 1)[-1]
             if repo_dir.endswith(".git"):
                 repo_dir = repo_dir[:-4]
