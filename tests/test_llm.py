@@ -86,6 +86,7 @@ def test_stream_forwards_deltas_and_records_usage(monkeypatch):
 def _no_keys(monkeypatch):
     monkeypatch.delenv("OPENAI_API_KEY", raising=False)
     monkeypatch.delenv("ANTHROPIC_API_KEY", raising=False)
+    monkeypatch.delenv("GEMINI_API_KEY", raising=False)
 
 
 def test_auto_local_when_no_key_and_ollama_up(monkeypatch):
@@ -132,6 +133,29 @@ def test_deepseek_keeps_model_and_switches_embeddings(monkeypatch):
     assert cfg.embedding_provider == "local"         # no openai key -> local embeddings for RAG
 
 
+def test_gemini_keeps_model_and_switches_embeddings(monkeypatch):
+    _no_keys(monkeypatch)
+    monkeypatch.delenv("DEEPSEEK_API_KEY", raising=False)
+    monkeypatch.setattr(base, "ollama_available", lambda timeout=1.0: True)  # must NOT be used
+    cfg = Config(gemini_key="g-x", default_model="gemini/gemini-2.5-flash-lite")
+    client = LLMClient(config=cfg)
+    assert client.model == "gemini/gemini-2.5-flash-lite"  # has gemini key -> not swapped to ollama
+    assert cfg.embedding_provider == "local"               # no openai key -> local embeddings for RAG
+
+
+def test_gemini_explicit_embedding_model_stays_litellm(monkeypatch):
+    # Gemini also serves embeddings (gemini-embedding-001): with an explicit embedding
+    # model the RAG path must NOT silently fall back to local.
+    _no_keys(monkeypatch)
+    cfg = Config(
+        gemini_key="g-x",
+        default_model="gemini/gemini-2.5-flash-lite",
+        embedding_model="gemini/gemini-embedding-001",
+    )
+    LLMClient(config=cfg)
+    assert cfg.embedding_provider == "openai"  # "openai" == the litellm embedding path, not local
+
+
 def test_apply_local_forces_whole_stack(monkeypatch, tmp_path):
     # Isolate config: empty PAPERMIND_HOME, no PAPERMIND_MODEL leaking in.
     monkeypatch.setenv("PAPERMIND_HOME", str(tmp_path))
@@ -158,7 +182,7 @@ def test_apply_local_forces_whole_stack(monkeypatch, tmp_path):
 # Preflight (ensure_ready) and error messages — fail fast, fail clear
 # --------------------------------------------------------------------------- #
 def _no_all_keys(monkeypatch):
-    for var in ("OPENAI_API_KEY", "ANTHROPIC_API_KEY", "DEEPSEEK_API_KEY"):
+    for var in ("OPENAI_API_KEY", "ANTHROPIC_API_KEY", "DEEPSEEK_API_KEY", "GEMINI_API_KEY"):
         monkeypatch.delenv(var, raising=False)
 
 
@@ -173,6 +197,15 @@ def test_ensure_ready_raises_without_key(monkeypatch):
 def test_ensure_ready_ok_with_key(monkeypatch):
     _no_all_keys(monkeypatch)
     LLMClient(model="gpt-4o", config=Config(openai_key="sk-test")).ensure_ready()  # no raise
+
+
+def test_ensure_ready_ok_with_gemini_key(monkeypatch):
+    # Regression: a gemini/ model used to be rejected by preflight because key
+    # detection only knew openai/anthropic/deepseek and fell through to OPENAI_API_KEY.
+    _no_all_keys(monkeypatch)
+    LLMClient(
+        model="gemini/gemini-2.5-flash-lite", config=Config(gemini_key="g-test")
+    ).ensure_ready()  # no raise
 
 
 def test_ensure_ready_ollama_down(monkeypatch):

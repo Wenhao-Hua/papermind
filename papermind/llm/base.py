@@ -369,6 +369,8 @@ def _has_key_for(model: str, config: Config) -> bool:
         return bool(config.anthropic_key or os.environ.get("ANTHROPIC_API_KEY"))
     if "deepseek" in m or m.startswith("deepseek/"):
         return bool(config.deepseek_key or os.environ.get("DEEPSEEK_API_KEY"))
+    if "gemini" in m:  # litellm routes the gemini/ prefix via GEMINI_API_KEY
+        return bool(config.gemini_key or os.environ.get("GEMINI_API_KEY"))
     return bool(config.openai_key or os.environ.get("OPENAI_API_KEY"))
 
 
