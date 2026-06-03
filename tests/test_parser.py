@@ -93,3 +93,75 @@ def test_nearest_image_above_none_when_only_vector():
     cap = (100, 500, 300, 520)
     images = [(2, (100, 540, 300, 700))]  # nothing above in column -> triggers render path
     assert _nearest_image_above(images, cap) is None
+
+
+# --------------------------------------------------------------------------- #
+# parse_pdf boundary paths (fitz stubbed; no real PDF)
+# --------------------------------------------------------------------------- #
+class _FakePage:
+    def __init__(self, text, blocks):
+        self._text, self._blocks = text, blocks
+
+    def get_text(self, kind="text"):
+        return self._text if kind == "text" else self._blocks
+
+
+class _FakeDoc:
+    def __init__(self, pages):
+        self._pages, self.page_count = pages, len(pages)
+
+    def load_page(self, pno):
+        return self._pages[pno]
+
+    def close(self):
+        pass
+
+
+def _boom_open(*a, **k):
+    raise RuntimeError("corrupt or unreadable PDF")
+
+
+def test_parse_pdf_open_failure_raises_parseerror(monkeypatch, tmp_path):
+    import fitz
+
+    from papermind.errors import ParseError
+    from papermind.output.schema import PaperMeta
+    from papermind.parser.pdf import parse_pdf
+
+    monkeypatch.setattr(fitz, "open", _boom_open)
+    with pytest.raises(ParseError):
+        parse_pdf(tmp_path / "x.pdf", PaperMeta(title="T"), tmp_path, extract_figures=False)
+
+
+def test_parse_pdf_scanned_pdf_has_no_text_raises(monkeypatch, tmp_path):
+    import fitz
+
+    from papermind.errors import ParseError
+    from papermind.output.schema import PaperMeta
+    from papermind.parser.pdf import parse_pdf
+
+    page = _FakePage(text="", blocks=[])  # no extractable text blocks -> scanned image
+    monkeypatch.setattr(fitz, "open", lambda *a, **k: _FakeDoc([page]))
+    with pytest.raises(ParseError) as ei:
+        parse_pdf(tmp_path / "scan.pdf", PaperMeta(title="T"), tmp_path, extract_figures=False)
+    assert "scanned" in str(ei.value).lower()
+
+
+def test_parse_pdf_dehyphenates_and_infers_title(monkeypatch, tmp_path):
+    import fitz
+
+    from papermind.output.schema import PaperMeta
+    from papermind.parser.pdf import parse_pdf
+
+    blocks = [
+        (0, 0, 200, 12, "A Great Title", 0, 0),
+        (0, 30, 200, 60, "we use atten-\ntion for long-\nrange deps", 1, 0),
+    ]
+    page = _FakePage(text="A Great Title\nwe use attention for long range deps", blocks=blocks)
+    monkeypatch.setattr(fitz, "open", lambda *a, **k: _FakeDoc([page]))
+
+    parsed = parse_pdf(tmp_path / "x.pdf", PaperMeta(title="paper"), tmp_path, extract_figures=False)
+    joined = " ".join(b.text for b in parsed.blocks)
+    assert "attention" in joined and "atten- tion" not in joined  # hyphenated line-break merged
+    assert "longrange" in joined                                  # second hyphenation merged
+    assert parsed.meta.title == "A Great Title"                   # 'paper' placeholder -> inferred title

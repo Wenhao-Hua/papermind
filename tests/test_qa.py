@@ -212,6 +212,37 @@ def test_usage_accumulation_thread_safe():
     assert client.usage.completion_tokens == n_threads * per * 5
 
 
+# --------------------------------------------------------------------------- #
+# PaperIndex cache invalidation (the no-faiss early-return branches of _try_load)
+# --------------------------------------------------------------------------- #
+def test_paper_index_try_load_missing_files_returns_none(tmp_path):
+    from papermind.qa.index import PaperIndex
+
+    assert PaperIndex._try_load(tmp_path, "model-x") is None  # nothing cached -> rebuild
+
+
+def test_paper_index_try_load_rejects_embed_model_mismatch(tmp_path):
+    from papermind.qa.index import PaperIndex
+
+    (tmp_path / "index.faiss").write_bytes(b"x")
+    (tmp_path / "chunks.json").write_text("[]", encoding="utf-8")
+    (tmp_path / "index_meta.json").write_text(
+        '{"embed_model": "old-model", "dim": 3, "n": 0}', encoding="utf-8"
+    )
+    # embedding model changed since the cache was built -> must invalidate and rebuild
+    assert PaperIndex._try_load(tmp_path, "new-model") is None
+
+
+def test_paper_index_try_load_corrupt_meta_returns_none(tmp_path):
+    from papermind.qa.index import PaperIndex
+
+    (tmp_path / "index.faiss").write_bytes(b"x")
+    (tmp_path / "chunks.json").write_text("[]", encoding="utf-8")
+    (tmp_path / "index_meta.json").write_text("{not valid json", encoding="utf-8")
+    # a corrupt cache must degrade to a rebuild, not crash
+    assert PaperIndex._try_load(tmp_path, "m") is None
+
+
 class _ImageClient:
     def __init__(self, data=b"\x89PNG\r\nfake"):
         self.data = data

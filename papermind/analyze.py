@@ -245,13 +245,22 @@ def _long_paper_digest(parsed: ParsedPaper, client, budget: int, notice=None) ->
     if notice:
         notice(f"长论文（约 {len(parsed.full_text) // 1000}k 字）：分 {len(windows)} 段提炼关键内容…")
 
-    digests: List[str] = []
-    for label, text in windows:
+    fallback_len = budget // len(windows)
+
+    def _condense(window):
+        label, text = window
         try:
             piece = client.complete(CONDENSE_SYSTEM, condense_user(label, text), max_tokens=1500)
-        except Exception:
+        except Exception:  # noqa: BLE001 - fall back to a verbatim slice for just this window
             piece = ""
-        digests.append(piece.strip() if piece and piece.strip() else text[: budget // len(windows)])
+        return piece.strip() if piece and piece.strip() else text[:fallback_len]
+
+    # Windows are independent -> condense them concurrently (network-bound). map() keeps order,
+    # so the digest stays in reading order. LLMClient.usage is lock-protected for concurrent use.
+    from concurrent.futures import ThreadPoolExecutor
+
+    with ThreadPoolExecutor(max_workers=min(len(windows), 8)) as pool:
+        digests = list(pool.map(_condense, windows))
     digest = "\n\n".join(d for d in digests if d)
     return digest[: int(budget * 1.3)] if digest else _aggregate_sections(parsed, budget)
 

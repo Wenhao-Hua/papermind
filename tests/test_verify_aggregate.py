@@ -85,11 +85,15 @@ def _long_parsed(filler_chars: int) -> ParsedPaper:
 
 class _CondenseClient:
     def __init__(self):
+        import threading
+
         self.calls = 0
+        self._lock = threading.Lock()  # windows are now condensed concurrently
 
     def complete(self, system, user, max_tokens=None):
-        self.calls += 1
-        return f"[DIGEST{self.calls}] extracted key sentences"
+        with self._lock:
+            self.calls += 1
+        return "[DIGEST] extracted key sentences"  # marker is order-independent (parallel map)
 
 
 def test_long_paper_uses_extractive_map_when_client_given():
@@ -99,7 +103,7 @@ def test_long_paper_uses_extractive_map_when_client_given():
     client = _CondenseClient()
     ctx = _build_context(parsed, client, budget=1500)
     assert client.calls >= 1  # the map step actually ran
-    assert "DIGEST1" in ctx
+    assert "[DIGEST]" in ctx
 
 
 def test_long_paper_falls_back_to_sampling_without_client():
