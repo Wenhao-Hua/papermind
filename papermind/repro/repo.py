@@ -18,7 +18,13 @@ from typing import List, Optional, Tuple
 
 from papermind.output.schema import RepoRef
 
-_GH_RE = re.compile(r"https?://github\.com/([A-Za-z0-9_.-]+)/([A-Za-z0-9_.-]+)")
+# Match github.com/owner/repo even when PDF extraction mangled the printed URL:
+# the scheme is often lost/garbled ("p://www.github.com/...") so we don't require it,
+# and line-wrapping can put whitespace around the path separators.
+_GH_RE = re.compile(r"github\.com\s*/\s*([A-Za-z0-9_.-]+)\s*/\s*([A-Za-z0-9_.-]+)", re.IGNORECASE)
+# PDF text often renders "fl"/"fi" etc. as single ligature glyphs (tensorﬂow), which
+# break the character class above — fold them back before scanning.
+_LIGATURES = str.maketrans({"ﬁ": "fi", "ﬂ": "fl", "ﬀ": "ff", "ﬃ": "ffi", "ﬄ": "ffl", "ﬅ": "ft", "ﬆ": "st"})
 # github.com paths that are not user/repo
 _SKIP_OWNERS = {
     "blog", "about", "features", "topics", "sponsors", "marketplace", "apps",
@@ -83,12 +89,13 @@ def find_repo_url(text: str, abstract: Optional[str], arxiv_id: Optional[str]) -
 
 
 def _scan_github(text: str) -> Optional[str]:
-    for m in _GH_RE.finditer(text or ""):
-        owner = m.group(1)
-        repo = m.group(2).rstrip(".")
+    text = (text or "").translate(_LIGATURES)  # fold ligatures (tensorﬂow -> tensorflow)
+    for m in _GH_RE.finditer(text):
+        owner = m.group(1).strip("-.")
+        repo = m.group(2).strip().rstrip(".")
         if repo.lower().endswith(".git"):
             repo = repo[:-4]
-        if owner.lower() in _SKIP_OWNERS or repo.lower() in _SKIP_REPOS:
+        if not owner or not repo or owner.lower() in _SKIP_OWNERS or repo.lower() in _SKIP_REPOS:
             continue
         return f"https://github.com/{owner}/{repo}"
     return None

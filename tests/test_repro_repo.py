@@ -18,6 +18,19 @@ def test_scan_github_finds_skips_and_cleans():
     assert R._scan_github("no links here") is None
 
 
+def test_scan_github_recovers_pdf_mangled_urls():
+    # PDF text extraction mangles printed URLs; the scanner must still recover owner/repo.
+    # ligature glyph: "tensorﬂow" (single ﬂ char) -> tensorflow
+    assert R._scan_github("https://github.com/tensorﬂow/tensor2tensor") == \
+        "https://github.com/tensorflow/tensor2tensor"
+    # line-wrap: a newline lands right after the host slash
+    assert R._scan_github("code at https://github.com/\ngoogle-research/bert here") == \
+        "https://github.com/google-research/bert"
+    # mangled scheme + www prefix ("htt" dropped by extraction)
+    assert R._scan_github("p://www.github.com/goodfeli/adversarial") == \
+        "https://github.com/goodfeli/adversarial"
+
+
 def test_find_repo_url_prefers_paper_link_without_network():
     # A link in the text wins and short-circuits before any PapersWithCode call.
     url, source, official = R.find_repo_url(
