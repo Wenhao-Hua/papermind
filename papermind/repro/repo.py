@@ -88,16 +88,23 @@ def find_repo_url(text: str, abstract: Optional[str], arxiv_id: Optional[str]) -
     return None, "", False
 
 
+def _owner_repo(m) -> Optional[Tuple[str, str]]:
+    """Clean a ``_GH_RE`` match into (owner, repo), or None if it's not a real repo path."""
+    owner = m.group(1).strip("-.")
+    repo = m.group(2).strip().rstrip(".")
+    if repo.lower().endswith(".git"):
+        repo = repo[:-4]
+    if not owner or not repo or owner.lower() in _SKIP_OWNERS or repo.lower() in _SKIP_REPOS:
+        return None
+    return owner, repo
+
+
 def _scan_github(text: str) -> Optional[str]:
     text = (text or "").translate(_LIGATURES)  # fold ligatures (tensorﬂow -> tensorflow)
     for m in _GH_RE.finditer(text):
-        owner = m.group(1).strip("-.")
-        repo = m.group(2).strip().rstrip(".")
-        if repo.lower().endswith(".git"):
-            repo = repo[:-4]
-        if not owner or not repo or owner.lower() in _SKIP_OWNERS or repo.lower() in _SKIP_REPOS:
-            continue
-        return f"https://github.com/{owner}/{repo}"
+        pair = _owner_repo(m)
+        if pair:
+            return f"https://github.com/{pair[0]}/{pair[1]}"
     return None
 
 
@@ -134,10 +141,11 @@ def _pwc_repo(arxiv_id: Optional[str]) -> Tuple[Optional[str], bool]:
 # --------------------------------------------------------------------------- #
 def inspect_repo(url: str, source: str) -> RepoRef:
     ref = RepoRef(url=url, source=source)
-    m = _GH_RE.match(url)
-    if not m:
+    m = _GH_RE.search(url)  # .match anchors at pos 0 -> never matches an "https://..." URL
+    pair = _owner_repo(m) if m else None
+    if pair is None:
         return ref
-    owner, repo = m.group(1), m.group(2)
+    owner, repo = pair
     api = f"https://api.github.com/repos/{owner}/{repo}"
 
     r = _http_get(api, headers=_gh_headers())

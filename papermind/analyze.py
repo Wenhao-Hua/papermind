@@ -88,7 +88,7 @@ def analyze(
             "reproduction": lambda: m_reproduction.run(parsed, client, context),
         }
         selected = [m for m in ALL_MODULES if m in modules]
-        results = _run_modules(selected, runners, advance)
+        results = _run_modules(selected, runners, advance, notice=notice)
 
         if "contributions" in results:
             report.contributions = results["contributions"]
@@ -142,22 +142,46 @@ def analyze(
     return report
 
 
-def _run_modules(selected: List[str], runners: dict, advance) -> dict:
-    """Run the selected analysis modules concurrently (or serially if just one)."""
+_MODULE_LABELS = {
+    "contributions": "核心贡献", "technical": "技术细节",
+    "connections": "关联工作", "reproduction": "复现指南",
+}
+
+
+def _run_modules(selected: List[str], runners: dict, advance, notice=None) -> dict:
+    """Run the selected analysis modules concurrently (or serially if just one).
+
+    A module that fails (e.g. the model returns JSON we can't repair) is skipped —
+    its section stays at its default (empty) and the rest of the report is still
+    produced. One bad module must not take down the whole analysis.
+    """
     results: dict = {}
+
+    def _safe(name: str):
+        try:
+            return runners[name]()
+        except Exception as exc:  # noqa: BLE001 - degrade gracefully, never crash the report
+            if notice:
+                notice(f"「{_MODULE_LABELS.get(name, name)}」模块分析失败，已跳过：{exc}")
+            return None
+
     if len(selected) <= 1:
         for name in selected:
-            results[name] = runners[name]()
+            result = _safe(name)
+            if result is not None:
+                results[name] = result
             advance(name)
         return results
 
     from concurrent.futures import ThreadPoolExecutor, as_completed
 
     with ThreadPoolExecutor(max_workers=len(selected)) as pool:
-        futures = {pool.submit(runners[name]): name for name in selected}
+        futures = {pool.submit(_safe, name): name for name in selected}
         for future in as_completed(futures):  # iterated on the main thread
             name = futures[future]
-            results[name] = future.result()  # propagates module errors as in serial mode
+            result = future.result()  # _safe swallowed any module error -> won't raise
+            if result is not None:
+                results[name] = result
             advance(name)
     return results
 

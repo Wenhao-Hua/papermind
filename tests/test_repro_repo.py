@@ -58,6 +58,46 @@ def test_extract_run_commands_is_precise():
     assert all("python is required" not in c and "pip install" not in c for c in cmds)
 
 
+def test_inspect_repo_parses_https_url_and_fills_fields(monkeypatch):
+    # Regression: inspect_repo used _GH_RE.match(url), which anchors at pos 0 and
+    # so NEVER matched an "https://..." URL -> the GitHub API was never called and
+    # every repo silently came back empty (bare git clone). It must now parse the
+    # URL and populate the fields from the API.
+    import base64 as b64
+
+    readme = b64.b64encode(b"## Usage\n```\npython train.py --config a.yaml\n```\n").decode()
+    calls = []
+
+    def fake_get(url, headers=None):
+        calls.append(url)
+        if url.endswith("/contents"):
+            return SimpleNamespace(json=lambda: [{"name": "environment.yml"}, {"name": "requirements.txt"}])
+        if url.endswith("/readme"):
+            return SimpleNamespace(json=lambda: {"encoding": "base64", "content": readme})
+        return SimpleNamespace(json=lambda: {
+            "stargazers_count": 4321, "description": "d", "default_branch": "trunk",
+            "language": "Python", "license": {"spdx_id": "MIT"},
+        })
+
+    monkeypatch.setattr(R, "_http_get", fake_get)
+    ref = R.inspect_repo("https://github.com/HazyResearch/flash-attention", "论文原文链接")
+
+    assert any("api.github.com/repos/HazyResearch/flash-attention" in u for u in calls)  # API actually hit
+    assert ref.stars == 4321 and ref.default_branch == "trunk" and ref.license == "MIT"
+    assert ref.dep_file == "requirements.txt"  # preferred over environment.yml
+    assert ref.install_commands == ["pip install -r requirements.txt"]
+    assert "python train.py --config a.yaml" in ref.run_commands
+
+
+def test_inspect_repo_non_github_url_returns_bare_ref(monkeypatch):
+    def _boom(*a, **k):
+        raise AssertionError("a non-github URL must not touch the network")
+
+    monkeypatch.setattr(R, "_http_get", _boom)
+    ref = R.inspect_repo("https://example.com/not-a-repo", "x")
+    assert ref.url == "https://example.com/not-a-repo" and ref.stars is None
+
+
 def test_find_and_inspect_repo_offline_returns_none():
     # No link in text and no arxiv id -> nothing to look up, no network touched.
     parsed = SimpleNamespace(full_text="a paper with no code link", meta=PaperMeta(title="X"))
