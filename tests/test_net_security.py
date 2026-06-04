@@ -74,6 +74,63 @@ def test_allows_public_host(monkeypatch):
 
 
 # --------------------------------------------------------------------------- #
+# safe_stream — the redirect-revalidation loop (the *live* SSRF defense)
+# --------------------------------------------------------------------------- #
+def _fake_httpx_always_redirects(monkeypatch, location, base="https://public.example.com/"):
+    """Patch httpx.Client so every send() returns a 302 to ``location``."""
+    import httpx
+
+    class _Resp:
+        is_redirect = True
+        url = httpx.URL(base)
+        headers = {"location": location}
+
+        def close(self):
+            pass
+
+    class _Client:
+        def __init__(self, **k):
+            pass
+
+        def __enter__(self):
+            return self
+
+        def __exit__(self, *a):
+            return False
+
+        def build_request(self, *a, **k):
+            return None
+
+        def send(self, *a, **k):
+            return _Resp()
+
+    monkeypatch.setattr(httpx, "Client", _Client)
+
+
+def test_safe_stream_revalidates_redirect_to_internal_host(monkeypatch):
+    # The canonical SSRF bypass: a public URL that 302-redirects to an internal host.
+    # The new Location must be re-validated and blocked, not followed.
+    def _resolve(host, port, *a, **k):
+        ip = "127.0.0.1" if "internal" in host else "93.184.216.34"
+        return [(0, 0, 0, "", (ip, port))]
+
+    monkeypatch.setattr(net.socket, "getaddrinfo", _resolve)
+    _fake_httpx_always_redirects(monkeypatch, "https://evil.internal/secret")
+    with pytest.raises(net.BlockedURLError):
+        with net.safe_stream("GET", "https://public.example.com/"):
+            pass
+
+
+def test_safe_stream_caps_redirects(monkeypatch):
+    # An endless (public) redirect loop must hit the max_redirects cap, not spin forever.
+    monkeypatch.setattr(net.socket, "getaddrinfo", _fake_resolve("93.184.216.34"))
+    _fake_httpx_always_redirects(monkeypatch, "https://public.example.com/next")
+    with pytest.raises(net.BlockedURLError):
+        with net.safe_stream("GET", "https://public.example.com/", max_redirects=2):
+            pass
+
+
+# --------------------------------------------------------------------------- #
 # Upload sanitization (web._resolve_upload)
 # --------------------------------------------------------------------------- #
 class _FakeUpload:

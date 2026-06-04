@@ -391,3 +391,48 @@ def test_figures_digest_only_with_image_filters_caption_only():
     assert "Figure 1" in parsed.figures_digest() and "Figure 2" in parsed.figures_digest()
     only = parsed.figures_digest(only_with_image=True)
     assert "Figure 1" in only and "Figure 2" not in only  # caption-only figure excluded from matching
+
+
+# --------------------------------------------------------------------------- #
+# _resolve_url download path + _title_from_pdf URL-filename fallback
+# --------------------------------------------------------------------------- #
+def test_resolve_url_downloads_and_builds_resolved_source(monkeypatch, tmp_path):
+    monkeypatch.setenv("PAPERMIND_HOME", str(tmp_path))
+
+    from papermind.config import load_config
+    from papermind.parser import arxiv as ax
+
+    monkeypatch.setattr(ax, "_resolve_pdf_url", lambda url: url)  # already a direct PDF
+    monkeypatch.setattr(ax, "_download_pdf", lambda url, dest: dest.write_bytes(b"%PDF-1.5 body"))
+    monkeypatch.setattr(ax, "_title_from_pdf", lambda pdf_path, url: "Some Paper")
+
+    resolved = ax._resolve_url("https://host.org/paper.pdf", load_config())
+    assert resolved.cache_key.startswith("url-")
+    assert resolved.pdf_path.read_bytes().startswith(b"%PDF")
+    assert resolved.meta.title == "Some Paper"
+
+
+def test_resolve_url_rejects_and_unlinks_non_pdf(monkeypatch, tmp_path):
+    monkeypatch.setenv("PAPERMIND_HOME", str(tmp_path))
+
+    from papermind.config import load_config
+    from papermind.errors import SourceError
+    from papermind.parser import arxiv as ax
+
+    monkeypatch.setattr(ax, "_resolve_pdf_url", lambda url: url)
+    monkeypatch.setattr(ax, "_download_pdf", lambda url, dest: dest.write_bytes(b"<html>not a pdf</html>"))
+    with pytest.raises(SourceError):
+        ax._resolve_url("https://host.org/page", load_config())  # non-PDF -> rejected (file unlinked)
+
+
+def test_title_from_pdf_falls_back_to_url_filename(monkeypatch, tmp_path):
+    import fitz
+
+    from papermind.parser import arxiv as ax
+
+    def _boom(*a, **k):
+        raise RuntimeError("no fitz")
+
+    monkeypatch.setattr(fitz, "open", _boom)  # PDF-based inference fails -> URL filename fallback
+    title = ax._title_from_pdf(tmp_path / "x.pdf", "https://h.org/papers/My_Great-Paper.pdf")
+    assert title == "My Great Paper"  # unquote + strip .pdf + (_,-) -> spaces

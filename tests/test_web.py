@@ -48,6 +48,23 @@ def test_framework_body_is_view_only_with_download():
     assert "/framework/edit" not in html and "fw-save" not in html  # no editing affordances
 
 
+def test_framework_demo_route_renders_cached_spec(monkeypatch, tmp_path):
+    monkeypatch.setenv("PAPERMIND_HOME", str(tmp_path))
+    from papermind.config import load_config
+    from papermind.figures.framework import FNode, FrameworkSpec, _auto_layout, save_framework_spec
+
+    cache_dir = load_config().paper_cache("1706.03762")  # cache key for the arXiv URL below
+    save_framework_spec(cache_dir, _auto_layout(FrameworkSpec(title="Attn", nodes=[FNode(id="a", label="输入序列")])))
+    r = TestClient(create_app(live=False)).post("/framework", data={"source": "https://arxiv.org/abs/1706.03762"})
+    assert r.status_code == 200 and "<svg" in r.text and "输入序列" in r.text and "下载 SVG" in r.text
+
+
+def test_framework_demo_route_uncached_shows_note(monkeypatch, tmp_path):
+    monkeypatch.setenv("PAPERMIND_HOME", str(tmp_path))
+    r = TestClient(create_app(live=False)).post("/framework", data={"source": "https://arxiv.org/abs/2401.00001"})
+    assert r.status_code == 200 and "演示模式" in r.text  # no cached spec -> the demo note, not a crash
+
+
 def test_demo_route_renders_offline_report():
     r = TestClient(create_app()).get("/demo")
     assert r.status_code == 200

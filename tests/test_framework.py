@@ -90,3 +90,64 @@ def test_auto_layout_positions():
 def test_wrap_breaks_long_text():
     lines = _wrap("word " * 40, 120, 12.0)
     assert len(lines) > 1 and all(lines)
+
+
+# --------------------------------------------------------------------------- #
+# LLM generation + persistence
+# --------------------------------------------------------------------------- #
+class _FakeJSONClient:
+    def __init__(self, value=None, raises=None):
+        self._value, self._raises = value, raises
+
+    def complete_json(self, system, user, max_tokens=4000):
+        if self._raises is not None:
+            raise self._raises
+        return self._value
+
+
+def test_generate_framework_builds_and_lays_out():
+    from papermind.figures.framework import generate_framework
+
+    client = _FakeJSONClient({"title": "T", "nodes": [{"id": "a", "label": "In", "kind": "io"},
+                                                      {"id": "b", "label": "Stage"}],
+                              "edges": [{"src": "a", "dst": "b"}]})
+    spec = generate_framework("ctx", client)
+    assert spec is not None and spec.title == "T"
+    assert [n.id for n in spec.nodes] == ["a", "b"]
+    assert all(n.w and n.x for n in spec.nodes)  # auto-layout assigned widths + positions
+
+
+def test_generate_framework_none_on_garbage():
+    from papermind.figures.framework import generate_framework
+
+    notices = []
+    assert generate_framework("ctx", _FakeJSONClient(["not", "a", "spec"]), on_notice=notices.append) is None
+    assert notices  # the user is told it failed
+
+
+def test_generate_framework_none_on_llm_error():
+    from papermind.errors import LLMError
+    from papermind.figures.framework import generate_framework
+
+    notices = []
+    assert generate_framework("ctx", _FakeJSONClient(raises=LLMError("boom")), on_notice=notices.append) is None
+    assert notices
+
+
+def test_framework_spec_persistence_roundtrip(tmp_path):
+    from papermind.figures.framework import load_framework_spec, save_framework_spec
+
+    spec = _sample()
+    save_framework_spec(tmp_path, spec)
+    loaded = load_framework_spec(tmp_path)
+    assert loaded is not None
+    assert loaded.title == spec.title and [n.id for n in loaded.nodes] == [n.id for n in spec.nodes]
+    assert abs(loaded.nodes[0].x - spec.nodes[0].x) < 0.01  # dragged/laid-out positions preserved
+
+
+def test_framework_spec_load_missing_and_corrupt(tmp_path):
+    from papermind.figures.framework import _framework_path, load_framework_spec
+
+    assert load_framework_spec(tmp_path) is None  # no file yet
+    _framework_path(tmp_path).write_text("{not valid json", encoding="utf-8")
+    assert load_framework_spec(tmp_path) is None  # corrupt -> None so the caller regenerates

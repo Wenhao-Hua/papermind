@@ -257,9 +257,10 @@ def _resolve_url(url: str, config: Config) -> ResolvedSource:
     if not pdf_path.exists() or pdf_path.stat().st_size == 0:
         _download_pdf(_resolve_pdf_url(url), pdf_path)
     with open(pdf_path, "rb") as fh:
-        if not fh.read(5).startswith(b"%PDF"):
-            pdf_path.unlink(missing_ok=True)
-            raise SourceError(f"{url} 看起来不是 PDF（可能是网页）。请提供 PDF 直链或 arXiv 链接。")
+        is_pdf = fh.read(5).startswith(b"%PDF")
+    if not is_pdf:  # unlink AFTER closing the handle — Windows can't delete an open file
+        pdf_path.unlink(missing_ok=True)
+        raise SourceError(f"{url} 看起来不是 PDF（可能是网页）。请提供 PDF 直链或 arXiv 链接。")
 
     meta = PaperMeta(title=_title_from_pdf(pdf_path, url), pdf_url=url)
     return ResolvedSource(meta=meta, pdf_path=pdf_path, cache_key=cache_key, cache_dir=cache_dir)
