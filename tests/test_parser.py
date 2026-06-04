@@ -71,16 +71,79 @@ def test_resolve_doi_routes_through_doi_org(monkeypatch):
     assert captured["url"] == "https://doi.org/10.1145/3292500.3330701"
 
 
-def test_resolve_title_searches_arxiv(monkeypatch):
+def test_openalex_parses_top_match(monkeypatch):
+    import httpx
+
+    from papermind.parser import arxiv as ax
+
+    class _R:
+        def raise_for_status(self):
+            pass
+
+        def json(self):
+            return {"results": [{"title": "LoRA", "best_oa_location": {"pdf_url": "https://arxiv.org/pdf/2106.09685"},
+                                 "open_access": {"oa_url": "https://other"}, "doi": "https://doi.org/10.48550/arxiv.2106.09685"}]}
+
+    monkeypatch.setattr(httpx, "get", lambda *a, **k: _R())
+    hit = ax._search_openalex("lora")
+    assert hit["pdf"] == "https://arxiv.org/pdf/2106.09685"
+    assert hit["doi"] == "https://doi.org/10.48550/arxiv.2106.09685"
+
+
+def test_openalex_returns_none_on_error(monkeypatch):
+    import httpx
+
+    from papermind.parser import arxiv as ax
+
+    def _boom(*a, **k):
+        raise httpx.HTTPError("429")
+
+    monkeypatch.setattr(httpx, "get", _boom)
+    assert ax._search_openalex("anything") is None
+
+
+def test_resolve_title_uses_open_pdf(monkeypatch):
+    from papermind.config import Config
+    from papermind.parser import arxiv as ax
+
+    seen = {}
+
+    def _fake_url(url, config):
+        seen["url"] = url
+        return "PDF"
+
+    monkeypatch.setattr(ax, "_search_openalex",
+                        lambda q: {"title": "t", "pdf": "https://arxiv.org/pdf/2106.09685", "doi": "https://doi.org/10.x/y"})
+    monkeypatch.setattr(ax, "_resolve_url", _fake_url)
+    assert ax.resolve("Low-Rank Adaptation", config=Config()) == "PDF"
+    assert seen["url"] == "https://arxiv.org/pdf/2106.09685"  # open PDF preferred over the DOI
+
+
+def test_resolve_title_uses_doi_when_no_open_pdf(monkeypatch):
+    from papermind.config import Config
+    from papermind.parser import arxiv as ax
+
+    seen = {}
+
+    def _fake_url(url, config):
+        seen["url"] = url
+        return "DOI"
+
+    monkeypatch.setattr(ax, "_search_openalex", lambda q: {"title": "t", "pdf": None, "doi": "https://doi.org/10.1109/x"})
+    monkeypatch.setattr(ax, "_resolve_url", _fake_url)
+    assert ax.resolve("Segment Anything", config=Config()) == "DOI"
+    assert seen["url"] == "https://doi.org/10.1109/x"
+
+
+def test_resolve_title_falls_back_to_arxiv_search(monkeypatch):
     from papermind.config import Config
     from papermind.output.schema import PaperMeta
     from papermind.parser import arxiv as ax
 
-    monkeypatch.setattr(
-        ax, "search_arxiv", lambda q, max_results=1: [PaperMeta(title="Attention", arxiv_id="1706.03762")]
-    )
+    monkeypatch.setattr(ax, "_search_openalex", lambda q: None)  # OpenAlex down / no match
+    monkeypatch.setattr(ax, "search_arxiv", lambda q, max_results=1: [PaperMeta(title="t", arxiv_id="2106.09685")])
     monkeypatch.setattr(ax, "_resolve_arxiv", lambda aid, config: f"ARXIV:{aid}")
-    assert ax.resolve("Attention is all you need", config=Config()) == "ARXIV:1706.03762"
+    assert ax.resolve("Low-Rank Adaptation", config=Config()) == "ARXIV:2106.09685"
 
 
 def test_resolve_title_no_match_raises(monkeypatch):
@@ -88,6 +151,7 @@ def test_resolve_title_no_match_raises(monkeypatch):
     from papermind.errors import SourceError
     from papermind.parser import arxiv as ax
 
+    monkeypatch.setattr(ax, "_search_openalex", lambda q: None)
     monkeypatch.setattr(ax, "search_arxiv", lambda q, max_results=1: [])
     with pytest.raises(SourceError):
         ax.resolve("an obscure paper that does not exist anywhere", config=Config())

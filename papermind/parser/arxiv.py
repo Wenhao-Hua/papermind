@@ -146,6 +146,51 @@ def _is_existing_path(source: str) -> bool:
         return False
 
 
+OPENALEX_API = "https://api.openalex.org/works"
+
+
+def _search_openalex(query: str) -> Optional[dict]:
+    """Top title match from OpenAlex (free, keyless, lenient — unlike the arXiv and
+    Semantic Scholar search APIs, which throttle cloud IPs hard). Returns
+    ``{title, pdf, doi}`` (any value may be None; ``doi`` is a full doi.org URL), or
+    None if unreachable / rate-limited / no match."""
+    import httpx
+
+    try:
+        resp = httpx.get(
+            OPENALEX_API,
+            params={"search": query, "per_page": 1, "mailto": "papermind@try2026.cn"},
+            headers={"User-Agent": USER_AGENT},
+            timeout=20.0,
+            follow_redirects=True,
+        )
+        resp.raise_for_status()
+        results = resp.json().get("results") or []
+    except (httpx.HTTPError, ValueError):
+        return None
+    if not results:
+        return None
+    work = results[0]
+    pdf = (work.get("best_oa_location") or {}).get("pdf_url") or (work.get("open_access") or {}).get("oa_url")
+    return {"title": work.get("title"), "pdf": pdf, "doi": work.get("doi")}
+
+
+def _resolve_title(query: str, config: Config) -> ResolvedSource:
+    """Find a paper by title and resolve it. OpenAlex first (free, reliable, covers
+    non-arXiv, hands back the open-access PDF); the arXiv search API is the fallback.
+    Prefer the free open-access PDF over the (possibly paywalled) DOI."""
+    hit = _search_openalex(query)
+    if hit:
+        if hit.get("pdf"):
+            return _resolve_url(hit["pdf"], config)
+        if hit.get("doi"):  # already a full https://doi.org/... URL
+            return _resolve_url(hit["doi"], config)
+    results = search_arxiv(query, max_results=1)  # fallback: arXiv search API
+    if results and results[0].arxiv_id:
+        return _resolve_arxiv(results[0].arxiv_id, config)
+    raise SourceError(f"没找到匹配「{query}」的论文。请换个更准确的标题，或粘贴论文链接 / DOI。")
+
+
 def resolve(source: str, config: Optional[Config] = None) -> ResolvedSource:
     """Resolve a source into a local PDF + best-effort metadata.
 
@@ -170,13 +215,8 @@ def resolve(source: str, config: Optional[Config] = None) -> ResolvedSource:
         return _resolve_url(source, config)
     if _is_existing_path(source):
         return _resolve_local(source, config)
-    if _looks_like_title(source):  # not an id/URL/DOI/path -> search arXiv by title
-        results = search_arxiv(source, max_results=1)
-        if results and results[0].arxiv_id:
-            return _resolve_arxiv(results[0].arxiv_id, config)
-        raise SourceError(
-            f"没在 arXiv 找到匹配「{source}」的论文。请换个更准确的标题，或粘贴论文链接 / DOI。"
-        )
+    if _looks_like_title(source):  # not an id/URL/DOI/path -> find the paper by title
+        return _resolve_title(source, config)
     raise SourceError(
         f"无法识别来源 {source!r}。请粘贴论文链接（arXiv / 论文页面 / PDF / DOI）、论文标题，或本地 PDF 路径。"
     )
