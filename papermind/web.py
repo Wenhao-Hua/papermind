@@ -67,6 +67,7 @@ _TABS = [
     ("/", "分析"),
     ("/ask", "问答"),
     ("/summary", "速读"),
+    ("/framework", "框架图"),
     ("/compare", "对比"),
     ("/reproduce", "复现"),
     ("/search", "搜索"),
@@ -465,6 +466,60 @@ def create_app(live: bool = False, rate_per_ip: int = 8, rate_global: int = 300,
 
         return _job_page(_start_job(work), live, "/reproduce")
 
+    # -- framework diagram ---------------------------------------------------- #
+    @app.get("/framework", response_class=HTMLResponse)
+    def framework_form():
+        return _page("/framework", _framework_form(live), live)
+
+    @app.post("/framework", response_class=HTMLResponse)
+    def framework_route(request: Request, source: str = Form(...), model: str = Form("")):
+        if not live:
+            spec = _demo_framework(source)
+            if spec is not None:
+                return _page("/framework", _framework_body(spec, source.strip()) + _framework_form(live), live)
+            return _page("/framework", _framework_form(live, "演示模式仅展示已缓存论文的框架图。请以 --live 启动。"), live)
+        blocked = gate(request)
+        if blocked:
+            return _page("/framework", _framework_form(live, blocked), live)
+        src = source.strip()
+
+        def work(jid):
+            spec = _build_framework(src, model, jid, no_cache)
+            return _page("/framework", _framework_body(spec, src) + _framework_form(live), live)
+
+        return _job_page(_start_job(work), live, "/framework")
+
+    @app.post("/framework/edit", response_class=HTMLResponse)
+    def framework_edit_route(request: Request, source: str = Form(...), instruction: str = Form(""), model: str = Form("")):
+        if not live:
+            return _page("/framework", _framework_form(live, "演示模式不支持改图（需调用模型）。请以 --live 启动。"), live)
+        blocked = gate(request)
+        if blocked:
+            return _page("/framework", _framework_form(live, blocked), live)
+        src, instr = source.strip(), (instruction or "").strip()
+
+        def work(jid):
+            from papermind.config import load_config
+            from papermind.figures.framework import edit_framework, load_framework_spec, save_framework_spec
+            from papermind.llm.base import LLMClient
+            from papermind.parser.arxiv import resolve
+
+            resolved = resolve(src, load_config())
+            spec = load_framework_spec(resolved.cache_dir)
+            if spec is None:
+                raise PaperMindError("请先生成这篇论文的框架图。")
+            if not instr:
+                return _page("/framework", _framework_body(spec, src) + _framework_form(live), live)
+            _set_job(jid, step="按指令修改框架…")
+            new = edit_framework(spec, instr, LLMClient(model=(model or None)))
+            if new is None:
+                raise PaperMindError("改图失败，请换个说法重试。")
+            new.title = new.title or spec.title
+            save_framework_spec(resolved.cache_dir, new)
+            return _page("/framework", _framework_body(new, src) + _framework_form(live), live)
+
+        return _job_page(_start_job(work), live, "/framework")
+
     # -- search (no model calls -> always available) ------------------------- #
     @app.get("/search", response_class=HTMLResponse)
     def search_form():
@@ -663,6 +718,8 @@ button:active{transform:translateY(0)}
 .ex a{display:inline-block;margin-left:6px;padding:4px 12px;border:1px solid var(--line);border-radius:999px;
   text-decoration:none;color:var(--accent);transition:transform .15s,background .15s,border-color .15s}
 .ex a:hover{background:var(--accent-soft);border-color:var(--accent);transform:translateY(-1px)}
+.fw-canvas{overflow:auto;background:var(--surface);border:1px solid var(--line);border-radius:var(--rc);padding:10px}
+.fw-canvas svg{max-width:100%;height:auto;display:block;margin:0 auto}
 .chat .turn{padding:20px 0;border-top:1px solid var(--line)}
 .chat .turn:first-child{padding-top:0;border-top:0}
 .q{font-weight:600;margin:0 0 12px}
@@ -834,6 +891,78 @@ def _ask_form(live: bool, error: str = "") -> str:
         "<select name='mode'><option value='balanced'>balanced</option>"
         "<option value='strict'>strict</option><option value='explore'>explore</option></select>"
         "<button>提问</button></form></section>"
+    )
+
+
+def _build_framework(src: str, model: str, jid: str, no_cache: bool):
+    """Resolve a paper and return its framework spec, generating + caching it on first
+    request (cheap: one model call on top of parse). Reused by the /framework job."""
+    from papermind.analyze import _build_context
+    from papermind.config import load_config
+    from papermind.errors import PaperMindError
+    from papermind.figures.framework import generate_framework, load_framework_spec, save_framework_spec
+    from papermind.llm.base import LLMClient
+    from papermind.parser.arxiv import resolve
+    from papermind.parser.pdf import parse_pdf
+
+    resolved = resolve(src, load_config())
+    spec = None if no_cache else load_framework_spec(resolved.cache_dir)
+    if spec is None:
+        _set_job(jid, step="解析论文…")
+        parsed = parse_pdf(resolved.pdf_path, resolved.meta, resolved.cache_dir, extract_figures=False)
+        _set_job(jid, step="生成框架图…")
+        spec = generate_framework(_build_context(parsed), LLMClient(model=(model or None)))
+        if spec is None:
+            raise PaperMindError("框架图生成失败，请重试或换一篇论文。")
+        spec.title = spec.title or (parsed.meta.title or "")
+        save_framework_spec(resolved.cache_dir, spec)
+    return spec
+
+
+def _demo_framework(source: str):
+    """A cached framework spec WITHOUT any network (demo mode)."""
+    from papermind.figures.framework import load_framework_spec
+    from papermind.parser.arxiv import cache_dir_for
+
+    cache_dir = cache_dir_for(source)
+    return load_framework_spec(cache_dir) if cache_dir else None
+
+
+def _framework_form(live: bool, error: str = "") -> str:
+    note = "" if live else "<p class='lead'>演示模式：仅展示已缓存论文的框架图。请以 <code>--live</code> 启动。</p>"
+    return (
+        "<section class='panel'><h2>论文框架图</h2>"
+        "<p class='lead'>自动生成整篇方法的端到端框架图（含论文未画出的推断步骤），可对话修改、可拖拽编辑。</p>"
+        f"{note}{_err(error)}"
+        "<form method='post' action='/framework'>"
+        "<label>论文 <span class='hint'>链接 / DOI / 标题</span></label>"
+        "<input name='source' placeholder='arXiv / 论文页面 / PDF / DOI / 标题' autofocus>"
+        "<button>生成框架图</button></form></section>"
+    )
+
+
+def _framework_body(spec, source: str) -> str:
+    import json
+
+    from papermind.figures.framework import render_framework_svg
+
+    svg = render_framework_svg(spec)
+    # JSON embedded for the visual editor; \u-escape the HTML-significant chars so the
+    # <script> block can't be broken out of (entities aren't decoded inside it).
+    spec_json = (
+        json.dumps(spec.model_dump(), ensure_ascii=False)
+        .replace("&", "\\u0026").replace("<", "\\u003c").replace(">", "\\u003e")
+    )
+    return (
+        "<section class='panel'><h2>框架图</h2>"
+        "<p class='lead'>论文式端到端框架图（虚线＝论文未显式画出的推断步骤）。下方可用一句话对话改图。</p>"
+        f"<div class='fw-canvas' id='fw-canvas'>{svg}</div>"
+        f"<script type='application/json' id='fw-spec'>{spec_json}</script>"
+        "<form method='post' action='/framework/edit' style='margin-top:16px'>"
+        f'<input type="hidden" name="source" value="{_e(source)}">'
+        "<label>对话改图 <span class='hint'>一句话描述要改什么</span></label>"
+        "<input name='instruction' placeholder='例：把训练目标并进主流程 / 加一步数据预处理 / 把反向过程拆成两步'>"
+        "<button>改图</button></form></section>"
     )
 
 

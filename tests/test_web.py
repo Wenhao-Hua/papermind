@@ -30,6 +30,23 @@ def test_index_has_form_and_active_model():
     assert "当前模型" in r.text
 
 
+def test_framework_tab_and_form():
+    client = TestClient(create_app(live=False))
+    r = client.get("/framework")
+    assert r.status_code == 200 and "生成框架图" in r.text
+    assert "/framework" in client.get("/").text  # nav tab present
+
+
+def test_framework_body_embeds_svg_spec_and_edit_form():
+    from papermind.figures.framework import FNode, FrameworkSpec, _auto_layout
+    from papermind.web import _framework_body
+
+    spec = _auto_layout(FrameworkSpec(title="T", nodes=[FNode(id="a", label="输入"), FNode(id="b", label="阶段")]))
+    html = _framework_body(spec, "https://arxiv.org/abs/1706.03762")
+    assert "<svg" in html and "fw-spec" in html       # diagram + embedded spec for the editor
+    assert "/framework/edit" in html and "改图" in html  # conversational-edit form
+
+
 def test_demo_route_renders_offline_report():
     r = TestClient(create_app()).get("/demo")
     assert r.status_code == 200
