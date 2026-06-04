@@ -48,7 +48,7 @@ papermind/
 ├── config.py         # keys / model / cache resolution (env > file > default)
 ├── parser/           # arxiv.py (download+meta), pdf.py (text+figures)
 ├── modules/          # contributions / technical / connections / reproduction
-├── figures/          # extract.py (match originals), generate.py (teaching SVGs; legacy Mermaid)
+├── figures/          # extract.py (match originals), generate.py (teaching SVGs; legacy Mermaid), framework.py (whole-method diagram: spec + deterministic SVG renderer)
 ├── qa/               # index.py (chunk+FAISS), retriever.py, chat.py (PaperChat)
 ├── repro/            # repo.py (locate & verify the paper's official code repo)
 ├── rerank/           # infer.py (trained cross-encoder reranker inference)

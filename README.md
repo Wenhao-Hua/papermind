@@ -3,7 +3,7 @@
 **English · [简体中文](README.zh-CN.md)**
 
 > **Read any paper — from skim to reproduction — with every key claim traced back to the source.**
-> Paste an arXiv link or any PDF URL: structured analysis, grounded & citation‑verified Q&A, and a runnable reproduction guide.
+> Paste an arXiv link, DOI, paper title, or any paper page / PDF URL (or upload a PDF): structured analysis, grounded & citation‑verified Q&A, a whole‑method framework diagram (downloadable SVG), and a runnable reproduction guide.
 
 [![CI](https://github.com/Wenhao-Hua/papermind/actions/workflows/ci.yml/badge.svg)](https://github.com/Wenhao-Hua/papermind/actions/workflows/ci.yml)
 [![PyPI](https://img.shields.io/pypi/v/paper-mind)](https://pypi.org/project/paper-mind/)

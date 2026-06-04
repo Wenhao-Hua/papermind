@@ -41,7 +41,7 @@ def analyze(
     """Analyze a paper and return a structured :class:`Report`.
 
     Args:
-        source: arXiv URL, any PDF URL, or local PDF path.
+        source: arXiv URL, DOI, paper title, any paper-page/PDF URL, or local PDF path.
         model: litellm model name (defaults to the configured model).
         modules: subset of {contributions, technical, connections, reproduction}.
         with_figures: extract/generate figures for technical points.
