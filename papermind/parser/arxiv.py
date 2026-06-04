@@ -27,6 +27,8 @@ _NEW_ID = r"\d{4}\.\d{4,5}(?:v\d+)?"
 _OLD_ID = r"[a-z\-]+(?:\.[A-Z]{2})?/\d{7}(?:v\d+)?"
 _ID_RE = re.compile(rf"(?:arxiv:)?({_NEW_ID}|{_OLD_ID})", re.IGNORECASE)
 _ABS_URL_RE = re.compile(rf"arxiv\.org/(?:abs|pdf)/({_NEW_ID}|{_OLD_ID})", re.IGNORECASE)
+# A DOI: bare (10.1145/...) or with a doi: prefix. doi.org URLs are handled as URLs.
+_DOI_RE = re.compile(r"^(?:doi:\s*)?(10\.\d{4,9}/\S+)$", re.IGNORECASE)
 
 
 @dataclass
@@ -125,27 +127,58 @@ def cache_dir_for(source: str, config: Optional[Config] = None) -> Optional[Path
     return None
 
 
+def _parse_doi(source: str) -> Optional[str]:
+    """A bare DOI (``10.1145/...``) or its ``doi:`` form -> the DOI. (``doi.org`` URLs
+    are handled as ordinary URLs — they 302 to the publisher's landing page.)"""
+    m = _DOI_RE.match(source.strip())
+    return m.group(1) if m else None
+
+
+def _looks_like_title(source: str) -> bool:
+    """Free text we can search arXiv for, vs. a stray token or a broken URL/path."""
+    return len(source) >= 4 and "/" not in source and "\\" not in source
+
+
+def _is_existing_path(source: str) -> bool:
+    try:
+        return Path(source).expanduser().exists()
+    except (OSError, ValueError):  # a title with ':' etc. is not a valid Windows path
+        return False
+
+
 def resolve(source: str, config: Optional[Config] = None) -> ResolvedSource:
     """Resolve a source into a local PDF + best-effort metadata.
 
-    Accepts: an arXiv URL (rich metadata), any other PDF URL (downloaded), or a
-    local .pdf path. Bare arXiv ids are no longer accepted — give a URL.
+    Accepts: an arXiv URL, a DOI (bare or ``doi:``/``doi.org``), any paper page or
+    PDF URL, a paper *title* (searched on arXiv), or a local ``.pdf`` path. Bare
+    arXiv ids are not accepted — give a URL.
     """
     config = config or load_config()
     source = (source or "").strip()
     if not source:
-        raise SourceError("请提供论文 URL（arXiv 链接或 PDF 直链），或本地 PDF 路径。")
+        raise SourceError("请提供论文链接（arXiv / 论文页面 / PDF / DOI）、论文标题，或本地 PDF 路径。")
 
     arxiv_id = parse_arxiv_id(source)
     if arxiv_id:
         return _resolve_arxiv(arxiv_id, config)
+    if _ID_RE.fullmatch(source):  # a bare arXiv id -> guide to a URL, don't title-search it
+        raise SourceError(f"请用完整链接而不是裸 id，例如 https://arxiv.org/abs/{source.split(':')[-1]}")
+    doi = _parse_doi(source)
+    if doi:
+        return _resolve_url(f"https://doi.org/{doi}", config)
     if re.match(r"https?://", source, re.IGNORECASE):
         return _resolve_url(source, config)
-    if Path(source).expanduser().exists():
+    if _is_existing_path(source):
         return _resolve_local(source, config)
+    if _looks_like_title(source):  # not an id/URL/DOI/path -> search arXiv by title
+        results = search_arxiv(source, max_results=1)
+        if results and results[0].arxiv_id:
+            return _resolve_arxiv(results[0].arxiv_id, config)
+        raise SourceError(
+            f"没在 arXiv 找到匹配「{source}」的论文。请换个更准确的标题，或粘贴论文链接 / DOI。"
+        )
     raise SourceError(
-        f"无法识别来源 {source!r}。请粘贴论文 URL（arXiv 链接或 PDF 直链）或本地 PDF 路径。"
-        "已不再支持裸 arXiv id —— 例如用 https://arxiv.org/abs/2307.08691 代替 2307.08691。"
+        f"无法识别来源 {source!r}。请粘贴论文链接（arXiv / 论文页面 / PDF / DOI）、论文标题，或本地 PDF 路径。"
     )
 
 

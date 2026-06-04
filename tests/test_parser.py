@@ -40,9 +40,57 @@ def test_resolve_rejects_bare_id_requires_url():
     from papermind.errors import SourceError
     from papermind.parser.arxiv import resolve
 
-    for bad in ("2307.08691", "arxiv:2307.08691", "not a source"):
-        with pytest.raises(SourceError):
-            resolve(bad)  # bare ids no longer accepted; needs a URL or local PDF (no network hit)
+    for bad in ("2307.08691", "arxiv:2307.08691"):  # bare ids -> guided to a URL, never title-searched
+        with pytest.raises(SourceError) as exc:
+            resolve(bad)  # no network hit — rejected before any search/download
+        assert "arxiv.org/abs/2307.08691" in str(exc.value)
+
+
+def test_parse_doi_forms():
+    from papermind.parser.arxiv import _parse_doi
+
+    assert _parse_doi("10.1145/3292500.3330701") == "10.1145/3292500.3330701"
+    assert _parse_doi("doi:10.1038/s41586-021-03819-2") == "10.1038/s41586-021-03819-2"
+    assert _parse_doi("DOI: 10.1101/2020.01.01.000001") == "10.1101/2020.01.01.000001"
+    assert _parse_doi("not a doi") is None
+    assert _parse_doi("https://arxiv.org/abs/2307.08691") is None
+
+
+def test_resolve_doi_routes_through_doi_org(monkeypatch):
+    from papermind.config import Config
+    from papermind.parser import arxiv as ax
+
+    captured = {}
+
+    def _fake_resolve_url(url, config):
+        captured["url"] = url
+        return "RESOLVED"
+
+    monkeypatch.setattr(ax, "_resolve_url", _fake_resolve_url)
+    assert ax.resolve("10.1145/3292500.3330701", config=Config()) == "RESOLVED"
+    assert captured["url"] == "https://doi.org/10.1145/3292500.3330701"
+
+
+def test_resolve_title_searches_arxiv(monkeypatch):
+    from papermind.config import Config
+    from papermind.output.schema import PaperMeta
+    from papermind.parser import arxiv as ax
+
+    monkeypatch.setattr(
+        ax, "search_arxiv", lambda q, max_results=1: [PaperMeta(title="Attention", arxiv_id="1706.03762")]
+    )
+    monkeypatch.setattr(ax, "_resolve_arxiv", lambda aid, config: f"ARXIV:{aid}")
+    assert ax.resolve("Attention is all you need", config=Config()) == "ARXIV:1706.03762"
+
+
+def test_resolve_title_no_match_raises(monkeypatch):
+    from papermind.config import Config
+    from papermind.errors import SourceError
+    from papermind.parser import arxiv as ax
+
+    monkeypatch.setattr(ax, "search_arxiv", lambda q, max_results=1: [])
+    with pytest.raises(SourceError):
+        ax.resolve("an obscure paper that does not exist anywhere", config=Config())
 
 
 def test_resolve_arxiv_falls_back_to_pdf_when_metadata_throttled(monkeypatch, tmp_path):
