@@ -816,7 +816,7 @@ _FRAMEWORK_JS = """
   var canvas=document.getElementById('fw-canvas'), specEl=document.getElementById('fw-spec');
   if(!canvas||!specEl) return;
   var spec; try{spec=JSON.parse(specEl.textContent);}catch(e){return;}
-  var sel=null, drag=null;
+  var sel=null;
   var FILL={io:'#f1f5f9',box:'#eef2ff',group:'#fbfcfe'}, STROKE={io:'#475569',box:'#6366f1',group:'#94a3b8'};
   var EDGE={solid:['#475569',2.0,''],emph:['#6366f1',2.6,''],dashed:['#94a3b8',1.8,'6,5']};
   var PAD=12, LABEL=15, LINE=12.5, LH=1.5;
@@ -855,7 +855,7 @@ _FRAMEWORK_JS = """
     spec.nodes.forEach(function(n){var R=rows(n),h=R.h,kind=(FILL[n.kind]?n.kind:'box');
       var dash=(n.inferred||kind==='group')?' stroke-dasharray="7,5"':'',sw=kind==='group'?1.5:1.8;
       var ss=(n.id===sel)?' stroke="#3730a3" stroke-width="3"':' stroke="'+STROKE[kind]+'" stroke-width="'+sw+'"';
-      o.push('<g data-id="'+esc(n.id)+'" class="fw-node" style="cursor:grab">');
+      o.push('<g data-id="'+esc(n.id)+'" class="fw-node" style="cursor:pointer">');
       o.push('<rect x="'+n.x.toFixed(1)+'" y="'+n.y.toFixed(1)+'" width="'+n.w.toFixed(1)+'" height="'+h.toFixed(1)+'" rx="11" fill="'+FILL[kind]+'"'+ss+dash+'/>');
       var ty=n.y+PAD+R.r[0][1];
       R.r.forEach(function(row){var bold=row[2]?' font-weight="700"':'',col=row[2]?'#1e293b':'#334155';
@@ -868,11 +868,8 @@ _FRAMEWORK_JS = """
     noteRows.forEach(function(row){o.push('<text x="60" y="'+ny+'" font-size="12" fill="#334155">'+esc(row)+'</text>');ny+=18;});
     o.push('</svg>');canvas.innerHTML=o.join('');}
   function node(id){for(var i=0;i<spec.nodes.length;i++)if(spec.nodes[i].id===id)return spec.nodes[i];return null;}
-  function pt(ev){var svg=canvas.querySelector('svg');if(!svg)return{x:0,y:0};var r=svg.getBoundingClientRect();var s=(spec.width||960)/r.width;return {x:(ev.clientX-r.left)*s,y:(ev.clientY-r.top)*s};}
   function editText(n){var cur=[n.label].concat(n.lines||[]).join(' | ');var v=prompt('编辑文字（用 | 分隔，首段为标题）',cur);if(v===null)return;var ps=v.split('|').map(function(s){return s.trim();}).filter(function(s){return s;});n.label=ps[0]||'';n.lines=ps.slice(1);render();}
-  canvas.addEventListener('mousedown',function(ev){var g=ev.target.closest('.fw-node');if(!g)return;sel=g.getAttribute('data-id');var n=node(sel),p=pt(ev);drag={id:sel,dx:p.x-n.x,dy:p.y-n.y};ev.preventDefault();render();});
-  window.addEventListener('mousemove',function(ev){if(!drag)return;var n=node(drag.id),p=pt(ev);n.x=Math.max(0,p.x-drag.dx);n.y=Math.max(0,p.y-drag.dy);render();});
-  window.addEventListener('mouseup',function(){drag=null;});
+  canvas.addEventListener('click',function(ev){var g=ev.target.closest('.fw-node');if(!g)return;sel=g.getAttribute('data-id');render();});
   canvas.addEventListener('dblclick',function(ev){var g=ev.target.closest('.fw-node');if(!g)return;editText(node(g.getAttribute('data-id')));});
   document.addEventListener('click',function(ev){var b=ev.target.closest('[data-fw]');if(!b)return;var act=b.getAttribute('data-fw');
     if(act==='add'){var id='n'+Date.now().toString(36);spec.nodes.push({id:id,label:'新节点',lines:[],kind:'box',col:0,inferred:false,x:(spec.width||960)/2-180,y:120,w:360});sel=id;render();}
@@ -1033,7 +1030,7 @@ def _framework_form(live: bool, error: str = "") -> str:
     note = "" if live else "<p class='lead'>演示模式：仅展示已缓存论文的框架图。请以 <code>--live</code> 启动。</p>"
     return (
         "<section class='panel'><h2>论文框架图</h2>"
-        "<p class='lead'>自动生成整篇方法的端到端框架图（含论文未画出的推断步骤），可对话修改、可拖拽编辑。</p>"
+        "<p class='lead'>自动生成整篇方法的端到端框架图（含论文未画出的推断步骤），可对话修改、可在线编辑。</p>"
         f"{note}{_err(error)}"
         "<form method='post' action='/framework'>"
         "<label>论文 <span class='hint'>链接 / DOI / 标题</span></label>"
@@ -1057,13 +1054,13 @@ def _framework_body(spec, source: str) -> str:
     )
     return (
         "<section class='panel'><h2>框架图</h2>"
-        "<p class='lead'>论文式端到端框架图（虚线＝论文未显式画出的推断步骤）。可直接拖拽编辑，或用一句话对话改图。</p>"
+        "<p class='lead'>论文式端到端框架图（虚线＝论文未显式画出的推断步骤）。可在线编辑文字/增删节点，或用一句话对话改图。</p>"
         "<div class='fw-tools'>"
         "<button type='button' data-fw='add'>＋ 节点</button>"
         "<button type='button' data-fw='rename'>✎ 编辑文字</button>"
         "<button type='button' data-fw='del'>🗑 删除选中</button>"
         "<button type='button' data-fw='save'>💾 保存</button>"
-        "<span class='fw-hint'>拖动=移动 · 双击框=编辑 · 单击=选中</span></div>"
+        "<span class='fw-hint'>单击=选中 · 双击框=编辑文字</span></div>"
         f"<div class='fw-canvas' id='fw-canvas'>{svg}</div>"
         f"<script type='application/json' id='fw-spec'>{spec_json}</script>"
         f'<form id="fw-save-form" method="post" action="/framework/save" style="display:none">'
