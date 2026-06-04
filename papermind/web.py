@@ -1038,7 +1038,8 @@ def _framework_form(live: bool, error: str = "") -> str:
         "<form method='post' action='/framework'>"
         "<label>论文 <span class='hint'>链接 / DOI / 标题</span></label>"
         "<input name='source' placeholder='arXiv / 论文页面 / PDF / DOI / 标题' autofocus>"
-        "<button>生成框架图</button></form></section>"
+        "<button>生成框架图</button></form>"
+        f"{_examples_row()}</section>"
     )
 
 
