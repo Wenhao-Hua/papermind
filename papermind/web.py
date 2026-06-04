@@ -922,7 +922,7 @@ def _framework_form(live: bool, error: str = "") -> str:
     note = "" if live else "<p class='lead'>演示模式：仅展示已缓存论文的框架图。请以 <code>--live</code> 启动。</p>"
     return (
         "<section class='panel'><h2>论文框架图</h2>"
-        "<p class='lead'>自动生成整篇方法的端到端框架图（含论文未画出的推断步骤），可对话修改、可在线编辑。</p>"
+        "<p class='lead'>自动生成整篇方法的端到端框架图（含论文未画出的推断步骤），可下载为 SVG。</p>"
         f"{note}{_err(error)}"
         "<form method='post' action='/framework'>"
         "<label>论文 <span class='hint'>链接 / DOI / 标题</span></label>"
