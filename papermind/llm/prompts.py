@@ -272,6 +272,43 @@ def figure_explain_user(name: str, explanation: str, formula: Optional[str], lab
 
 
 # --------------------------------------------------------------------------- #
+# Whole-method framework diagram — a structured node/edge spec (not raw SVG), so
+# it can be re-rendered, conversationally edited, and dragged in a visual editor.
+# --------------------------------------------------------------------------- #
+FRAMEWORK_SYSTEM = (
+    "你是学术论文配图工程师，为一篇论文画**整篇方法的端到端框架图**（论文 Figure-1 式总览）。"
+    "你不直接画 SVG，而是输出一份**结构化 JSON 规格**（节点+连线），由渲染器排版成论文式图。\n\n"
+    "只输出合法 JSON，不要任何解释文字、不要代码围栏。结构：\n"
+    "{\n"
+    '  "title": "方法名或论文短标题",\n'
+    '  "nodes": [{"id":"短id", "label":"框标题(≤14字)", "lines":["框内补充行:公式/子标题,每行≤22字,0-3行"], '
+    '"kind":"io|box|group", "col":0或1, "inferred":true或false}],\n'
+    '  "edges": [{"src":"id","dst":"id","style":"solid|emph|dashed","label":"可选≤6字"}],\n'
+    '  "legend": [{"style":"solid|dashed|emph","text":"含义"}],\n'
+    '  "note": "底部记号说明(可选,一行)"\n'
+    "}\n\n"
+    "布局（坐标不用你给，渲染器自动排版，你只需给对 col 和顺序）：\n"
+    "- 主数据流放 col=0，按论文真实流程**自上而下**排：输入(kind=io) → 各主要阶段(kind=box) → 输出(kind=io)；nodes 数组按此顺序。\n"
+    "- 论文**未显式画出但方法隐含**的部分（训练目标/损失、采样循环、预处理、与其它方法的关联等）放 col=1（右侧），"
+    "kind=group 且 inferred=true，并用 style=dashed 的边连到相关主节点。\n"
+    "- 节点 5-9 个，别太碎。kind：io=输入/输出，box=主模块，group=推断/旁注面板。\n"
+    "- 边 style：solid=前向数据流；emph=被强调的路径；dashed=推断/参照/对照。\n\n"
+    "内容：\n"
+    "- **严格忠于给定论文**的记号/公式/流程，沿用论文写法；论文没有的绝不臆造，拿不准就少画。\n"
+    "- 数学符号直接用 Unicode（× → √ ⊤ · 下标₀₁₂ 希腊字母），不要 LaTeX 反斜杠、不要任何 HTML 标签。\n"
+    "- 文字极简：label 是名词短语，lines 放关键公式或一句定义。论文画过的 inferred=false，推断补全的 inferred=true。"
+)
+
+
+def framework_user(context: str) -> str:
+    return (
+        "【这篇论文的内容（据此作画、勿臆造）】\n" + (context or "")[:6000] + "\n\n"
+        "请输出这篇论文方法的完整端到端框架图 JSON 规格：col=0 主流程（输入→各阶段→输出，忠于论文顺序），"
+        "col=1 放论文未显式画出但隐含的步骤（kind=group, inferred=true, 用 dashed 边连接）。只输出合法 JSON。"
+    )
+
+
+# --------------------------------------------------------------------------- #
 # Q&A / reasoning / tutoring
 # --------------------------------------------------------------------------- #
 _LAYERING_RULES = (
