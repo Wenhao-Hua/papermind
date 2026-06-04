@@ -34,10 +34,8 @@ def write_bibtex(meta: PaperMeta, path: str) -> str:
 
 
 def _cite_key(meta: PaperMeta) -> str:
-    if meta.authors:
-        last = meta.authors[0].split()[-1]
-    else:
-        last = "anon"
+    parts = meta.authors[0].split() if meta.authors else []
+    last = parts[-1] if parts else "anon"  # a blank/whitespace author must not IndexError
     year = str(meta.year) if meta.year else "0000"
     first_word = ""
     for token in re.split(r"\s+", meta.title or ""):

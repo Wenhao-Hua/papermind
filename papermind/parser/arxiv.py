@@ -181,10 +181,14 @@ def _resolve_title(query: str, config: Config) -> ResolvedSource:
     Prefer the free open-access PDF over the (possibly paywalled) DOI."""
     hit = _search_openalex(query)
     if hit:
-        if hit.get("pdf"):
-            return _resolve_url(hit["pdf"], config)
-        if hit.get("doi"):  # already a full https://doi.org/... URL
-            return _resolve_url(hit["doi"], config)
+        # Prefer the free PDF, then the DOI; if OpenAlex's recorded link rotted /
+        # paywalled / is HTML, fall through to the next source rather than hard-failing.
+        for candidate in (hit.get("pdf"), hit.get("doi")):  # doi is a full doi.org URL
+            if candidate:
+                try:
+                    return _resolve_url(candidate, config)
+                except SourceError:
+                    continue
     results = search_arxiv(query, max_results=1)  # fallback: arXiv search API
     if results and results[0].arxiv_id:
         return _resolve_arxiv(results[0].arxiv_id, config)
@@ -297,13 +301,16 @@ def _resolve_arxiv(arxiv_id: str, config: Config) -> ResolvedSource:
 
     meta: Optional[PaperMeta] = None
     if meta_path.exists():
-        meta = PaperMeta(**json.loads(meta_path.read_text(encoding="utf-8")))
-    else:
+        try:
+            meta = PaperMeta(**json.loads(meta_path.read_text(encoding="utf-8")))
+        except (json.JSONDecodeError, ValueError, TypeError, OSError):
+            meta_path.unlink(missing_ok=True)  # corrupt cache -> drop it and re-fetch below
+    if meta is None:
         try:
             meta = _fetch_arxiv_metadata(arxiv_id)
-            meta_path.write_text(
-                json.dumps(meta.model_dump(), indent=2, ensure_ascii=False), encoding="utf-8"
-            )
+            tmp = meta_path.with_name(meta_path.name + ".tmp")  # atomic write: a killed
+            tmp.write_text(json.dumps(meta.model_dump(), indent=2, ensure_ascii=False), encoding="utf-8")
+            tmp.replace(meta_path)  # process can never leave a half-written metadata.json
         except SourceError:
             # arXiv's metadata API is unreachable or rate-limiting this IP (cloud hosts
             # routinely get 429'd even with retries). The PDF lives on a different

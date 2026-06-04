@@ -82,32 +82,29 @@ class _FakeUpload:
         self.file = io.BytesIO(data)
 
 
-def test_upload_ignores_client_path_and_is_random():
+def test_upload_ignores_client_path_and_is_content_addressed(monkeypatch, tmp_path):
+    monkeypatch.setenv("PAPERMIND_HOME", str(tmp_path))
+
     from pathlib import Path
 
     from papermind import web
 
-    up = _FakeUpload("../../../../evil.pdf", b"%PDF-1.4 hello world")
-    path = web._resolve_upload("", up)
-    name = Path(path).name
-    assert ".." not in path                      # no traversal survived
-    assert name.startswith("papermind_") and name.endswith(".pdf")
+    data = b"%PDF-1.4 hello world"
+    path = web._resolve_upload("", _FakeUpload("../../../../evil.pdf", data))
+    assert ".." not in path and "evil" not in path  # the attacker filename is ignored, no traversal
     assert Path(path).read_bytes().startswith(b"%PDF")
-    Path(path).unlink(missing_ok=True)
+    # content-addressed cache (not a leaking random temp file): identical bytes dedupe to one path
+    assert web._resolve_upload("", _FakeUpload("other.pdf", data)) == path
 
 
-def test_upload_same_name_gets_distinct_paths():
-    from pathlib import Path
+def test_upload_same_name_distinct_content_gets_distinct_paths(monkeypatch, tmp_path):
+    monkeypatch.setenv("PAPERMIND_HOME", str(tmp_path))
 
     from papermind import web
 
     a = web._resolve_upload("", _FakeUpload("paper.pdf", b"%PDF-1.4 A"))
     b = web._resolve_upload("", _FakeUpload("paper.pdf", b"%PDF-1.4 B"))
-    try:
-        assert a != b  # no cross-user collision on a shared filename
-    finally:
-        Path(a).unlink(missing_ok=True)
-        Path(b).unlink(missing_ok=True)
+    assert a != b  # different content under a shared filename must not collide
 
 
 def test_upload_rejects_non_pdf():

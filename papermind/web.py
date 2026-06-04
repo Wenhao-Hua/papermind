@@ -179,10 +179,12 @@ def _get_job(jid: str):
         return dict(_JOBS[jid]) if jid in _JOBS else None
 
 
-def _start_job(work, kind: str = "analyze") -> str:
+def _start_job(work, kind: str = "analyze", on_fail=None) -> str:
     """Run ``work(job_id) -> html`` in a daemon thread; store result/error on the job.
 
     ``kind`` ("analyze" | "ask") tells /result which tab/retry-form to render.
+    ``on_fail`` runs on any failure — gated routes pass it to refund the reserved
+    rate-limit slot (a request that produced no output shouldn't cost a daily quota).
     """
     jid = _new_job()
     _set_job(jid, kind=kind)
@@ -191,8 +193,12 @@ def _start_job(work, kind: str = "analyze") -> str:
         try:
             _set_job(jid, status="done", html=work(jid))
         except PaperMindError as exc:
+            if on_fail:
+                on_fail()
             _set_job(jid, status="error", error=str(exc))  # curated, user-facing message
         except Exception as exc:  # noqa: BLE001 - unexpected: log internally, never echo to the public page
+            if on_fail:
+                on_fail()
             print(f"[papermind] job {jid} ({kind}) failed: {exc!r}", file=sys.stderr)
             _set_job(jid, status="error", error="分析失败，请稍后重试，或本地运行（pip install paper-mind）。")
 
@@ -273,6 +279,7 @@ def create_app(live: bool = False, rate_per_ip: int = 8, rate_global: int = 300,
         if blocked:
             return _page("/", _analyze_form(live, blocked), live)
         figs = with_figures
+        ip = _client_ip(request)
 
         def work(jid):
             from papermind.analyze import analyze as run_analyze
@@ -285,7 +292,7 @@ def create_app(live: bool = False, rate_per_ip: int = 8, rate_global: int = 300,
             )
             return report.to_html()
 
-        return _job_page(_start_job(work), live, "/")
+        return _job_page(_start_job(work, on_fail=lambda: limiter.release(ip)), live, "/")
 
     @app.post("/analyze", response_class=HTMLResponse)
     def analyze_route(request: Request, source: str = Form(""), model: str = Form(""),
@@ -371,22 +378,18 @@ def create_app(live: bool = False, rate_per_ip: int = 8, rate_global: int = 300,
         def work(jid):
             from papermind.qa.chat import PaperChat
 
-            try:
-                sess2 = _session_for(sid)
-                if sess2 is None or sess2.get("paper") != paper:
-                    _set_job(jid, step="下载并解析论文、建立索引…")
-                    sess2 = {"paper": paper, "chat": PaperChat(paper, model=mdl, mode=md), "log": []}
-                sess2["chat"].mode = md  # honor a mode change between turns
-                _set_job(jid, step="检索原文并生成回答…")
-                answer = sess2["chat"].ask(q)
-            except PaperMindError:
-                limiter.release(ip)  # the user got no answer -> refund their daily quota slot
-                raise
+            sess2 = _session_for(sid)
+            if sess2 is None or sess2.get("paper") != paper:
+                _set_job(jid, step="下载并解析论文、建立索引…")
+                sess2 = {"paper": paper, "chat": PaperChat(paper, model=mdl, mode=md), "log": []}
+            sess2["chat"].mode = md  # honor a mode change between turns
+            _set_job(jid, step="检索原文并生成回答…")
+            answer = sess2["chat"].ask(q)
             sess2["log"].append((q, answer))
             _store_session(sid, sess2)
             return _page("/ask", _chat_log_html(sess2["log"]) + _ask_form(live), live)
 
-        jid = _start_job(work, kind="ask")
+        jid = _start_job(work, kind="ask", on_fail=lambda: limiter.release(ip))
         return _with_session(HTMLResponse(_job_page(jid, live, "/ask")), sid)
 
     # -- summary -------------------------------------------------------------- #
@@ -401,6 +404,7 @@ def create_app(live: bool = False, rate_per_ip: int = 8, rate_global: int = 300,
         blocked = gate(request)
         if blocked:
             return _page("/summary", _summary_form(live, blocked), live)
+        ip = _client_ip(request)
         src = source.strip()
 
         def work(jid):
@@ -411,7 +415,7 @@ def create_app(live: bool = False, rate_per_ip: int = 8, rate_global: int = 300,
             body = f"<section class='panel'><h2>{_e(result.title)}</h2><p>{_e(result.tldr)}</p><ul>{points}</ul></section>"
             return _page("/summary", body + _summary_form(live), live)
 
-        return _job_page(_start_job(work), live, "/summary")
+        return _job_page(_start_job(work, on_fail=lambda: limiter.release(ip)), live, "/summary")
 
     # -- compare -------------------------------------------------------------- #
     @app.get("/compare", response_class=HTMLResponse)
@@ -428,13 +432,14 @@ def create_app(live: bool = False, rate_per_ip: int = 8, rate_global: int = 300,
         blocked = gate(request)
         if blocked:
             return _page("/compare", _compare_form(live, blocked), live)
+        ip = _client_ip(request)
 
         def work(jid):
             from papermind.compare import compare as run_compare
 
             return run_compare(items, model=(model or None), synthesize=True).to_html()
 
-        return _job_page(_start_job(work), live, "/compare")
+        return _job_page(_start_job(work, on_fail=lambda: limiter.release(ip)), live, "/compare")
 
     # -- reproduce ------------------------------------------------------------ #
     @app.get("/reproduce", response_class=HTMLResponse)
@@ -451,6 +456,7 @@ def create_app(live: bool = False, rate_per_ip: int = 8, rate_global: int = 300,
         blocked = gate(request)
         if blocked:
             return _page("/reproduce", _reproduce_form(live, blocked), live)
+        ip = _client_ip(request)
         src = source.strip()
 
         def work(jid):
@@ -464,7 +470,7 @@ def create_app(live: bool = False, rate_per_ip: int = 8, rate_global: int = 300,
                 raise PaperMindError("这篇论文没有可导出的复现信息。")
             return _page("/reproduce", _repro_body(report) + _reproduce_form(live), live)
 
-        return _job_page(_start_job(work), live, "/reproduce")
+        return _job_page(_start_job(work, on_fail=lambda: limiter.release(ip)), live, "/reproduce")
 
     # -- framework diagram ---------------------------------------------------- #
     @app.get("/framework", response_class=HTMLResponse)
@@ -481,13 +487,14 @@ def create_app(live: bool = False, rate_per_ip: int = 8, rate_global: int = 300,
         blocked = gate(request)
         if blocked:
             return _page("/framework", _framework_form(live, blocked), live)
+        ip = _client_ip(request)
         src = source.strip()
 
         def work(jid):
             spec = _build_framework(src, model, jid, no_cache)
             return _page("/framework", _framework_body(spec) + _framework_form(live), live)
 
-        return _job_page(_start_job(work), live, "/framework")
+        return _job_page(_start_job(work, on_fail=lambda: limiter.release(ip)), live, "/framework")
 
     # -- search (no model calls -> always available) ------------------------- #
     @app.get("/search", response_class=HTMLResponse)
@@ -595,8 +602,9 @@ def _resolve_upload(source: str, file) -> Optional[str]:
     to a fresh random temp file and validate size + PDF magic first.
     """
     if file is not None and getattr(file, "filename", ""):
-        import tempfile
+        import hashlib
 
+        from papermind.config import load_config
         from papermind.net import MAX_DOWNLOAD_BYTES
 
         data = file.file.read(MAX_DOWNLOAD_BYTES + 1)
@@ -605,10 +613,13 @@ def _resolve_upload(source: str, file) -> Optional[str]:
         if data:
             if not data.startswith(b"%PDF"):
                 raise SourceError("上传的文件不是 PDF。")
-            fd, tmp = tempfile.mkstemp(prefix="papermind_", suffix=".pdf")
-            with os.fdopen(fd, "wb") as fh:
-                fh.write(data)
-            return tmp
+            # Persist into the cache keyed by content hash (not a random /tmp file that
+            # would leak one PDF per upload): identical re-uploads dedupe, and the bytes
+            # live under normal cache management instead of accumulating in the OS tmp dir.
+            dest = load_config().paper_cache(f"upload-{hashlib.sha1(data).hexdigest()[:12]}") / "paper.pdf"
+            if not dest.exists() or dest.stat().st_size != len(data):
+                dest.write_bytes(data)
+            return str(dest)
     return (source or "").strip() or None
 
 
