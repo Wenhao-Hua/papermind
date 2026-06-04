@@ -53,6 +53,7 @@ dev = [
     "pytest>=7.0.0",
     "pytest-mock>=3.10.0",
     "pytest-cov>=4.0.0",
+    "ruff>=0.6.0",
 ]
 
 [project.urls]
@@ -72,6 +73,12 @@ artifacts = ["papermind/assets/*.svg"]  # bundle the homepage hero figure into t
 # repo showcase, not package content; the wheel already ships only the papermind
 # package (+ assets/hero.svg). Tests + their helper packages stay in the sdist.
 exclude = ["examples", "docs", "/data", "/report", ".github"]
+
+[tool.ruff]
+line-length = 120
+
+[tool.ruff.lint]
+select = ["F"]  # pyflakes only: unused imports/vars + undefined names (catch dead code, no style churn)
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]

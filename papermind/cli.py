@@ -229,7 +229,6 @@ def analyze(
 
 
 def _write_outputs(report, fmt: str, output: str) -> None:
-    from pathlib import Path
 
     base_path = _output_base(report, output)
     base_path.parent.mkdir(parents=True, exist_ok=True)

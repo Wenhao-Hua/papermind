@@ -1,0 +1,11 @@
+{
+  "mcpServers": {
+    "playwright": {
+      "command": "npx",
+      "args": ["-y", "@playwright/mcp@latest"],
+      "env": {
+        "npm_config_cache": "C:\\Users\\25343\\AppData\\Local\\npm-cache"
+      }
+    }
+  }
+}

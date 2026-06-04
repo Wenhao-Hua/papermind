@@ -4,7 +4,6 @@ from __future__ import annotations
 
 from papermind.modules import connections, contributions, reproduction, technical
 from papermind.output.schema import (
-    Connection,
     Contributions,
     PaperMeta,
     Report,

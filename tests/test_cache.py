@@ -4,7 +4,6 @@ from __future__ import annotations
 
 import papermind.analyze as analyze_mod
 from papermind.cache import (
-    clear_all,
     clear_paper,
     iter_cached_papers,
     latest_report_path,

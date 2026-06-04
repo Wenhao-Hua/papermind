@@ -1,19 +1,18 @@
-"""The paper's whole-method *framework diagram* as an editable structured spec.
+"""The paper's whole-method *framework diagram* as a structured node/edge spec.
 
 Unlike the per-point teaching SVGs (which the LLM draws as raw SVG), the framework
-diagram is a node/edge **spec** — a single source of truth that powers three things
-from one representation:
+diagram is a node/edge **spec** — a single source of truth for two things:
 
-  * generation       — the LLM emits the spec (figures.generate side stays untouched);
-  * conversational edit — the LLM rewrites the spec from an instruction;
-  * a visual editor  — the browser drags/renames/adds nodes by mutating the spec.
+  * generation — the LLM emits the spec (figures.generate is untouched);
+  * rendering  — a deterministic ``spec -> paper-style SVG`` pass; the page is
+    view-only and that rendered SVG is what users download.
 
-This module owns the spec schema and a deterministic ``spec -> paper-style SVG``
-renderer (so the editor can re-render after every change without an LLM call).
+The spec is cached per paper (framework.json) so a revisit re-renders instantly.
 """
 
 from __future__ import annotations
 
+import math
 from typing import List, Optional
 
 from pydantic import BaseModel, Field
@@ -22,7 +21,6 @@ from pydantic import BaseModel, Field
 # Spec schema
 # --------------------------------------------------------------------------- #
 _KINDS = ("io", "box", "group")          # input/output · main module · (inferred) panel
-_STYLES = ("solid", "emph", "dashed")     # data flow · highlighted/selected · inferred/reference
 
 
 class FNode(BaseModel):
@@ -161,8 +159,6 @@ def render_framework_svg(spec: FrameworkSpec) -> str:
         color, sw, dash = _EDGE.get(e.style, _EDGE["solid"])
         da = f' stroke-dasharray="{dash}"' if dash else ""
         # shorten the line so the arrowhead tip (not the line) lands on the box edge
-        import math
-
         ang = math.atan2(y2 - y1, x2 - x1)
         hx, hy = x2 - 11 * math.cos(ang), y2 - 11 * math.sin(ang)
         out.append(f'<line x1="{x1:.1f}" y1="{y1:.1f}" x2="{hx:.1f}" y2="{hy:.1f}" stroke="{color}" stroke-width="{sw}"{da}/>')

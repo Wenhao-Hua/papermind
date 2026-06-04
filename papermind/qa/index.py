@@ -56,7 +56,6 @@ class PaperIndex:
 
     @classmethod
     def _build(cls, parsed: ParsedPaper, client: LLMClient) -> "PaperIndex":
-        import numpy as np
 
         faiss = _import_faiss()
         chunks = build_chunks(parsed)

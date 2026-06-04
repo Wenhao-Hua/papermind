@@ -41,18 +41,6 @@ _ASK_SESSIONS: dict = {}
 _ASK_LOCK = threading.Lock()
 _ASK_MAX_SESSIONS = 32
 
-# Kept for reference / tests: the models the server can talk to. The web UI no
-# longer renders a picker — the active model comes from the server's config.
-WEB_MODELS = [
-    ("gpt-4o-mini", "OpenAI · GPT-4o mini"),
-    ("gpt-4o", "OpenAI · GPT-4o"),
-    ("claude-3-5-sonnet-20241022", "Anthropic · Claude 3.5 Sonnet"),
-    ("deepseek/deepseek-v4-pro", "DeepSeek · V4 Pro"),
-    ("deepseek/deepseek-v4-flash", "DeepSeek · V4 Flash"),
-    ("gemini/gemini-1.5-flash", "Google · Gemini 1.5 Flash"),
-    ("ollama/llama3.1", "本地 · Ollama llama3.1"),
-]
-
 _MODEL_LABELS = {
     "deepseek/deepseek-v4-pro": "DeepSeek-V4 Pro",
     "deepseek/deepseek-v4-flash": "DeepSeek-V4 Flash",
@@ -244,7 +232,7 @@ def _job_page(job_id: str, live: bool, tab: str = "/") -> str:
 def create_app(live: bool = False, rate_per_ip: int = 8, rate_global: int = 300,
                with_figures: bool = True, svg_figures: bool = True, no_cache: bool = False):
     try:
-        from fastapi import Cookie, FastAPI, File, Form, Request, UploadFile
+        from fastapi import Cookie, FastAPI, File, Form, Request, UploadFile  # noqa: F401 - Request/UploadFile used in runtime-evaluated route annotations
         from fastapi.responses import HTMLResponse
     except ImportError as exc:  # pragma: no cover
         raise PaperMindError("Web demo 需要 FastAPI。安装：pip install 'paper-mind[web]'") from exc
@@ -703,7 +691,6 @@ button:active{transform:translateY(0)}
 .fw-tools{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin-bottom:12px}
 .fw-tools button{background:var(--surface);color:var(--accent);border:1px solid var(--line);padding:7px 14px;box-shadow:none;font-size:.9rem}
 .fw-tools button:hover{background:var(--accent-soft);transform:none;filter:none}
-.fw-hint{color:var(--soft);font-size:.84rem;margin-left:4px}
 .chat .turn{padding:20px 0;border-top:1px solid var(--line)}
 .chat .turn:first-child{padding-top:0;border-top:0}
 .q{font-weight:600;margin:0 0 12px}

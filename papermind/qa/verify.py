@@ -18,7 +18,7 @@ from __future__ import annotations
 
 import re
 from difflib import SequenceMatcher
-from typing import List, Optional, Tuple
+from typing import Optional, Tuple
 
 VERIFY_THRESHOLD = 0.55
 _MIN_SUBSTR = 12  # only treat short-enough quotes as substrings to avoid trivial hits
