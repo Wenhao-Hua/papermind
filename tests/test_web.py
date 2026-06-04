@@ -45,6 +45,13 @@ def test_framework_body_embeds_svg_spec_and_edit_form():
     html = _framework_body(spec, "https://arxiv.org/abs/1706.03762")
     assert "<svg" in html and "fw-spec" in html       # diagram + embedded spec for the editor
     assert "/framework/edit" in html and "改图" in html  # conversational-edit form
+    assert "data-fw" in html and "fw-save-spec" in html  # visual-editor toolbar + save hook
+
+
+def test_framework_save_rejects_malformed_spec():
+    # The save endpoint must reject a broken editor payload before touching the cache.
+    r = TestClient(create_app(live=True)).post("/framework/save", data={"source": "x", "spec": "{not json"})
+    assert r.status_code == 200 and "保存失败" in r.text
 
 
 def test_demo_route_renders_offline_report():
