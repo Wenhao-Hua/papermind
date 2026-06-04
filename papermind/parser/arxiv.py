@@ -178,7 +178,7 @@ def _resolve_url(url: str, config: Config) -> ResolvedSource:
     pdf_path = cache_dir / "paper.pdf"
 
     if not pdf_path.exists() or pdf_path.stat().st_size == 0:
-        _download_pdf(url, pdf_path)
+        _download_pdf(_resolve_pdf_url(url), pdf_path)
     with open(pdf_path, "rb") as fh:
         if not fh.read(5).startswith(b"%PDF"):
             pdf_path.unlink(missing_ok=True)
@@ -281,6 +281,60 @@ def _fetch_arxiv_metadata(arxiv_id: str) -> PaperMeta:
         pdf_url=f"https://arxiv.org/pdf/{arxiv_id}.pdf",
         abstract=abstract,
     )
+
+
+def _resolve_pdf_url(url: str) -> str:
+    """Resolve a paper URL to a downloadable PDF URL.
+
+    A direct PDF link is returned unchanged. An academic *landing page* (HTML) is
+    parsed for its ``citation_pdf_url`` meta tag — the Highwire / Google-Scholar
+    standard embedded by arXiv, bioRxiv, OpenReview, ACL, PMLR, NeurIPS, IEEE,
+    Springer and most publishers — so a user can paste the page they're reading,
+    not just a raw PDF link. Raises :class:`SourceError` for a page with no
+    discoverable PDF. The fetch (and the resolved PDF) go through the SSRF guard.
+    """
+    import httpx
+
+    from papermind.net import BlockedURLError, safe_stream
+
+    try:
+        with safe_stream("GET", url, headers={"User-Agent": USER_AGENT}, timeout=30.0) as resp:
+            resp.raise_for_status()
+            html = b""
+            for chunk in resp.iter_bytes(chunk_size=65536):
+                if not html and chunk.startswith(b"%PDF"):
+                    return url  # already a direct PDF — don't slurp the whole file
+                html += chunk
+                if len(html) > 2_000_000:  # 2 MB of markup is far more than enough
+                    break
+    except BlockedURLError as exc:
+        raise SourceError(str(exc)) from exc
+    except httpx.HTTPError as exc:
+        raise SourceError(f"无法打开 {url}：{exc}") from exc
+
+    pdf_url = _citation_pdf_url(html.decode("utf-8", "replace"), base=url)
+    if pdf_url:
+        return pdf_url
+    raise SourceError(
+        f"{url} 是网页而非 PDF，且未能从页面找到论文 PDF 链接。"
+        "请粘贴 PDF 直链或 arXiv 链接，或上传 PDF 文件。"
+    )
+
+
+def _citation_pdf_url(html: str, base: str) -> Optional[str]:
+    """The PDF link from a page's ``citation_pdf_url`` meta tag. Scans every ``<meta>``
+    and parses its attributes, tolerating either attribute order and quoted *or*
+    unquoted values (ACL Anthology, for one, leaves ``name`` unquoted)."""
+    from urllib.parse import urljoin
+
+    attr_re = r"""([a-zA-Z_:-]+)\s*=\s*(?:"([^"]*)"|'([^']*)'|([^\s">]+))"""
+    for tag in re.finditer(r"<meta\b([^>]*)>", html, re.IGNORECASE):
+        attrs = {}
+        for m in re.finditer(attr_re, tag.group(1)):
+            attrs[m.group(1).lower()] = m.group(2) or m.group(3) or m.group(4) or ""
+        if attrs.get("name", "").lower() == "citation_pdf_url" and attrs.get("content"):
+            return urljoin(base, attrs["content"].strip())
+    return None
 
 
 def _download_pdf(url: str, dest: Path) -> None:

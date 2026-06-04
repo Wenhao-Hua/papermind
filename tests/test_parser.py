@@ -70,6 +70,68 @@ def test_resolve_arxiv_falls_back_to_pdf_when_metadata_throttled(monkeypatch, tm
     assert not (resolved.cache_dir / "metadata.json").exists()
 
 
+# --------------------------------------------------------------------------- #
+# Any-paper resolution: a landing page (HTML) -> its citation_pdf_url
+# --------------------------------------------------------------------------- #
+def test_citation_pdf_url_both_attribute_orders_and_relative():
+    from papermind.parser.arxiv import _citation_pdf_url
+
+    a = '<meta name="citation_pdf_url" content="https://x.org/p.pdf">'
+    assert _citation_pdf_url(a, "https://x.org/abs/1") == "https://x.org/p.pdf"
+    b = "<meta content='/files/p.pdf' name='citation_pdf_url'>"  # reversed order + relative
+    assert _citation_pdf_url(b, "https://x.org/abs/1") == "https://x.org/files/p.pdf"
+    c = '<meta content="https://aclanthology.org/2020.acl-main.1.pdf" name=citation_pdf_url>'  # unquoted name (ACL)
+    assert _citation_pdf_url(c, "https://aclanthology.org/2020.acl-main.1/") == "https://aclanthology.org/2020.acl-main.1.pdf"
+    assert _citation_pdf_url("<html>no tag here</html>", "https://x.org") is None
+
+
+def _fake_safe_stream(body: bytes):
+    import contextlib
+
+    @contextlib.contextmanager
+    def _cm(method, url, *, headers=None, timeout=30.0, max_redirects=5):
+        class _Resp:
+            headers = {}
+
+            def raise_for_status(self):
+                pass
+
+            def iter_bytes(self, chunk_size=65536):
+                for i in range(0, len(body), chunk_size):
+                    yield body[i : i + chunk_size]
+
+        yield _Resp()
+
+    return _cm
+
+
+def test_resolve_pdf_url_passes_through_direct_pdf(monkeypatch):
+    import papermind.net as net
+    from papermind.parser.arxiv import _resolve_pdf_url
+
+    monkeypatch.setattr(net, "safe_stream", _fake_safe_stream(b"%PDF-1.7 ...bytes..."))
+    assert _resolve_pdf_url("https://host.org/paper.pdf") == "https://host.org/paper.pdf"
+
+
+def test_resolve_pdf_url_finds_pdf_on_landing_page(monkeypatch):
+    import papermind.net as net
+    from papermind.parser.arxiv import _resolve_pdf_url
+
+    html = b'<html><head><meta name="citation_pdf_url" content="https://openreview.net/pdf?id=abc"></head></html>'
+    monkeypatch.setattr(net, "safe_stream", _fake_safe_stream(html))
+    assert _resolve_pdf_url("https://openreview.net/forum?id=abc") == "https://openreview.net/pdf?id=abc"
+
+
+def test_resolve_pdf_url_page_without_pdf_raises(monkeypatch):
+    import papermind.net as net
+    from papermind.errors import SourceError
+    from papermind.parser.arxiv import _resolve_pdf_url
+
+    monkeypatch.setattr(net, "safe_stream", _fake_safe_stream(b"<html><body>just a webpage</body></html>"))
+    with pytest.raises(SourceError):
+        _resolve_pdf_url("https://example.com/some-page")
+
+
 def test_detect_heading_numbered():
     assert _detect_heading("3.1 Tiling and Recomputation") == ("3.1", "Tiling and Recomputation")
     assert _detect_heading("2 Background") == ("2", "Background")
