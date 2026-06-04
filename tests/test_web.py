@@ -37,21 +37,15 @@ def test_framework_tab_and_form():
     assert "/framework" in client.get("/").text  # nav tab present
 
 
-def test_framework_body_embeds_svg_spec_and_edit_form():
+def test_framework_body_is_view_only_with_download():
     from papermind.figures.framework import FNode, FrameworkSpec, _auto_layout
     from papermind.web import _framework_body
 
     spec = _auto_layout(FrameworkSpec(title="T", nodes=[FNode(id="a", label="输入"), FNode(id="b", label="阶段")]))
-    html = _framework_body(spec, "https://arxiv.org/abs/1706.03762")
-    assert "<svg" in html and "fw-spec" in html       # diagram + embedded spec for the editor
-    assert "/framework/edit" in html and "改图" in html  # conversational-edit form
-    assert "data-fw" in html and "fw-save-spec" in html  # visual-editor toolbar + save hook
-
-
-def test_framework_save_rejects_malformed_spec():
-    # The save endpoint must reject a broken editor payload before touching the cache.
-    r = TestClient(create_app(live=True)).post("/framework/save", data={"source": "x", "spec": "{not json"})
-    assert r.status_code == 200 and "保存失败" in r.text
+    html = _framework_body(spec)
+    assert "<svg" in html and "输入" in html                    # the diagram is rendered
+    assert 'data-fw="download"' in html and "下载 SVG" in html   # the only action: download the SVG
+    assert "/framework/edit" not in html and "fw-save" not in html  # no editing affordances
 
 
 def test_demo_route_renders_offline_report():

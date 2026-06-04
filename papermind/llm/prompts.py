@@ -308,33 +308,6 @@ def framework_user(context: str) -> str:
     )
 
 
-FRAMEWORK_EDIT_SYSTEM = (
-    "你在编辑一篇论文的框架图规格（节点+连线 JSON）。给你当前规格和一条修改要求，"
-    "输出**修改后的完整规格 JSON**（与输入同结构：title/nodes/edges/legend/note；"
-    "node 含 id/label/lines/kind/col/inferred）。只改要求涉及的部分，其余尽量原样保留、id 稳定；"
-    "保持忠于论文、记号一致；数学符号用 Unicode，不要 LaTeX 反斜杠或 HTML 标签。"
-    "只输出合法 JSON，不要解释、不要代码围栏。"
-)
-
-
-def framework_edit_user(spec: dict, instruction: str) -> str:
-    import json
-
-    slim = {
-        "title": spec.get("title", ""),
-        "nodes": [{k: n.get(k) for k in ("id", "label", "lines", "kind", "col", "inferred")}
-                  for n in spec.get("nodes", [])],
-        "edges": [{k: e.get(k) for k in ("src", "dst", "style", "label")} for e in spec.get("edges", [])],
-        "legend": spec.get("legend", []),
-        "note": spec.get("note", ""),
-    }
-    return (
-        "【当前框架图规格】\n" + json.dumps(slim, ensure_ascii=False)
-        + "\n\n【修改要求】" + (instruction or "").strip()
-        + "\n\n请据此修改，输出完整的新规格 JSON（坐标无需给，渲染器会重排）。只输出合法 JSON。"
-    )
-
-
 # --------------------------------------------------------------------------- #
 # Q&A / reasoning / tutoring
 # --------------------------------------------------------------------------- #

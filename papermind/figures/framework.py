@@ -297,24 +297,6 @@ def generate_framework(context: str, client, on_notice=None) -> Optional[Framewo
     return _auto_layout(spec)
 
 
-def edit_framework(spec: FrameworkSpec, instruction: str, client, on_notice=None) -> Optional[FrameworkSpec]:
-    """Rewrite a framework spec from a natural-language instruction (conversational edit).
-    Re-lays-out the result; returns None on failure (the caller keeps the old spec)."""
-    from papermind.errors import LLMError
-    from papermind.llm.prompts import FRAMEWORK_EDIT_SYSTEM, framework_edit_user
-
-    try:
-        data = client.complete_json(
-            FRAMEWORK_EDIT_SYSTEM, framework_edit_user(spec.model_dump(), instruction), max_tokens=4000
-        )
-    except LLMError as exc:
-        if on_notice:
-            on_notice(f"改图失败：{exc}")
-        return None
-    new = _spec_from_data(data)
-    return _auto_layout(new) if new is not None else None
-
-
 # --------------------------------------------------------------------------- #
 # Persistence (one framework.json per paper, in its cache dir)
 # --------------------------------------------------------------------------- #
