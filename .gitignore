@@ -30,8 +30,18 @@ Thumbs.db
 # Playwright MCP browser artifacts / screenshots
 .playwright-mcp/
 
-# Dev-only preview pages / scratch screenshots
+# Dev-only preview pages / scratch screenshots / coverage / local MCP config
 examples/_*.html
 /candidates.png
 /home-hero.png
 /fig-preview.png
+/preview.html
+/framework-*.png
+/framework-*.svg
+/framework-*.pdf
+/fw-*.png
+/fw-*.svg
+/fw-*.pdf
+/papermind-home-*.png
+.coverage
+.mcp.json
