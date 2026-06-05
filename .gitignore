@@ -43,5 +43,6 @@ examples/_*.html
 /fw-*.svg
 /fw-*.pdf
 /papermind-home-*.png
+/test.pdf
 .coverage
 .mcp.json
