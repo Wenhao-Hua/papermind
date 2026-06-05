@@ -22,6 +22,7 @@
 
 - **🔬 We trained our own retrieval reranker — +14pt Recall@5 over a strong dense baseline** (QASPER, held‑out test). Most "chat with a paper" tools wrap an API; PaperMind's evidence retrieval is a cross‑encoder we fine‑tuned and measured (see [Benchmarks](#benchmarks-the-reranker-is-trained-and-measured-not-a-black-box)).
 - **🔎 Key claims are labeled and citation‑verified.** Answers are split into **fact / inference (with confidence) / out‑of‑scope**, and each cited quote is checked against the actual paper text — if it can't be found, it's flagged ⚠️ rather than silently trusted.
+- **📐 Whole‑method framework diagram.** Beyond per‑point figures, PaperMind reconstructs the paper's end‑to‑end method as a single Figure‑1‑style architecture diagram (steps the paper only implies are marked *inferred*) — view it on the web `/framework` tab and download it as SVG.
 - **🛠️ Reproduction grounded in the real code repo.** PaperMind locates the paper's code repository and builds `setup.sh` from the repo's **actual dependency file and README run‑commands** — not a hallucinated guess.
 - **🆓 Runs fully local & free.** `papermind demo` works offline; `--local` routes everything through Ollama; with no key it auto‑falls back to local.
 

@@ -2,8 +2,8 @@
 
 **[English](README.md) · 简体中文**
 
-> **把一篇论文读懂、读到能复现 —— 关键判断都标原文出处、逐条核验。**（arXiv 链接或任意 PDF 直链）
-> *Understand any paper from its URL: structured analysis, grounded & cited Q&A, runnable reproduction.*
+> **把任意论文读懂、读到能复现 —— 关键判断都标原文出处、逐条核验。**
+> 输入 arXiv 链接 / DOI / 论文标题 / 论文页面或 PDF 直链（也可上传 PDF）：结构化分析、带原文依据并核验的问答、整篇方法的**框架图**（可下载 SVG）、可运行的复现指南。
 
 [![CI](https://github.com/Wenhao-Hua/papermind/actions/workflows/ci.yml/badge.svg)](https://github.com/Wenhao-Hua/papermind/actions/workflows/ci.yml)
 [![PyPI](https://img.shields.io/pypi/v/paper-mind)](https://pypi.org/project/paper-mind/)
@@ -22,6 +22,7 @@
 
 - **🔬 我们自训练了检索重排器 —— 相对强稠密基线 Recall@5 +14pt**（QASPER 独立 test）。多数「和论文对话」工具只是套 API；PaperMind 的证据检索是我们**自己微调并实测**的 cross-encoder（见 [实测数据](#实测重排器是自训练实测的不是黑箱)）。
 - **🔎 关键判断分层标注、逐条核验。** 回答分 **论文事实 / 推理(带置信度) / 超纲**，每条引用都对着原文核验——核不到就标 ⚠️，绝不默默当真。
+- **📐 整篇方法的框架图。** 除了逐技术点的配图，PaperMind 还把论文的端到端方法重建成一张 Figure‑1 式的总览架构图（论文只隐含、未画出的步骤标注为*推断*）——在网页 `/framework` 页查看，可下载为 SVG。
 - **🛠️ 复现接论文的真实代码仓库。** 自动定位论文的代码仓库，用仓库里**真实的依赖文件和 README 运行命令**生成 `setup.sh`，不是模型瞎猜。
 - **🆓 全本地、零成本可跑。** `papermind demo` 离线看；`--local` 全程走 Ollama；没 key 自动回退本地。
 
