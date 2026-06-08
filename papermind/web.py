@@ -14,6 +14,7 @@ picker — the active model is shown subtly in the footer.
 
 from __future__ import annotations
 
+import contextvars
 import html as _html
 import os
 import secrets
@@ -23,6 +24,28 @@ import time
 from typing import Optional
 
 from papermind.errors import PaperMindError, SourceError
+
+# --------------------------------------------------------------------------- #
+# Language (bilingual UI) — resolved per request and stored in a ContextVar so the
+# render helpers don't need a lang argument threaded through every signature.
+# Default English (10k-star reach); zh via Accept-Language or an explicit ?lang=zh.
+# --------------------------------------------------------------------------- #
+_LANG: "contextvars.ContextVar[str]" = contextvars.ContextVar("pm_lang", default="en")
+
+
+def _lang() -> str:
+    return _LANG.get()
+
+
+def _t(en: str, zh: str) -> str:
+    """Pick the English or Chinese string for the current request's language."""
+    return zh if _LANG.get() == "zh" else en
+
+
+def _resolve_lang(cookie: Optional[str], accept_language: Optional[str]) -> str:
+    if cookie in ("en", "zh"):
+        return cookie
+    return "zh" if (accept_language or "").lower().lstrip().startswith("zh") else "en"
 
 # X-Forwarded-For / X-Real-IP are appended by the client and trivially forged, so
 # trusting them would let anyone reset their per-IP quota. Only cf-connecting-ip
@@ -52,13 +75,13 @@ _MODEL_LABELS = {
 }
 
 _TABS = [
-    ("/", "分析"),
-    ("/ask", "问答"),
-    ("/summary", "速读"),
-    ("/framework", "框架图"),
-    ("/compare", "对比"),
-    ("/reproduce", "复现"),
-    ("/search", "搜索"),
+    ("/", "Analyze", "分析"),
+    ("/ask", "Q&A", "问答"),
+    ("/summary", "Summary", "速读"),
+    ("/framework", "Framework", "框架图"),
+    ("/compare", "Compare", "对比"),
+    ("/reproduce", "Reproduce", "复现"),
+    ("/search", "Search", "搜索"),
 ]
 
 
@@ -115,8 +138,14 @@ def _client_ip(request) -> str:
 
 def _quota_msg(scope: str, limiter: "RateLimiter") -> str:
     if scope == "global":
-        return f"本服务今日总额度已用完（{limiter.global_max} 次/天）。请明天再来，或本地运行：pip install paper-mind。"
-    return f"今日额度已用完（每人 {limiter.per_ip} 次/天）。请明天再来，或本地零成本运行：pip install paper-mind 后 papermind analyze。"
+        return _t(
+            f"The service's daily quota is used up ({limiter.global_max}/day). Try tomorrow, or run locally: pip install paper-mind.",
+            f"本服务今日总额度已用完（{limiter.global_max} 次/天）。请明天再来，或本地运行：pip install paper-mind。",
+        )
+    return _t(
+        f"Your daily quota is used up ({limiter.per_ip}/day per person). Try tomorrow, or run locally for free: pip install paper-mind then papermind analyze.",
+        f"今日额度已用完（每人 {limiter.per_ip} 次/天）。请明天再来，或本地零成本运行：pip install paper-mind 后 papermind analyze。",
+    )
 
 
 # --------------------------------------------------------------------------- #
@@ -219,11 +248,11 @@ def _job_page(job_id: str, live: bool, tab: str = "/") -> str:
     # Progress bar lives INLINE in the card (not the shared overlay) so the
     # elements exist before the inline poll script runs.
     body = (
-        "<section class='panel'><h2>分析中…</h2>"
+        f"<section class='panel'><h2>{_t('Working…', '分析中…')}</h2>"
         "<div class='pm-bar' style='margin:14px 0'><span id='jp-fill'></span></div>"
-        "<p class='pm-busy-step' id='jp-step'>开始</p>"
-        "<p class='pm-busy-time'><b id='jp-pct'>0</b>% · 已用 <b id='jp-sec'>0</b> 秒</p>"
-        "<p class='lead'>完成后自动显示结果。重论文可能要 1–3 分钟，可以离开本页稍后再回来。</p></section>"
+        f"<p class='pm-busy-step' id='jp-step'>{_t('Starting', '开始')}</p>"
+        f"<p class='pm-busy-time'><b id='jp-pct'>0</b>% · {_t('elapsed', '已用')} <b id='jp-sec'>0</b>{_t('s', ' 秒')}</p>"
+        f"<p class='lead'>{_t('The result appears automatically. A heavy paper can take 1–3 min — you can leave and come back.', '完成后自动显示结果。重论文可能要 1–3 分钟，可以离开本页稍后再回来。')}</p></section>"
         f"<script>{_poll_js(job_id)}</script>"
     )
     return _page(tab, body, live)
@@ -239,6 +268,17 @@ def create_app(live: bool = False, rate_per_ip: int = 8, rate_global: int = 300,
 
     app = FastAPI(title="PaperMind", docs_url=None, redoc_url=None)
     limiter = RateLimiter(rate_per_ip, rate_global)
+
+    @app.middleware("http")
+    async def _set_language(request, call_next):
+        q = request.query_params.get("lang")
+        explicit = q if q in ("en", "zh") else None
+        _LANG.set(_resolve_lang(explicit or request.cookies.get("pm_lang"),
+                                request.headers.get("accept-language")))
+        response = await call_next(request)
+        if explicit and explicit != request.cookies.get("pm_lang"):
+            response.set_cookie("pm_lang", explicit, max_age=31536000, samesite="lax")
+        return response
 
     def gate(request) -> Optional[str]:
         """Reserve a quota slot for this request's IP; return an error message if over."""
@@ -290,10 +330,10 @@ def create_app(live: bool = False, rate_per_ip: int = 8, rate_global: int = 300,
         except PaperMindError as exc:
             return _page("/", _analyze_form(live, str(exc)), live)
         if not src:
-            return _page("/", _analyze_form(live, "请填入论文 URL（arXiv 链接或 PDF 直链），或上传 PDF。"), live)
+            return _page("/", _analyze_form(live, _t("Enter a paper link / DOI / title, or upload a PDF.", "请填入论文链接 / DOI / 标题，或上传 PDF。")), live)
         if not live:  # demo: only already-cached reports; never runs a model or hits the network
             report = _demo_cached(src)
-            return report.to_html() if report is not None else _page("/", _analyze_form(live, _DEMO_MSG), live)
+            return report.to_html() if report is not None else _page("/", _analyze_form(live, _demo_msg()), live)
         return _analyze_async(request, src, model, no_cache or bool(refresh))
 
     @app.get("/analyze", response_class=HTMLResponse)
@@ -302,7 +342,7 @@ def create_app(live: bool = False, rate_per_ip: int = 8, rate_global: int = 300,
             return _page("/", _analyze_form(live), live)
         if not live:
             report = _demo_cached(source)
-            return report.to_html() if report is not None else _page("/", _analyze_form(live, _DEMO_MSG), live)
+            return report.to_html() if report is not None else _page("/", _analyze_form(live, _demo_msg()), live)
         return _analyze_async(request, source, "", no_cache)
 
     @app.get("/job/{job_id}")
@@ -320,7 +360,7 @@ def create_app(live: bool = False, rate_per_ip: int = 8, rate_global: int = 300,
         form = _ask_form if kind == "ask" else _analyze_form
         if job is None:
             # job lost (server restarted / expired) -> give back a usable retry form
-            return _page(tab, form(live, "结果已过期或服务刚更新过，请重新提交。"), live)
+            return _page(tab, form(live, _t("The result expired or the service just updated — please resubmit.", "结果已过期或服务刚更新过，请重新提交。")), live)
         if job["status"] == "done":
             return job["html"]
         if job["status"] == "error":
@@ -344,12 +384,12 @@ def create_app(live: bool = False, rate_per_ip: int = 8, rate_global: int = 300,
         pm_sid: Optional[str] = Cookie(None),
     ):
         if not live:
-            return _page("/ask", _ask_form(live, "演示模式不支持问答（需调用模型）。请以 --live 启动。"), live)
+            return _page("/ask", _ask_form(live, _t("Q&A needs a model, so it's off in demo mode. Start with --live.", "演示模式不支持问答（需调用模型）。请以 --live 启动。")), live)
 
         sess = _session_for(pm_sid)
         prior = _chat_log_html(sess["log"]) if sess and sess.get("log") else ""
         if not source.strip() or not question.strip():
-            return _page("/ask", prior + _ask_form(live, "请填写论文和问题。"), live)
+            return _page("/ask", prior + _ask_form(live, _t("Please fill in both the paper and the question.", "请填写论文和问题。")), live)
 
         blocked = gate(request)
         if blocked:
@@ -388,7 +428,7 @@ def create_app(live: bool = False, rate_per_ip: int = 8, rate_global: int = 300,
     @app.post("/summary", response_class=HTMLResponse)
     def summary_route(request: Request, source: str = Form(...), model: str = Form("")):
         if not live:
-            return _page("/summary", _summary_form(live, "演示模式不支持速读（需调用模型）。请以 --live 启动。"), live)
+            return _page("/summary", _summary_form(live, _t("Summary needs a model, so it's off in demo mode. Start with --live.", "演示模式不支持速读（需调用模型）。请以 --live 启动。")), live)
         blocked = gate(request)
         if blocked:
             return _page("/summary", _summary_form(live, blocked), live)
@@ -414,9 +454,9 @@ def create_app(live: bool = False, rate_per_ip: int = 8, rate_global: int = 300,
     def compare_route(request: Request, sources: str = Form(...), model: str = Form("")):
         items = [s.strip() for s in sources.splitlines() if s.strip()][:4]
         if len(items) < 2:
-            return _page("/compare", _compare_form(live, "请每行一个来源，至少 2 篇。"), live)
+            return _page("/compare", _compare_form(live, _t("One source per line, at least 2.", "请每行一个来源，至少 2 篇。")), live)
         if not live:
-            return _page("/compare", _compare_form(live, "演示模式不支持对比（需调用模型）。请以 --live 启动。"), live)
+            return _page("/compare", _compare_form(live, _t("Compare needs a model, so it's off in demo mode. Start with --live.", "演示模式不支持对比（需调用模型）。请以 --live 启动。")), live)
         blocked = gate(request)
         if blocked:
             return _page("/compare", _compare_form(live, blocked), live)
@@ -440,7 +480,7 @@ def create_app(live: bool = False, rate_per_ip: int = 8, rate_global: int = 300,
             report = _demo_cached(source)
             if report is not None and report.reproduction is not None:
                 return _page("/reproduce", _repro_body(report) + _reproduce_form(live), live)
-            return _page("/reproduce", _reproduce_form(live, "演示模式仅展示已缓存论文的复现。请以 --live 启动。"), live)
+            return _page("/reproduce", _reproduce_form(live, _t("Demo mode shows reproduction only for cached papers. Start with --live.", "演示模式仅展示已缓存论文的复现。请以 --live 启动。")), live)
         blocked = gate(request)
         if blocked:
             return _page("/reproduce", _reproduce_form(live, blocked), live)
@@ -471,7 +511,7 @@ def create_app(live: bool = False, rate_per_ip: int = 8, rate_global: int = 300,
             spec = _demo_framework(source)
             if spec is not None:
                 return _page("/framework", _framework_body(spec) + _framework_form(live), live)
-            return _page("/framework", _framework_form(live, "演示模式仅展示已缓存论文的框架图。请以 --live 启动。"), live)
+            return _page("/framework", _framework_form(live, _t("Demo mode shows framework diagrams only for cached papers. Start with --live.", "演示模式仅展示已缓存论文的框架图。请以 --live 启动。")), live)
         blocked = gate(request)
         if blocked:
             return _page("/framework", _framework_form(live, blocked), live)
@@ -508,7 +548,7 @@ def create_app(live: bool = False, rate_per_ip: int = 8, rate_global: int = 300,
                 f"<td class='ttl'><a href='{_e(abs_url)}' target='_blank' rel='noopener'>{_e(r.title)}</a></td></tr>"
             )
         table = (
-            "<table><thead><tr><th>arXiv</th><th>年份</th><th>标题（原文）</th></tr></thead>"
+            f"<table><thead><tr><th>arXiv</th><th>{_t('Year', '年份')}</th><th>{_t('Title', '标题（原文）')}</th></tr></thead>"
             f"<tbody>{rows}</tbody></table>"
         )
         return _page("/search", _search_form() + f"<section class='panel'>{table}</section>", live)
@@ -533,7 +573,11 @@ def serve(host: str = "0.0.0.0", port: int = 8080, live: bool = False,
 # --------------------------------------------------------------------------- #
 # Demo (cached-only) lookups + small renderers
 # --------------------------------------------------------------------------- #
-_DEMO_MSG = "演示模式仅展示已缓存的论文。分析新论文请用 CLI，或以 --live 启动服务。"
+def _demo_msg() -> str:
+    return _t(
+        "Demo mode shows only already-cached papers. Analyze a new one via the CLI, or start the server with --live.",
+        "演示模式仅展示已缓存的论文。分析新论文请用 CLI，或以 --live 启动服务。",
+    )
 
 
 def _demo_cached(source: str):
@@ -639,6 +683,9 @@ body{margin:0;color:var(--ink);font:16px/1.7 var(--sans);
 .pm-mast{padding:44px 0 18px}
 .pm-logo{font:600 1.95rem/1 var(--serif);letter-spacing:-.01em}
 .pm-tag{display:block;margin-top:9px;color:var(--soft);font-size:.92rem}
+.pm-lang{float:right;margin-top:8px;font-size:.82rem;color:var(--soft);text-decoration:none;
+  border:1px solid var(--line);border-radius:999px;padding:3px 12px}
+.pm-lang:hover{color:var(--ink);background:var(--accent-soft)}
 .pm-nav{display:flex;flex-wrap:wrap;gap:24px;border-bottom:1px solid var(--line);margin-bottom:30px}
 .pm-nav a{text-decoration:none;color:var(--soft);font-weight:600;font-size:.95rem;
   padding-bottom:13px;border-bottom:2px solid transparent;transition:color .15s,border-color .15s}
@@ -780,24 +827,31 @@ def _active_model_label() -> str:
 
 def _page(active: str, body: str, live: bool) -> str:
     nav = "".join(
-        f"<a href='{href}' class='{'on' if href == active else ''}'>{label}</a>" for href, label in _TABS
+        f"<a href='{href}' class='{'on' if href == active else ''}'>{_t(en, zh)}</a>"
+        for href, en, zh in _TABS
     )
-    mode = "实时分析 · 用本机 key（有成本）" if live else "演示模式 · 仅已缓存论文"
+    toggle = ("<a class='pm-lang' href='?lang=en'>English</a>" if _lang() == "zh"
+              else "<a class='pm-lang' href='?lang=zh'>中文</a>")
+    mode = _t("Live · uses the server key (billed)", "实时分析 · 用本机 key（有成本）") if live \
+        else _t("Demo · cached papers only", "演示模式 · 仅已缓存论文")
+    tag = _t("Read a paper — structured analysis · grounded, cited Q&A · framework diagram · reproduction.",
+             "读懂一篇论文 · 结构化分析 · 带原文依据的问答 · 框架图 · 复现指南")
     return (
-        "<!DOCTYPE html><html lang='zh'><head><meta charset='utf-8'>"
+        f"<!DOCTYPE html><html lang='{_lang()}'><head><meta charset='utf-8'>"
         "<meta name='viewport' content='width=device-width, initial-scale=1'>"
         f"<title>PaperMind</title><style>{_CSS}</style></head><body><div class='pm-wrap'>"
-        "<header class='pm-mast'><span class='pm-logo'>PaperMind</span>"
-        "<span class='pm-tag'>读懂一篇论文（arXiv 链接或 PDF 直链）· 结构化分析 · 带原文依据的问答 · 复现指南</span></header>"
+        f"<header class='pm-mast'>{toggle}<span class='pm-logo'>PaperMind</span>"
+        f"<span class='pm-tag'>{tag}</span></header>"
         f"<nav class='pm-nav'>{nav}</nav><main>{body}</main>"
         "<footer class='pm-foot'>"
-        f"<span>当前模型 <span class='m'>{_e(_active_model_label())}</span></span>"
-        f"<span>{mode}</span><a href='/demo'>离线示例</a></footer>"
+        f"<span>{_t('Model', '当前模型')} <span class='m'>{_e(_active_model_label())}</span></span>"
+        f"<span>{mode}</span><a href='/demo'>{_t('Offline demo', '离线示例')}</a></footer>"
         "<div id='pm-busy' class='pm-busy'><div class='pm-busy-card'>"
         "<div class='pm-bar'><span id='pm-fill'></span></div>"
-        "<p class='pm-busy-title'>分析中…</p><p class='pm-busy-step' id='pm-step'>开始</p>"
-        "<p class='pm-busy-time'><b id='pm-pct'>0</b>% · 已用 <b id='pm-sec'>0</b> 秒</p></div></div>"
-        f"<script>{_BUSY_JS}</script>"
+        f"<p class='pm-busy-title'>{_t('Analyzing…', '分析中…')}</p>"
+        f"<p class='pm-busy-step' id='pm-step'>{_t('Starting', '开始')}</p>"
+        f"<p class='pm-busy-time'><b id='pm-pct'>0</b>% · {_t('elapsed', '已用')} <b id='pm-sec'>0</b>{_t('s', ' 秒')}</p></div></div>"
+        f"<script>{_BUSY_JS.replace('提交中…', _t('Submitting…', '提交中…'))}</script>"
         "</body></html>"
     )
 
@@ -811,7 +865,7 @@ _EXAMPLES = [("https://arxiv.org/abs/1706.03762", "Transformer"), ("https://arxi
 
 def _examples_row() -> str:
     chips = "".join(f"<a href='#' data-id='{_e(i)}'>{_e(name)}</a>" for i, name in _EXAMPLES)
-    return f"<p class='ex'>没有目标？试试 {chips}</p>"
+    return f"<p class='ex'>{_t('No target? Try', '没有目标？试试')} {chips}</p>"
 
 
 def _load_hero_svg(name: str = "hero.svg") -> str:
@@ -829,56 +883,71 @@ def _load_hero_svg(name: str = "hero.svg") -> str:
     return ""
 
 
-_HERO_SVG = _load_hero_svg()
+def _load_zh_hero() -> str:
+    """The Chinese hero figure (a real teaching SVG from the gallery). Falls back to the
+    bundled English hero when the examples aren't present (e.g. a bare pip install)."""
+    import pathlib
+
+    p = pathlib.Path(__file__).resolve().parent.parent / "examples" / "figures" / "transformer-fig2.svg"
+    try:
+        return p.read_text(encoding="utf-8")
+    except Exception:  # noqa: BLE001
+        return _HERO_EN
+
+
+_HERO_EN = _load_hero_svg("hero.svg")  # English, bundled in the wheel
+_HERO_ZH = _load_zh_hero()
 
 
 def _hero() -> str:
+    svg = _HERO_ZH if _lang() == "zh" else _HERO_EN
+    cap = _t("↑ A paper-style teaching diagram PaperMind generates · ",
+             "↑ PaperMind 为论文技术点生成的论文式教学示意图 · ")
     fig = (
-        f"<figure class='hero-fig'>{_HERO_SVG}"
-        "<figcaption>↑ PaperMind 为论文技术点自动生成的论文式教学示意图 · "
-        "<a href='/demo'>看一份完整示例报告 →</a></figcaption></figure>"
-    ) if _HERO_SVG else ""
+        f"<figure class='hero-fig'>{svg}<figcaption>{cap}"
+        f"<a href='/demo'>{_t('see a full sample report →', '看一份完整示例报告 →')}</a></figcaption></figure>"
+    ) if svg else ""
     return (
         "<section class='hero'>"
-        "<h1 class='hero-h'>把任意论文，读懂到能复现。</h1>"
-        "<p class='hero-sub'>结构化分析 · 带原文出处并自动核验的问答 · 复现接论文的真实代码仓库。"
-        "粘贴论文链接、DOI 或标题（arXiv、论文页面、PDF…），也可上传 PDF。</p>"
-        "<div class='hero-mods'><span>🎯 核心贡献</span><span>🔬 技术细节 + 教学示意图</span>"
-        "<span>🔗 知识关联</span><span>🛠️ 复现指南</span></div>"
+        f"<h1 class='hero-h'>{_t('Read any paper — from skim to reproduction.', '把任意论文，读懂到能复现。')}</h1>"
+        f"<p class='hero-sub'>{_t('Structured analysis · grounded, citation-verified Q&A · a whole-method framework diagram · reproduction from the real code repo. Paste a link, DOI, or title (arXiv, paper page, PDF…), or upload a PDF.', '结构化分析 · 带原文出处并核验的问答 · 整篇方法的框架图 · 接真实代码仓库的复现。粘贴链接、DOI 或标题（arXiv、论文页面、PDF…），也可上传 PDF。')}</p>"
+        f"<div class='hero-mods'><span>{_t('🎯 Contributions', '🎯 核心贡献')}</span>"
+        f"<span>{_t('🔬 Technical + teaching figures', '🔬 技术细节 + 教学示意图')}</span>"
+        f"<span>{_t('🔗 Connections', '🔗 知识关联')}</span><span>{_t('🛠️ Reproduction', '🛠️ 复现指南')}</span></div>"
         f"{fig}</section>"
     )
 
 
 def _analyze_form(live: bool, error: str = "") -> str:
-    note = "" if live else "<p class='lead'>演示模式：仅展示已缓存论文。分析新论文请用 CLI，或以 <code>--live</code> 启动。</p>"
+    note = "" if live else f"<p class='lead'>{_t('Demo mode: only already-cached papers. Analyze a new one via the CLI, or start with <code>--live</code>.', '演示模式：仅展示已缓存论文。分析新论文请用 CLI，或以 <code>--live</code> 启动。')}</p>"
     return (
-        "<section class='panel'><h2>分析一篇论文</h2>"
-        "<p class='lead'>四模块结构化解读：核心贡献 · 方法与图示 · 关联工作 · 复现要点。</p>"
+        f"<section class='panel'><h2>{_t('Analyze a paper', '分析一篇论文')}</h2>"
+        f"<p class='lead'>{_t('Four-module read: contributions · method &amp; figures · related work · reproduction.', '四模块结构化解读：核心贡献 · 方法与图示 · 关联工作 · 复现要点。')}</p>"
         f"{note}{_err(error)}"
         "<form method='post' action='/analyze' enctype='multipart/form-data'>"
-        "<label>论文 <span class='hint'>链接 / DOI / 标题</span></label>"
-        "<input name='source' placeholder='arXiv / 论文页面 / PDF / DOI，或直接输入论文标题' autofocus>"
-        "<label>或上传 PDF <span class='hint'>本地论文</span></label>"
+        f"<label>{_t('Paper', '论文')} <span class='hint'>{_t('link / DOI / title', '链接 / DOI / 标题')}</span></label>"
+        f"<input name='source' placeholder='{_t('arXiv / paper page / PDF / DOI, or just the paper title', 'arXiv / 论文页面 / PDF / DOI，或直接输入论文标题')}' autofocus>"
+        f"<label>{_t('or upload a PDF', '或上传 PDF')} <span class='hint'>{_t('local paper', '本地论文')}</span></label>"
         "<input type='file' name='file' accept='application/pdf'>"
         "<label style='font-weight:400;color:var(--soft)'>"
-        "<input type='checkbox' name='refresh' value='1' style='width:auto;margin-right:8px'>忽略缓存，重新分析</label>"
-        "<button>分析</button></form>"
+        f"<input type='checkbox' name='refresh' value='1' style='width:auto;margin-right:8px'>{_t('Ignore cache, re-analyze', '忽略缓存，重新分析')}</label>"
+        f"<button>{_t('Analyze', '分析')}</button></form>"
         f"{_examples_row()}</section>"
     )
 
 
 def _ask_form(live: bool, error: str = "") -> str:
     return (
-        "<section class='panel'><h2>问答</h2>"
-        "<p class='lead'>基于原文回答，分层标注：论文事实 · 基于论文的推理 · 超出论文范围，并附原文依据。</p>"
+        f"<section class='panel'><h2>{_t('Q&amp;A', '问答')}</h2>"
+        f"<p class='lead'>{_t('Grounded in the paper, labeled by layer: paper fact · inference from the paper · out of scope — each with its source.', '基于原文回答，分层标注：论文事实 · 基于论文的推理 · 超出论文范围，并附原文依据。')}</p>"
         f"{_err(error)}"
         "<form method='post' action='/ask'>"
-        "<label>论文 <span class='hint'>论文 URL（arXiv 链接或 PDF 直链）</span></label><input name='source' placeholder='https://arxiv.org/abs/2307.08691'>"
-        "<label>问题</label><input name='question' placeholder='为什么要除以 √d_k？'>"
-        "<label>模式 <span class='hint'>strict 更保守 · explore 更发散</span></label>"
+        f"<label>{_t('Paper', '论文')} <span class='hint'>{_t('link / DOI / title', '链接 / DOI / 标题')}</span></label><input name='source' placeholder='https://arxiv.org/abs/2307.08691'>"
+        f"<label>{_t('Question', '问题')}</label><input name='question' placeholder='{_t('Why divide by √d_k?', '为什么要除以 √d_k？')}'>"
+        f"<label>{_t('Mode', '模式')} <span class='hint'>{_t('strict = more cautious · explore = more open', 'strict 更保守 · explore 更发散')}</span></label>"
         "<select name='mode'><option value='balanced'>balanced</option>"
         "<option value='strict'>strict</option><option value='explore'>explore</option></select>"
-        "<button>提问</button></form></section>"
+        f"<button>{_t('Ask', '提问')}</button></form></section>"
     )
 
 
@@ -917,15 +986,15 @@ def _demo_framework(source: str):
 
 
 def _framework_form(live: bool, error: str = "") -> str:
-    note = "" if live else "<p class='lead'>演示模式：仅展示已缓存论文的框架图。请以 <code>--live</code> 启动。</p>"
+    note = "" if live else f"<p class='lead'>{_t('Demo mode: only cached papers&#39; framework diagrams. Start with <code>--live</code>.', '演示模式：仅展示已缓存论文的框架图。请以 <code>--live</code> 启动。')}</p>"
     return (
-        "<section class='panel'><h2>论文框架图</h2>"
-        "<p class='lead'>自动生成整篇方法的端到端框架图（含论文未画出的推断步骤），可下载为 SVG。</p>"
+        f"<section class='panel'><h2>{_t('Framework diagram', '论文框架图')}</h2>"
+        f"<p class='lead'>{_t('Generates the paper&#39;s end-to-end method as one diagram (including steps the paper only implies), downloadable as SVG.', '自动生成整篇方法的端到端框架图（含论文未画出的推断步骤），可下载为 SVG。')}</p>"
         f"{note}{_err(error)}"
         "<form method='post' action='/framework'>"
-        "<label>论文 <span class='hint'>链接 / DOI / 标题</span></label>"
-        "<input name='source' placeholder='arXiv / 论文页面 / PDF / DOI / 标题' autofocus>"
-        "<button>生成框架图</button></form>"
+        f"<label>{_t('Paper', '论文')} <span class='hint'>{_t('link / DOI / title', '链接 / DOI / 标题')}</span></label>"
+        f"<input name='source' placeholder='{_t('arXiv / paper page / PDF / DOI / title', 'arXiv / 论文页面 / PDF / DOI / 标题')}' autofocus>"
+        f"<button>{_t('Generate diagram', '生成框架图')}</button></form>"
         f"{_examples_row()}</section>"
     )
 
@@ -935,9 +1004,9 @@ def _framework_body(spec) -> str:
 
     svg = render_framework_svg(spec)
     return (
-        "<section class='panel'><h2>框架图</h2>"
-        "<p class='lead'>论文式端到端框架图（虚线＝论文未显式画出的推断步骤）。</p>"
-        "<div class='fw-tools'><button type='button' data-fw='download'>⬇ 下载 SVG</button></div>"
+        f"<section class='panel'><h2>{_t('Framework diagram', '框架图')}</h2>"
+        f"<p class='lead'>{_t('Paper-style end-to-end diagram (dashed = steps the paper only implies).', '论文式端到端框架图（虚线＝论文未显式画出的推断步骤）。')}</p>"
+        f"<div class='fw-tools'><button type='button' data-fw='download'>{_t('⬇ Download SVG', '⬇ 下载 SVG')}</button></div>"
         f"<div class='fw-canvas' id='fw-canvas'>{svg}</div>"
         f"<script>{_FRAMEWORK_JS}</script>"
         "</section>"
@@ -946,67 +1015,71 @@ def _framework_body(spec) -> str:
 
 def _summary_form(live: bool, error: str = "") -> str:
     return (
-        "<section class='panel'><h2>速读</h2>"
-        "<p class='lead'>一句话 TL;DR + 几条要点（单次调用，比完整分析更快）。</p>"
+        f"<section class='panel'><h2>{_t('Summary', '速读')}</h2>"
+        f"<p class='lead'>{_t('A one-line TL;DR + a few key points (a single call, faster than the full analysis).', '一句话 TL;DR + 几条要点（单次调用，比完整分析更快）。')}</p>"
         f"{_err(error)}"
         "<form method='post' action='/summary'>"
-        "<label>论文 <span class='hint'>论文 URL（arXiv 链接或 PDF 直链）</span></label><input name='source' placeholder='https://arxiv.org/abs/2307.08691'>"
-        "<button>速读</button></form></section>"
+        f"<label>{_t('Paper', '论文')} <span class='hint'>{_t('link / DOI / title', '链接 / DOI / 标题')}</span></label><input name='source' placeholder='https://arxiv.org/abs/2307.08691'>"
+        f"<button>{_t('Summarize', '速读')}</button></form></section>"
     )
 
 
 def _compare_form(live: bool, error: str = "") -> str:
     return (
-        "<section class='panel'><h2>多篇对比</h2>"
-        "<p class='lead'>2–4 篇论文的问题 · 方法 · 结果横向对照。</p>"
+        f"<section class='panel'><h2>{_t('Compare papers', '多篇对比')}</h2>"
+        f"<p class='lead'>{_t('Side-by-side problem · method · results across 2–4 papers.', '2–4 篇论文的问题 · 方法 · 结果横向对照。')}</p>"
         f"{_err(error)}"
         "<form method='post' action='/compare'>"
-        "<label>论文 <span class='hint'>每行一个，2–4 篇</span></label>"
+        f"<label>{_t('Papers', '论文')} <span class='hint'>{_t('one per line, 2–4', '每行一个，2–4 篇')}</span></label>"
         "<textarea name='sources' placeholder='https://arxiv.org/abs/2307.08691&#10;https://arxiv.org/abs/1706.03762'></textarea>"
-        "<button>对比</button></form></section>"
+        f"<button>{_t('Compare', '对比')}</button></form></section>"
     )
 
 
 def _reproduce_form(live: bool, error: str = "") -> str:
     return (
-        "<section class='panel'><h2>复现指南</h2>"
-        "<p class='lead'>导出可一键运行的环境与步骤脚本（setup.sh）。</p>"
+        f"<section class='panel'><h2>{_t('Reproduction guide', '复现指南')}</h2>"
+        f"<p class='lead'>{_t('Export a one-shot environment + steps script (setup.sh).', '导出可一键运行的环境与步骤脚本（setup.sh）。')}</p>"
         f"{_err(error)}"
         "<form method='post' action='/reproduce'>"
-        "<label>论文 <span class='hint'>论文 URL（arXiv 链接或 PDF 直链）</span></label><input name='source' placeholder='https://arxiv.org/abs/2307.08691'>"
-        "<button>导出</button></form></section>"
+        f"<label>{_t('Paper', '论文')} <span class='hint'>{_t('link / DOI / title', '链接 / DOI / 标题')}</span></label><input name='source' placeholder='https://arxiv.org/abs/2307.08691'>"
+        f"<button>{_t('Export', '导出')}</button></form></section>"
     )
 
 
 def _search_form(error: str = "") -> str:
     return (
-        "<section class='panel'><h2>搜索 arXiv</h2>"
-        "<p class='lead'>关键词检索，不调用模型。点结果中的 arXiv id 即可分析 / 问答。</p>"
+        f"<section class='panel'><h2>{_t('Search arXiv', '搜索 arXiv')}</h2>"
+        f"<p class='lead'>{_t('Keyword search, no model calls. Click an arXiv id in the results to analyze / ask.', '关键词检索，不调用模型。点结果中的 arXiv id 即可分析 / 问答。')}</p>"
         f"{_err(error)}"
         "<form method='post' action='/search'>"
-        "<label>关键词</label><input name='query' placeholder='flash attention' autofocus>"
-        "<button>搜索</button></form></section>"
+        f"<label>{_t('Keywords', '关键词')}</label><input name='query' placeholder='flash attention' autofocus>"
+        f"<button>{_t('Search', '搜索')}</button></form></section>"
     )
 
 
 def _answer_segments_html(answer) -> str:
-    kind = {"fact": ("论文事实", "fact"), "inference": ("基于论文的推理", "inf"), "out_of_scope": ("超出论文范围", "oos")}
+    kind = {
+        "fact": (_t("Paper fact", "论文事实"), "fact"),
+        "inference": (_t("Inference from the paper", "基于论文的推理"), "inf"),
+        "out_of_scope": (_t("Out of scope", "超出论文范围"), "oos"),
+    }
     segs = []
     for s in answer.segments:
         label, cls = kind.get(s.kind, (s.kind, ""))
         tag = label
         if s.kind == "inference" and s.confidence:
-            tag += f" · 置信度 {_e(s.confidence)}"
-        reason = f"<small>推理依据：{_e(s.reasoning)}</small>" if s.reasoning else ""
+            tag += f" · {_t('confidence', '置信度')} {_e(s.confidence)}"
+        reason = f"<small>{_t('Reasoning', '推理依据')}：{_e(s.reasoning)}</small>" if s.reasoning else ""
         segs.append(f"<div class='seg {cls}'><span class='tag'>{tag}</span><div>{_e(s.text)}</div>{reason}</div>")
     ev = ""
     if answer.evidence:
         rows = ""
         for e in answer.evidence:
             loc = (e.section or "") + (f" p.{e.page}" if e.page else "")
-            mark = "" if e.verified else "<span class='hint'>未核实 · </span>"
+            mark = "" if e.verified else f"<span class='hint'>{_t('unverified', '未核实')} · </span>"
             rows += f"<tr><td class='aid'>{_e(loc) or '—'}</td><td>{mark}{_e(e.text)}</td></tr>"
-        ev = f"<h3>原文依据</h3><table><tbody>{rows}</tbody></table>"
+        ev = f"<h3>{_t('Sources', '原文依据')}</h3><table><tbody>{rows}</tbody></table>"
     return f"{''.join(segs)}{ev}"
 
 

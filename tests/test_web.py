@@ -27,13 +27,23 @@ def test_index_has_form_and_active_model():
     assert "PaperMind" in r.text and "<form" in r.text
     # No model picker — the active model is shown subtly in the footer instead.
     assert "<select name='model'" not in r.text
-    assert "当前模型" in r.text
+    assert "Model" in r.text  # active model shown in the footer (English default)
+
+
+def test_web_is_bilingual():
+    app = create_app()
+    en = TestClient(app).get("/", headers={"accept-language": "en-US,en"}).text
+    zh = TestClient(app).get("/", headers={"accept-language": "zh-CN,zh"}).text
+    assert "Analyze a paper" in en and "分析一篇论文" not in en  # Accept-Language en -> English
+    assert "分析一篇论文" in zh and "Analyze a paper" not in zh  # Accept-Language zh -> Chinese
+    r = TestClient(app).get("/?lang=zh")  # explicit ?lang overrides + persists via cookie
+    assert "分析一篇论文" in r.text and r.cookies.get("pm_lang") == "zh"
 
 
 def test_framework_tab_and_form():
     client = TestClient(create_app(live=False))
     r = client.get("/framework")
-    assert r.status_code == 200 and "生成框架图" in r.text
+    assert r.status_code == 200 and "Generate diagram" in r.text
     assert "/framework" in client.get("/").text  # nav tab present
 
 
@@ -44,7 +54,7 @@ def test_framework_body_is_view_only_with_download():
     spec = _auto_layout(FrameworkSpec(title="T", nodes=[FNode(id="a", label="输入"), FNode(id="b", label="阶段")]))
     html = _framework_body(spec)
     assert "<svg" in html and "输入" in html                    # the diagram is rendered
-    assert 'data-fw="download"' in html and "下载 SVG" in html   # the only action: download the SVG
+    assert "data-fw='download'" in html and "Download SVG" in html   # the only action: download the SVG
     assert "/framework/edit" not in html and "fw-save" not in html  # no editing affordances
 
 
@@ -56,13 +66,13 @@ def test_framework_demo_route_renders_cached_spec(monkeypatch, tmp_path):
     cache_dir = load_config().paper_cache("1706.03762")  # cache key for the arXiv URL below
     save_framework_spec(cache_dir, _auto_layout(FrameworkSpec(title="Attn", nodes=[FNode(id="a", label="输入序列")])))
     r = TestClient(create_app(live=False)).post("/framework", data={"source": "https://arxiv.org/abs/1706.03762"})
-    assert r.status_code == 200 and "<svg" in r.text and "输入序列" in r.text and "下载 SVG" in r.text
+    assert r.status_code == 200 and "<svg" in r.text and "输入序列" in r.text and "data-fw='download'" in r.text
 
 
 def test_framework_demo_route_uncached_shows_note(monkeypatch, tmp_path):
     monkeypatch.setenv("PAPERMIND_HOME", str(tmp_path))
     r = TestClient(create_app(live=False)).post("/framework", data={"source": "https://arxiv.org/abs/2401.00001"})
-    assert r.status_code == 200 and "演示模式" in r.text  # no cached spec -> the demo note, not a crash
+    assert r.status_code == 200 and "demo mode" in r.text.lower()  # no cached spec -> the demo note, not a crash
 
 
 def test_demo_route_renders_offline_report():
@@ -81,7 +91,7 @@ def test_all_feature_tabs_present():
 def test_ask_blocked_in_demo_mode():
     client = TestClient(create_app(live=False))
     r = client.post("/ask", data={"source": "1706.03762", "question": "why?", "model": "", "mode": "balanced"})
-    assert r.status_code == 200 and "演示模式不支持问答" in r.text
+    assert r.status_code == 200 and "demo mode" in r.text.lower()
 
 
 def test_search_works_without_model(monkeypatch):
@@ -110,7 +120,7 @@ def test_analyze_demo_mode_does_not_run_when_uncached(monkeypatch, tmp_path):
     client = TestClient(create_app(live=False))
     r = client.post("/analyze", data={"source": "9999.99999", "model": ""})
     assert r.status_code == 200
-    assert "演示模式" in r.text  # falls back to the safe note, no analysis run
+    assert "demo mode" in r.text.lower()  # falls back to the safe note, no analysis run
 
 
 def test_rate_limiter_per_ip_and_global_caps():
@@ -187,7 +197,7 @@ def test_analyze_live_runs_async_and_polls(monkeypatch):
     r = client.post("/analyze", data={"source": "https://arxiv.org/abs/1706.03762"})
     assert r.status_code == 200
     m = re.search(r"/job/([0-9a-f]+)", r.text)
-    assert m and "分析中" in r.text  # returned a polling page, not a blocking analysis
+    assert m and "Working" in r.text  # returned a polling page, not a blocking analysis
     jid = m.group(1)
 
     status = _await_job(lambda j: client.get(f"/job/{j}").json(), jid)
@@ -290,7 +300,7 @@ def test_missing_job_and_result_degrade_gracefully():
     c = TestClient(create_app(live=True))
     assert c.get("/job/deadbeef").json() == {"status": "missing"}
     r = c.get("/result/deadbeef")
-    assert r.status_code == 200 and "结果已过期" in r.text
+    assert r.status_code == 200 and "expired" in r.text
 
 
 def test_result_error_renders_escaped_form(monkeypatch):
@@ -322,7 +332,7 @@ def test_analyze_get_runs_async(monkeypatch):
     c = TestClient(create_app(live=True, with_figures=False))
     r = c.get("/analyze", params={"source": "https://arxiv.org/abs/1706.03762"})
     m = re.search(r"/job/([0-9a-f]+)", r.text)
-    assert m and "分析中" in r.text
+    assert m and "Working" in r.text
     assert _await_job(lambda j: c.get(f"/job/{j}").json(), m.group(1))["status"] == "done"
     assert "GetPaper" in c.get(f"/result/{m.group(1)}").text
 
@@ -347,7 +357,7 @@ def test_ask_live_runs_async_and_polls(monkeypatch):
                              "question": "why scale by sqrt d_k?", "model": "", "mode": "balanced"})
     assert r.status_code == 200
     m = re.search(r"/job/([0-9a-f]+)", r.text)
-    assert m and "分析中" in r.text  # a polling page, NOT a blocking synchronous answer
+    assert m and "Working" in r.text  # a polling page, NOT a blocking synchronous answer
 
     jid = m.group(1)
     assert _await_job(lambda j: c.get(f"/job/{j}").json(), jid)["status"] == "done"
@@ -365,7 +375,7 @@ def test_async_analyze_gated_over_quota(monkeypatch):
     c = TestClient(create_app(live=True, with_figures=False, rate_per_ip=1, rate_global=99))
     assert "/job/" in c.post("/analyze", data={"source": "https://arxiv.org/abs/a"}).text
     blocked = c.post("/analyze", data={"source": "https://arxiv.org/abs/b"})
-    assert "/job/" not in blocked.text and "额度已用完" in blocked.text  # gated before starting a job
+    assert "/job/" not in blocked.text and "quota" in blocked.text.lower()  # gated before starting a job
 
 
 def test_demo_never_hits_network(monkeypatch):
@@ -378,7 +388,7 @@ def test_demo_never_hits_network(monkeypatch):
     # an id that won't be cached locally -> demo returns the cached-only message,
     # and crucially must NOT call resolve() (which would raise AssertionError here)
     r = TestClient(create_app(live=False)).post("/analyze", data={"source": "https://arxiv.org/abs/9999.99999"})
-    assert r.status_code == 200 and "演示模式" in r.text
+    assert r.status_code == 200 and "demo mode" in r.text.lower()
 
 
 def test_on_progress_step_reaches_job(monkeypatch):
