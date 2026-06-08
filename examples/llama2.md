@@ -41,14 +41,14 @@ $$
 ![教学示意图：PPO with piecewise reward and KL penalty](figures/llama2-fig1.svg)
 *教学示意图：PPO with piecewise reward and KL penalty（教学示意图）*
 
-> **读图**：PPO阶段使用分段奖励和KL散度惩罚优化策略。
+> **读图**：PPO优化策略最大化奖励并惩罚KL散度
 >
-> - 最终奖励函数R = 白化组合奖励 - β·KL散度。
-> - 分段奖励根据安全类别/得分选择安全或帮助性奖励模型。
-> - KL散度惩罚策略偏离原始策略，防止奖励黑客。
-> - PPO通过裁剪替代目标更新策略参数θ。
+> - 奖励函数：白化组合奖励减β倍KL散度
+> - 分段奖励：安全类别或得分<0.15用R_s，否则R_h
+> - 白化处理：logit逆sigmoid后z-score归一化
+> - PPO更新：梯度含优势函数A，裁剪比率至[1-ε,1+ε]
 >
-> **关键**：关注分段奖励选择与KL惩罚的平衡。
+> **关键**：关注奖励函数分段与白化，平衡KL惩罚
 
 ### 2. Iterative Fine-tuning with Rejection Sampling and PPO  `🔴 high`
 
@@ -87,13 +87,14 @@ $$
 ![教学示意图：Safety RLHF with reward model mixture and false refusal analysis](figures/llama2-fig2.svg)
 *教学示意图：Safety RLHF with reward model mixture and false refusal analysis（教学示意图）*
 
-> **读图**：安全RLHF的奖励模型混合与误拒分析
+> **读图**：安全RLHF通过混合奖励模型和误拒分析提升安全性。
 >
-> - Rc由安全奖励Rs和帮助性奖励Rh混合组成
-> - 阈值0.15在Meta安全测试集上精确率0.89召回率0.55
-> - 拒绝分类器量化误拒率：帮助性集约0.05%，边界集较高
+> - Rc：组合奖励函数，根据安全类别或阈值选择Rs或Rh。
+> - 阈值0.15：在Meta安全测试集上精确率0.89、召回率0.55。
+> - 误拒分析：训练拒绝分类器量化误拒率。
+> - 安全数据比例实验：安全得分提升，帮助性得分不变。
 >
-> **关键**：安全提升但回答更保守，误拒率在边界集升高
+> **关键**：安全数据比例增加使回答更保守，但帮助性几乎不变。
 
 ### 5. Safety context distillation with preprompts and answer templates  `🟡 mid`
 

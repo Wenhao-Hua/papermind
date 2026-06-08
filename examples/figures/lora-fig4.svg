@@ -1,115 +1,140 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 960 680" font-family="'Segoe UI','PingFang SC','Microsoft YaHei',sans-serif" font-size="14" fill="#1e293b" width="960" height="680">
-  <rect x="0" y="0" width="960" height="680" fill="#ffffff"/>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 960 640" font-family="'Segoe UI','PingFang SC','Microsoft YaHei',sans-serif" width="960" height="640">
+  <rect x="0" y="0" width="960" height="640" fill="#ffffff"/>
 
-  <!-- 标题 -->
-  <text x="480" y="36" font-size="20" font-weight="700" fill="#1e293b" text-anchor="middle">LoRA 权重矩阵选择：应用于 Transformer 注意力模块</text>
-  <line x1="200" y1="48" x2="760" y2="48" stroke="#cbd5e1" stroke-width="1"/>
+  <!-- 主标题 -->
+  <text x="480" y="36" text-anchor="middle" font-size="18" font-weight="bold" fill="#1e293b">LoRA: 应用于 Transformer 的权重矩阵选择</text>
 
-  <!-- 核心公式面板（视觉焦点） -->
-  <rect x="60" y="68" width="840" height="80" rx="6" fill="#eef2ff" stroke="#6366f1" stroke-width="2"/>
-  <text x="480" y="98" font-size="16" font-weight="600" fill="#3730a3" text-anchor="middle">可训练参数量（核心指标）</text>
-  <text x="480" y="132" font-size="22" font-weight="700" fill="#3730a3" text-anchor="middle">|Θ| = 2 × L̂<tspan baseline-shift="sub" font-size="75%">LoRA</tspan> × d<tspan baseline-shift="sub" font-size="75%">model</tspan> × r</text>
+  <!-- 左侧主面板：核心公式 + 示意图 -->
+  <rect x="40" y="56" width="580" height="560" fill="#f8fafc" stroke="#cbd5e1" stroke-width="1.5" rx="4"/>
+  <text x="330" y="80" text-anchor="middle" font-size="14" font-weight="bold" fill="#334155">核心指标：可训练参数量</text>
 
-  <!-- 左侧：Transformer 层结构图 -->
-  <rect x="60" y="170" width="420" height="340" rx="4" fill="#f8fafc" stroke="#e2e8f0" stroke-width="1"/>
-  <text x="270" y="196" font-size="14" font-weight="600" fill="#1e293b" text-anchor="middle">Transformer 层（冻结）</text>
+  <!-- 关键公式框（强调色） -->
+  <rect x="80" y="96" width="500" height="52" fill="#eef2ff" stroke="#6366f1" stroke-width="2" rx="4"/>
+  <text x="330" y="118" text-anchor="middle" font-size="16" font-weight="bold" fill="#3730a3">|Θ| = 2 × L̂<tspan baseline-shift="sub" font-size="75%">LoRA</tspan> × d<tspan baseline-shift="sub" font-size="75%">model</tspan> × r</text>
+  <text x="330" y="138" text-anchor="middle" font-size="11" fill="#64748b">其中 L̂<tspan baseline-shift="sub" font-size="75%">LoRA</tspan> = 应用 LoRA 的层数，d<tspan baseline-shift="sub" font-size="75%">model</tspan> = 模型维度，r = 秩</text>
 
-  <!-- 外部框：Transformer 层 -->
-  <rect x="90" y="210" width="360" height="280" rx="4" fill="none" stroke="#94a3b8" stroke-width="1" stroke-dasharray="5,3"/>
-
-  <!-- 注意力模块框 -->
-  <rect x="110" y="225" width="320" height="170" rx="4" fill="#f1f5f9" stroke="#475569" stroke-width="1"/>
-  <text x="270" y="248" font-size="13" font-weight="600" fill="#1e293b" text-anchor="middle">多头注意力（Multi-Head Attention）</text>
-
-  <!-- 四个权重矩阵：Wq, Wk, Wv, Wo -->
-  <!-- Wq（强调色） -->
-  <rect x="130" y="262" width="130" height="40" rx="3" fill="#eef2ff" stroke="#6366f1" stroke-width="2"/>
-  <text x="195" y="287" font-size="13" font-weight="600" fill="#3730a3" text-anchor="middle">W<tspan baseline-shift="sub" font-size="75%">q</tspan>（查询）</text>
-  <!-- LoRA 旁路 -->
-  <rect x="270" y="262" width="50" height="40" rx="3" fill="#6366f1" stroke="#6366f1" stroke-width="1"/>
-  <text x="295" y="287" font-size="11" font-weight="600" fill="#ffffff" text-anchor="middle">LoRA</text>
-  <line x1="260" y1="282" x2="270" y2="282" stroke="#6366f1" stroke-width="2"/>
-
-  <!-- Wk（灰色，冻结） -->
-  <rect x="130" y="310" width="130" height="40" rx="3" fill="#f1f5f9" stroke="#94a3b8" stroke-width="1"/>
-  <text x="195" y="335" font-size="13" fill="#64748b" text-anchor="middle">W<tspan baseline-shift="sub" font-size="75%">k</tspan>（键）</text>
-  <text x="270" y="335" font-size="11" fill="#94a3b8" text-anchor="middle">冻结</text>
-
-  <!-- Wv（强调色） -->
-  <rect x="130" y="358" width="130" height="40" rx="3" fill="#eef2ff" stroke="#6366f1" stroke-width="2"/>
-  <text x="195" y="383" font-size="13" font-weight="600" fill="#3730a3" text-anchor="middle">W<tspan baseline-shift="sub" font-size="75%">v</tspan>（值）</text>
-  <rect x="270" y="358" width="50" height="40" rx="3" fill="#6366f1" stroke="#6366f1" stroke-width="1"/>
-  <text x="295" y="383" font-size="11" font-weight="600" fill="#ffffff" text-anchor="middle">LoRA</text>
-  <line x1="260" y1="378" x2="270" y2="378" stroke="#6366f1" stroke-width="2"/>
-
-  <!-- Wo（灰色，冻结） -->
-  <rect x="130" y="406" width="130" height="40" rx="3" fill="#f1f5f9" stroke="#94a3b8" stroke-width="1"/>
-  <text x="195" y="431" font-size="13" fill="#64748b" text-anchor="middle">W<tspan baseline-shift="sub" font-size="75%">o</tspan>（输出）</text>
-  <text x="270" y="431" font-size="11" fill="#94a3b8" text-anchor="middle">冻结</text>
-
-  <!-- MLP 模块（冻结） -->
-  <rect x="110" y="410" width="320" height="60" rx="4" fill="#f1f5f9" stroke="#94a3b8" stroke-width="1"/>
-  <text x="270" y="435" font-size="13" fill="#64748b" text-anchor="middle">MLP 模块（冻结）</text>
-  <text x="270" y="455" font-size="11" fill="#94a3b8" text-anchor="middle">不参与下游任务训练</text>
-
-  <!-- 右侧面板：权重矩阵选择对比 -->
-  <rect x="510" y="170" width="390" height="340" rx="4" fill="#f8fafc" stroke="#e2e8f0" stroke-width="1"/>
-  <text x="705" y="196" font-size="14" font-weight="600" fill="#1e293b" text-anchor="middle">权重矩阵选择对比（GPT-3 175B）</text>
+  <!-- 参数说明表 -->
+  <text x="330" y="172" text-anchor="middle" font-size="13" font-weight="bold" fill="#334155">参数符号说明</text>
+  <line x1="120" y1="182" x2="540" y2="182" stroke="#cbd5e1" stroke-width="1"/>
 
   <!-- 表头 -->
-  <rect x="530" y="210" width="170" height="30" rx="2" fill="#e2e8f0" stroke="#cbd5e1" stroke-width="1"/>
-  <text x="615" y="230" font-size="12" font-weight="600" fill="#1e293b" text-anchor="middle">适应类型</text>
-  <rect x="700" y="210" width="90" height="30" rx="2" fill="#e2e8f0" stroke="#cbd5e1" stroke-width="1"/>
-  <text x="745" y="230" font-size="12" font-weight="600" fill="#1e293b" text-anchor="middle">效果</text>
-  <rect x="790" y="210" width="90" height="30" rx="2" fill="#e2e8f0" stroke="#cbd5e1" stroke-width="1"/>
-  <text x="835" y="230" font-size="12" font-weight="600" fill="#1e293b" text-anchor="middle">参数量</text>
+  <text x="160" y="200" text-anchor="middle" font-size="11" font-weight="bold" fill="#475569">符号</text>
+  <text x="330" y="200" text-anchor="middle" font-size="11" font-weight="bold" fill="#475569">含义</text>
+  <text x="500" y="200" text-anchor="middle" font-size="11" font-weight="bold" fill="#475569">示例值</text>
+  <line x1="120" y1="208" x2="540" y2="208" stroke="#e2e8f0" stroke-width="1"/>
 
-  <!-- 行1：Wq + Wv（强调） -->
-  <rect x="530" y="244" width="170" height="30" rx="2" fill="#eef2ff" stroke="#6366f1" stroke-width="2"/>
-  <text x="615" y="264" font-size="12" font-weight="600" fill="#3730a3" text-anchor="middle">W<tspan baseline-shift="sub" font-size="75%">q</tspan> + W<tspan baseline-shift="sub" font-size="75%">v</tspan></text>
-  <rect x="700" y="244" width="90" height="30" rx="2" fill="#eef2ff" stroke="#6366f1" stroke-width="2"/>
-  <text x="745" y="264" font-size="12" font-weight="600" fill="#3730a3" text-anchor="middle">最佳</text>
-  <rect x="790" y="244" width="90" height="30" rx="2" fill="#eef2ff" stroke="#6366f1" stroke-width="2"/>
-  <text x="835" y="264" font-size="12" fill="#3730a3" text-anchor="middle">2×d×r</text>
+  <!-- 表行 1 -->
+  <text x="160" y="228" text-anchor="middle" font-size="11" fill="#1e293b">L̂<tspan baseline-shift="sub" font-size="75%">LoRA</tspan></text>
+  <text x="330" y="228" text-anchor="middle" font-size="11" fill="#334155">应用 LoRA 的 Transformer 层数</text>
+  <text x="500" y="228" text-anchor="middle" font-size="11" fill="#64748b">12（GPT-2 Medium）</text>
+  <line x1="120" y1="236" x2="540" y2="236" stroke="#f1f5f9" stroke-width="1"/>
 
-  <!-- 行2：仅 Wq -->
-  <rect x="530" y="280" width="170" height="30" rx="2" fill="#f1f5f9" stroke="#cbd5e1" stroke-width="1"/>
-  <text x="615" y="300" font-size="12" fill="#64748b" text-anchor="middle">仅 W<tspan baseline-shift="sub" font-size="75%">q</tspan></text>
-  <rect x="700" y="280" width="90" height="30" rx="2" fill="#f1f5f9" stroke="#cbd5e1" stroke-width="1"/>
-  <text x="745" y="300" font-size="12" fill="#64748b" text-anchor="middle">次优</text>
-  <rect x="790" y="280" width="90" height="30" rx="2" fill="#f1f5f9" stroke="#cbd5e1" stroke-width="1"/>
-  <text x="835" y="300" font-size="12" fill="#64748b" text-anchor="middle">d×r</text>
+  <!-- 表行 2 -->
+  <text x="160" y="256" text-anchor="middle" font-size="11" fill="#1e293b">d<tspan baseline-shift="sub" font-size="75%">model</tspan></text>
+  <text x="330" y="256" text-anchor="middle" font-size="11" fill="#334155">模型隐藏层维度</text>
+  <text x="500" y="256" text-anchor="middle" font-size="11" fill="#64748b">1024（GPT-2 Medium）</text>
+  <line x1="120" y1="264" x2="540" y2="264" stroke="#f1f5f9" stroke-width="1"/>
 
-  <!-- 行3：仅 Wv -->
-  <rect x="530" y="316" width="170" height="30" rx="2" fill="#f1f5f9" stroke="#cbd5e1" stroke-width="1"/>
-  <text x="615" y="336" font-size="12" fill="#64748b" text-anchor="middle">仅 W<tspan baseline-shift="sub" font-size="75%">v</tspan></text>
-  <rect x="700" y="316" width="90" height="30" rx="2" fill="#f1f5f9" stroke="#cbd5e1" stroke-width="1"/>
-  <text x="745" y="336" font-size="12" fill="#64748b" text-anchor="middle">次优</text>
-  <rect x="790" y="316" width="90" height="30" rx="2" fill="#f1f5f9" stroke="#cbd5e1" stroke-width="1"/>
-  <text x="835" y="336" font-size="12" fill="#64748b" text-anchor="middle">d×r</text>
+  <!-- 表行 3 -->
+  <text x="160" y="284" text-anchor="middle" font-size="11" fill="#1e293b">r</text>
+  <text x="330" y="284" text-anchor="middle" font-size="11" fill="#334155">LoRA 秩（超参数）</text>
+  <text x="500" y="284" text-anchor="middle" font-size="11" fill="#64748b">1, 2, 4, 8</text>
+  <line x1="120" y1="292" x2="540" y2="292" stroke="#f1f5f9" stroke-width="1"/>
 
-  <!-- 行4：全部四种 -->
-  <rect x="530" y="352" width="170" height="30" rx="2" fill="#f1f5f9" stroke="#cbd5e1" stroke-width="1"/>
-  <text x="615" y="372" font-size="12" fill="#64748b" text-anchor="middle">全部四种</text>
-  <rect x="700" y="352" width="90" height="30" rx="2" fill="#f1f5f9" stroke="#cbd5e1" stroke-width="1"/>
-  <text x="745" y="372" font-size="12" fill="#64748b" text-anchor="middle">下降</text>
-  <rect x="790" y="352" width="90" height="30" rx="2" fill="#f1f5f9" stroke="#cbd5e1" stroke-width="1"/>
-  <text x="835" y="372" font-size="12" fill="#64748b" text-anchor="middle">4×d×r</text>
+  <!-- 表行 4 -->
+  <text x="160" y="312" text-anchor="middle" font-size="11" fill="#1e293b">|Θ|</text>
+  <text x="330" y="312" text-anchor="middle" font-size="11" fill="#334155">可训练参数量</text>
+  <text x="500" y="312" text-anchor="middle" font-size="11" fill="#64748b">2×12×1024×r</text>
 
-  <!-- 说明文字 -->
-  <text x="705" y="410" font-size="12" fill="#64748b" text-anchor="middle">实验结论：同时适应 W<tspan baseline-shift="sub" font-size="75%">q</tspan> 和 W<tspan baseline-shift="sub" font-size="75%">v</tspan></text>
-  <text x="705" y="430" font-size="12" fill="#64748b" text-anchor="middle">在相同参数量下效果最佳</text>
-  <text x="705" y="450" font-size="12" fill="#64748b" text-anchor="middle">适应单一类型或全部类型</text>
-  <text x="705" y="470" font-size="12" fill="#64748b" text-anchor="middle">反而可能降低性能</text>
+  <!-- 权重矩阵选择示意图 -->
+  <text x="330" y="352" text-anchor="middle" font-size="13" font-weight="bold" fill="#334155">LoRA 应用于 Transformer 的权重矩阵</text>
+  <line x1="120" y1="362" x2="540" y2="362" stroke="#cbd5e1" stroke-width="1"/>
 
-  <!-- 底部：参数公式说明 -->
-  <rect x="60" y="530" width="840" height="60" rx="4" fill="#f1f5f9" stroke="#e2e8f0" stroke-width="1"/>
-  <text x="480" y="554" font-size="13" font-weight="600" fill="#1e293b" text-anchor="middle">参数公式说明</text>
-  <text x="480" y="576" font-size="12" fill="#334155" text-anchor="middle">|Θ| = 2 × L̂<tspan baseline-shift="sub" font-size="75%">LoRA</tspan> × d<tspan baseline-shift="sub" font-size="75%">model</tspan> × r</text>
-  <text x="480" y="596" font-size="11" fill="#64748b" text-anchor="middle">其中 L̂<tspan baseline-shift="sub" font-size="75%">LoRA</tspan> 为应用 LoRA 的权重矩阵数量，d<tspan baseline-shift="sub" font-size="75%">model</tspan> 为模型隐藏维度，r 为秩</text>
+  <!-- 注意力模块结构 -->
+  <rect x="100" y="376" width="460" height="160" fill="#ffffff" stroke="#94a3b8" stroke-width="1" rx="3"/>
+  <text x="330" y="394" text-anchor="middle" font-size="12" font-weight="bold" fill="#334155">注意力模块（每层）</text>
 
-  <!-- 底部：实验数据 -->
-  <rect x="60" y="610" width="840" height="50" rx="4" fill="#f8fafc" stroke="#e2e8f0" stroke-width="1"/>
-  <text x="480" y="634" font-size="12" fill="#334155" text-anchor="middle">GPT-3 175B 实验：r=4，仅适应 W<tspan baseline-shift="sub" font-size="75%">q</tspan> 和 W<tspan baseline-shift="sub" font-size="75%">v</tspan>，检查点从 350GB 降至 35MB（缩小约 10,000×）</text>
-  <text x="480" y="652" font-size="11" fill="#64748b" text-anchor="middle">训练 VRAM 从 1.2TB 降至 350GB，训练速度提升 25%</text>
+  <!-- 四个投影矩阵 -->
+  <!-- W_q -->
+  <rect x="120" y="408" width="90" height="44" fill="#eef2ff" stroke="#6366f1" stroke-width="2" rx="3"/>
+  <text x="165" y="428" text-anchor="middle" font-size="12" font-weight="bold" fill="#3730a3">W<tspan baseline-shift="sub" font-size="75%">q</tspan></text>
+  <text x="165" y="444" text-anchor="middle" font-size="9" fill="#6366f1">LoRA ✓</text>
+
+  <!-- W_k -->
+  <rect x="230" y="408" width="90" height="44" fill="#f1f5f9" stroke="#94a3b8" stroke-width="1.5" rx="3"/>
+  <text x="275" y="428" text-anchor="middle" font-size="12" fill="#475569">W<tspan baseline-shift="sub" font-size="75%">k</tspan></text>
+  <text x="275" y="444" text-anchor="middle" font-size="9" fill="#94a3b8">冻结</text>
+
+  <!-- W_v -->
+  <rect x="340" y="408" width="90" height="44" fill="#eef2ff" stroke="#6366f1" stroke-width="2" rx="3"/>
+  <text x="385" y="428" text-anchor="middle" font-size="12" font-weight="bold" fill="#3730a3">W<tspan baseline-shift="sub" font-size="75%">v</tspan></text>
+  <text x="385" y="444" text-anchor="middle" font-size="9" fill="#6366f1">LoRA ✓</text>
+
+  <!-- W_o -->
+  <rect x="450" y="408" width="90" height="44" fill="#f1f5f9" stroke="#94a3b8" stroke-width="1.5" rx="3"/>
+  <text x="495" y="428" text-anchor="middle" font-size="12" fill="#475569">W<tspan baseline-shift="sub" font-size="75%">o</tspan></text>
+  <text x="495" y="444" text-anchor="middle" font-size="9" fill="#94a3b8">冻结</text>
+
+  <!-- MLP 标注 -->
+  <rect x="120" y="468" width="420" height="44" fill="#f1f5f9" stroke="#94a3b8" stroke-width="1.5" rx="3"/>
+  <text x="330" y="488" text-anchor="middle" font-size="12" fill="#475569">MLP（前馈网络）</text>
+  <text x="330" y="504" text-anchor="middle" font-size="9" fill="#94a3b8">冻结</text>
+
+  <!-- 箭头：从 W_q 和 W_v 指向 LoRA 分解 -->
+  <line x1="165" y1="452" x2="165" y2="478" stroke="#6366f1" stroke-width="1.5" stroke-dasharray="4,3"/>
+  <line x1="385" y1="452" x2="385" y2="478" stroke="#6366f1" stroke-width="1.5" stroke-dasharray="4,3"/>
+
+  <!-- 底部说明 -->
+  <text x="330" y="544" text-anchor="middle" font-size="11" fill="#64748b">实验表明：同时适应 W<tspan baseline-shift="sub" font-size="75%">q</tspan> 和 W<tspan baseline-shift="sub" font-size="75%">v</tspan> 在相同参数量下效果最好</text>
+  <text x="330" y="562" text-anchor="middle" font-size="11" fill="#64748b">适应单一类型或所有类型反而可能降低性能</text>
+
+  <!-- 右侧面板：图例与说明 -->
+  <rect x="640" y="56" width="280" height="560" fill="#f8fafc" stroke="#cbd5e1" stroke-width="1.5" rx="4"/>
+  <text x="780" y="80" text-anchor="middle" font-size="14" font-weight="bold" fill="#334155">图例与机制</text>
+
+  <!-- 图例 -->
+  <text x="660" y="108" font-size="12" font-weight="bold" fill="#334155">箭头含义</text>
+
+  <!-- 实线箭头 -->
+  <line x1="660" y1="130" x2="700" y2="130" stroke="#475569" stroke-width="1.5"/>
+  <polygon points="700,126 710,130 700,134" fill="#475569"/>
+  <text x="720" y="134" font-size="11" fill="#475569">前向传播 / 数据流</text>
+
+  <!-- 虚线箭头 -->
+  <line x1="660" y1="158" x2="700" y2="158" stroke="#94a3b8" stroke-width="1.5" stroke-dasharray="5,4"/>
+  <polygon points="700,154 710,158 700,162" fill="#94a3b8"/>
+  <text x="720" y="162" font-size="11" fill="#94a3b8">对照 / 参照</text>
+
+  <!-- 强调色箭头 -->
+  <line x1="660" y1="186" x2="700" y2="186" stroke="#6366f1" stroke-width="2.5"/>
+  <polygon points="700,182 710,186 700,190" fill="#6366f1"/>
+  <text x="720" y="190" font-size="11" fill="#6366f1">被选中的指派 / 映射</text>
+
+  <!-- 颜色图例 -->
+  <text x="660" y="224" font-size="12" font-weight="bold" fill="#334155">颜色含义</text>
+
+  <rect x="660" y="236" width="16" height="16" fill="#eef2ff" stroke="#6366f1" stroke-width="1.5" rx="2"/>
+  <text x="684" y="250" font-size="11" fill="#3730a3">LoRA 应用层（可训练）</text>
+
+  <rect x="660" y="260" width="16" height="16" fill="#f1f5f9" stroke="#94a3b8" stroke-width="1" rx="2"/>
+  <text x="684" y="274" font-size="11" fill="#475569">冻结层（不更新）</text>
+
+  <!-- 机制说明 -->
+  <text x="660" y="308" font-size="12" font-weight="bold" fill="#334155">LoRA 机制</text>
+  <text x="660" y="328" font-size="11" fill="#475569">冻结预训练权重 W₀</text>
+  <text x="660" y="348" font-size="11" fill="#475569">注入可训练的低秩分解矩阵</text>
+  <text x="660" y="368" font-size="11" fill="#475569">h = W₀x + ∆Wx = W₀x + BAx</text>
+  <text x="660" y="388" font-size="11" fill="#475569">其中 B ∈ ℝ<tspan baseline-shift="super" font-size="75%">d×r</tspan>, A ∈ ℝ<tspan baseline-shift="super" font-size="75%">r×d</tspan></text>
+  <text x="660" y="408" font-size="11" fill="#475569">r ≪ d（通常 r = 1, 2, 4, 8）</text>
+
+  <!-- 参数量对比 -->
+  <text x="660" y="444" font-size="12" font-weight="bold" fill="#334155">参数量对比（GPT-3 175B）</text>
+  <text x="660" y="464" font-size="11" fill="#475569">全微调：175B 参数</text>
+  <text x="660" y="484" font-size="11" fill="#475569">LoRA（r=1）：~17.5M 参数</text>
+  <text x="660" y="504" font-size="11" fill="#475569">减少约 10,000 倍</text>
+
+  <!-- 关键结论 -->
+  <rect x="660" y="524" width="240" height="44" fill="#eef2ff" stroke="#6366f1" stroke-width="1.5" rx="3"/>
+  <text x="780" y="544" text-anchor="middle" font-size="11" font-weight="bold" fill="#3730a3">关键结论</text>
+  <text x="780" y="560" text-anchor="middle" font-size="10" fill="#6366f1">LoRA 性能与全微调相当或更优</text>
 </svg>

@@ -1,107 +1,137 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 960 680" font-family="'Segoe UI','PingFang SC','Microsoft YaHei',sans-serif" width="960" height="680">
-  <rect x="0" y="0" width="960" height="680" fill="#ffffff"/>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 960 620" font-family="'Segoe UI','PingFang SC','Microsoft YaHei',sans-serif" width="960" height="620">
+  <rect x="0" y="0" width="960" height="620" fill="#ffffff"/>
 
-  <!-- 标题 -->
-  <text x="480" y="36" font-size="20" font-weight="bold" fill="#1e293b" text-anchor="middle">Vision Transformer (ViT) — [class] Token Mechanism</text>
+  <!-- 主标题 -->
+  <text x="480" y="36" font-size="18" font-weight="bold" fill="#1e293b" text-anchor="middle">Vision Transformer (ViT) — [class] Token Mechanism</text>
 
-  <!-- 主面板：核心公式与结构 -->
-  <rect x="40" y="56" width="600" height="580" fill="#f8fafc" stroke="#cbd5e1" stroke-width="1.5" rx="4"/>
-  <text x="340" y="80" font-size="14" font-weight="bold" fill="#334155" text-anchor="middle">Core Definition: Learnable Classification Token</text>
+  <!-- 左侧主面板：核心流程 -->
+  <rect x="40" y="56" width="580" height="540" fill="#f8fafc" stroke="#cbd5e1" stroke-width="1.2" rx="4"/>
+  <text x="330" y="80" font-size="13" font-weight="bold" fill="#334155" text-anchor="middle">Input Embedding &amp; [class] Token Insertion</text>
 
-  <!-- 公式框（强调色） -->
-  <rect x="60" y="96" width="560" height="72" fill="#eef2ff" stroke="#6366f1" stroke-width="2" rx="4"/>
-  <text x="340" y="120" font-size="15" fill="#3730a3" text-anchor="middle" font-weight="bold">z₀ = [x_class ; x_p¹E ; … ; x_pᴺE] + E_pos</text>
-  <text x="340" y="148" font-size="15" fill="#3730a3" text-anchor="middle" font-weight="bold">y = LN(z_L⁰)</text>
+  <!-- 输入图像示意 -->
+  <rect x="80" y="100" width="100" height="100" fill="#eef2ff" stroke="#6366f1" stroke-width="1.5" rx="3"/>
+  <text x="130" y="138" font-size="11" fill="#3730a3" text-anchor="middle">Image</text>
+  <text x="130" y="154" font-size="10" fill="#64748b" text-anchor="middle">224&#215;224&#215;3</text>
 
-  <!-- 图例：符号说明 -->
-  <text x="80" y="192" font-size="12" fill="#475569">Symbols:</text>
-  <text x="80" y="212" font-size="11" fill="#64748b">x_class — learnable [class] embedding (dims D)</text>
-  <text x="80" y="230" font-size="11" fill="#64748b">x_pⁱE — linear projection of i-th image patch (dim D)</text>
-  <text x="80" y="248" font-size="11" fill="#64748b">E_pos — positional embedding (learnable, dim D)</text>
-  <text x="80" y="266" font-size="11" fill="#64748b">z_L⁰ — output of [class] token after L Transformer blocks</text>
-  <text x="80" y="284" font-size="11" fill="#64748b">LN — Layer Norm;  y — final class prediction</text>
+  <!-- 箭头：图像 → 切块 -->
+  <line x1="180" y1="150" x2="220" y2="150" stroke="#475569" stroke-width="1.2"/>
+  <polygon points="220,145 232,150 220,155" fill="#475569"/>
 
-  <!-- 结构图：输入序列 -->
-  <text x="340" y="316" font-size="13" font-weight="bold" fill="#334155" text-anchor="middle">Input Sequence Construction</text>
+  <!-- 切块示意 -->
+  <rect x="235" y="100" width="100" height="100" fill="#f1f5f9" stroke="#94a3b8" stroke-width="1" rx="3"/>
+  <text x="285" y="138" font-size="11" fill="#334155" text-anchor="middle">Patch Embedding</text>
+  <text x="285" y="154" font-size="10" fill="#64748b" text-anchor="middle">16&#215;16 patches</text>
+  <text x="285" y="170" font-size="10" fill="#64748b" text-anchor="middle">N = 196</text>
 
-  <!-- 序列框 -->
-  <rect x="80" y="330" width="520" height="44" fill="#ffffff" stroke="#94a3b8" stroke-width="1.5" rx="3"/>
-  <text x="120" y="356" font-size="12" fill="#1e293b" text-anchor="middle" font-weight="bold">[class]</text>
-  <line x1="150" y1="338" x2="150" y2="364" stroke="#cbd5e1" stroke-width="1"/>
-  <text x="190" y="356" font-size="11" fill="#475569" text-anchor="middle">patch₁</text>
-  <line x1="220" y1="338" x2="220" y2="364" stroke="#cbd5e1" stroke-width="1"/>
-  <text x="260" y="356" font-size="11" fill="#475569" text-anchor="middle">patch₂</text>
-  <line x1="290" y1="338" x2="290" y2="364" stroke="#cbd5e1" stroke-width="1"/>
-  <text x="330" y="356" font-size="11" fill="#475569" text-anchor="middle">…</text>
-  <line x1="360" y1="338" x2="360" y2="364" stroke="#cbd5e1" stroke-width="1"/>
-  <text x="400" y="356" font-size="11" fill="#475569" text-anchor="middle">patchₙ</text>
-  <line x1="430" y1="338" x2="430" y2="364" stroke="#cbd5e1" stroke-width="1"/>
-  <text x="470" y="356" font-size="11" fill="#475569" text-anchor="middle">+ E_pos</text>
+  <!-- 箭头：切块 → 序列 -->
+  <line x1="335" y1="150" x2="375" y2="150" stroke="#475569" stroke-width="1.2"/>
+  <polygon points="375,145 387,150 375,155" fill="#475569"/>
+
+  <!-- 序列表示：x_class + x_p^1 ... x_p^N -->
+  <rect x="390" y="96" width="200" height="108" fill="#ffffff" stroke="#6366f1" stroke-width="1.5" rx="3"/>
+  <text x="490" y="116" font-size="11" font-weight="bold" fill="#3730a3" text-anchor="middle">Input Sequence z₀</text>
+
+  <!-- 序列中的元素：class token + patch tokens -->
+  <rect x="400" y="126" width="28" height="28" fill="#6366f1" rx="2"/>
+  <text x="414" y="145" font-size="9" fill="#ffffff" text-anchor="middle">[c]</text>
+
+  <rect x="434" y="126" width="28" height="28" fill="#eef2ff" stroke="#6366f1" stroke-width="0.8" rx="2"/>
+  <text x="448" y="145" font-size="8" fill="#3730a3" text-anchor="middle">1</text>
+
+  <rect x="468" y="126" width="28" height="28" fill="#eef2ff" stroke="#6366f1" stroke-width="0.8" rx="2"/>
+  <text x="482" y="145" font-size="8" fill="#3730a3" text-anchor="middle">2</text>
+
+  <text x="510" y="145" font-size="10" fill="#64748b" text-anchor="middle">…</text>
+
+  <rect x="524" y="126" width="28" height="28" fill="#eef2ff" stroke="#6366f1" stroke-width="0.8" rx="2"/>
+  <text x="538" y="145" font-size="8" fill="#3730a3" text-anchor="middle">N</text>
+
+  <text x="490" y="170" font-size="9" fill="#64748b" text-anchor="middle">+ E<tspan baseline-shift="sub" font-size="75%">pos</tspan></text>
+
+  <!-- 公式框 -->
+  <rect x="80" y="220" width="510" height="44" fill="#f1f5f9" stroke="#cbd5e1" stroke-width="1" rx="3"/>
+  <text x="335" y="240" font-size="12" fill="#1e293b" text-anchor="middle">z₀ = [x<tspan baseline-shift="sub" font-size="75%">class</tspan> ; x<tspan baseline-shift="sub" font-size="75%">p</tspan>¹E ; … ; x<tspan baseline-shift="sub" font-size="75%">p</tspan>ᴺE] + E<tspan baseline-shift="sub" font-size="75%">pos</tspan></text>
+  <text x="335" y="258" font-size="10" fill="#64748b" text-anchor="middle">x<tspan baseline-shift="sub" font-size="75%">class</tspan> : learnable [class] embedding</text>
 
   <!-- 箭头：序列 → Transformer -->
-  <polygon points="340,378 334,388 346,388" fill="#6366f1"/>
-  <line x1="340" y1="374" x2="340" y2="388" stroke="#6366f1" stroke-width="2"/>
+  <line x1="490" y1="204" x2="490" y2="270" stroke="#475569" stroke-width="1.2"/>
+  <polygon points="485,270 490,282 495,270" fill="#475569"/>
 
-  <!-- Transformer 块示意 -->
-  <rect x="140" y="396" width="400" height="80" fill="#ffffff" stroke="#6366f1" stroke-width="1.5" rx="4"/>
-  <text x="340" y="420" font-size="12" font-weight="bold" fill="#3730a3" text-anchor="middle">Transformer Encoder (L blocks)</text>
-  <text x="340" y="440" font-size="11" fill="#475569" text-anchor="middle">Multi-Head Self-Attention + MLP + Residual + Layer Norm</text>
-  <text x="340" y="460" font-size="11" fill="#64748b" text-anchor="middle">Each block: z&#8320; = MSA(LN(z&#8320;₋₁)) + z&#8320;₋₁ ;  z&#8320; = MLP(LN(z&#8320;)) + z&#8320;</text>
+  <!-- Transformer 编码器 -->
+  <rect x="80" y="286" width="510" height="120" fill="#ffffff" stroke="#6366f1" stroke-width="1.5" rx="4"/>
+  <text x="335" y="308" font-size="13" font-weight="bold" fill="#3730a3" text-anchor="middle">Transformer Encoder (L layers)</text>
+
+  <!-- 编码器内部示意：L 层堆叠 -->
+  <rect x="100" y="320" width="470" height="74" fill="#f8fafc" stroke="#cbd5e1" stroke-width="0.8" rx="3"/>
+  <text x="335" y="340" font-size="10" fill="#334155" text-anchor="middle">Multi-Head Self-Attention + MLP + Layer Norm (&#215; L)</text>
+
+  <!-- 层间箭头 -->
+  <line x1="335" y1="348" x2="335" y2="358" stroke="#94a3b8" stroke-width="0.8"/>
+  <polygon points="332,358 335,364 338,358" fill="#94a3b8"/>
+
+  <text x="335" y="376" font-size="10" fill="#64748b" text-anchor="middle">z&#8242;<tspan baseline-shift="sub" font-size="75%">l</tspan> = MSA(LN(z<tspan baseline-shift="sub" font-size="75%">l-1</tspan>)) + z<tspan baseline-shift="sub" font-size="75%">l-1</tspan></text>
+  <text x="335" y="390" font-size="10" fill="#64748b" text-anchor="middle">z<tspan baseline-shift="sub" font-size="75%">l</tspan> = MLP(LN(z&#8242;<tspan baseline-shift="sub" font-size="75%">l</tspan>)) + z&#8242;<tspan baseline-shift="sub" font-size="75%">l</tspan></text>
 
   <!-- 箭头：Transformer → 输出 -->
-  <polygon points="340,480 334,490 346,490" fill="#6366f1"/>
-  <line x1="340" y1="476" x2="340" y2="490" stroke="#6366f1" stroke-width="2"/>
+  <line x1="335" y1="406" x2="335" y2="440" stroke="#475569" stroke-width="1.2"/>
+  <polygon points="330,440 335,452 340,440" fill="#475569"/>
 
-  <!-- 输出：分类头 -->
-  <rect x="200" y="498" width="280" height="44" fill="#eef2ff" stroke="#6366f1" stroke-width="2" rx="4"/>
-  <text x="340" y="518" font-size="13" font-weight="bold" fill="#3730a3" text-anchor="middle">Classification Head</text>
-  <text x="340" y="534" font-size="11" fill="#475569" text-anchor="middle">y = LN(z_L⁰)  →  linear projection → class logits</text>
+  <!-- 输出：取 z_L^0 -->
+  <rect x="80" y="456" width="510" height="44" fill="#eef2ff" stroke="#6366f1" stroke-width="1.5" rx="3"/>
+  <text x="335" y="476" font-size="12" font-weight="bold" fill="#3730a3" text-anchor="middle">y = LN(z<tspan baseline-shift="sub" font-size="75%">L</tspan>⁰)</text>
+  <text x="335" y="494" font-size="10" fill="#64748b" text-anchor="middle">z<tspan baseline-shift="sub" font-size="75%">L</tspan>⁰ : output of [class] token at final layer</text>
 
-  <!-- 强调：只有 [class] token 被使用 -->
-  <rect x="80" y="556" width="520" height="28" fill="#f1f5f9" stroke="#cbd5e1" stroke-width="1" rx="3"/>
-  <text x="340" y="574" font-size="11" fill="#334155" text-anchor="middle">Only the output of [class] token (z_L⁰) is used for prediction; patch outputs are discarded.</text>
+  <!-- 箭头：输出 → 分类头 -->
+  <line x1="335" y1="500" x2="335" y2="530" stroke="#475569" stroke-width="1.2"/>
+  <polygon points="330,530 335,542 340,530" fill="#475569"/>
 
-  <!-- 右侧面板：图例与机制拆解 -->
-  <rect x="660" y="56" width="270" height="580" fill="#fbfcfe" stroke="#cbd5e1" stroke-width="1.5" rx="4"/>
-  <text x="795" y="80" font-size="14" font-weight="bold" fill="#334155" text-anchor="middle">Legend &amp; Mechanism</text>
+  <!-- 分类头 -->
+  <rect x="180" y="546" width="310" height="36" fill="#f1f5f9" stroke="#94a3b8" stroke-width="1" rx="3"/>
+  <text x="335" y="568" font-size="11" fill="#334155" text-anchor="middle">Classification Head (MLP) &#8594; class prediction</text>
 
-  <!-- 图例：箭头 -->
-  <text x="680" y="110" font-size="12" font-weight="bold" fill="#475569">Arrow Types</text>
-  <line x1="680" y1="130" x2="720" y2="130" stroke="#6366f1" stroke-width="2"/>
-  <polygon points="720,130 714,126 714,134" fill="#6366f1"/>
-  <text x="730" y="134" font-size="11" fill="#475569">Data flow / forward pass</text>
+  <!-- 右侧说明面板 -->
+  <rect x="640" y="56" width="280" height="540" fill="#f8fafc" stroke="#cbd5e1" stroke-width="1.2" rx="4"/>
+  <text x="780" y="80" font-size="13" font-weight="bold" fill="#334155" text-anchor="middle">Key Design Details</text>
 
-  <line x1="680" y1="158" x2="720" y2="158" stroke="#94a3b8" stroke-width="1.5" stroke-dasharray="5,4"/>
-  <polygon points="720,158 714,154 714,162" fill="#94a3b8"/>
-  <text x="730" y="162" font-size="11" fill="#475569">Reference / skip connection</text>
+  <!-- 说明 1：[class] token -->
+  <rect x="660" y="100" width="240" height="100" fill="#ffffff" stroke="#cbd5e1" stroke-width="1" rx="3"/>
+  <text x="780" y="120" font-size="11" font-weight="bold" fill="#3730a3" text-anchor="middle">[class] Token</text>
+  <text x="780" y="140" font-size="10" fill="#334155" text-anchor="middle">Learnable embedding x<tspan baseline-shift="sub" font-size="75%">class</tspan></text>
+  <text x="780" y="156" font-size="10" fill="#334155" text-anchor="middle">prepended to patch sequence</text>
+  <text x="780" y="172" font-size="10" fill="#334155" text-anchor="middle">Its output z<tspan baseline-shift="sub" font-size="75%">L</tspan>⁰ serves as</text>
+  <text x="780" y="188" font-size="10" fill="#334155" text-anchor="middle">image representation for classifier</text>
 
-  <!-- 机制拆解 -->
-  <text x="680" y="200" font-size="12" font-weight="bold" fill="#475569">Key Design Points</text>
+  <!-- 说明 2：BERT 借鉴 -->
+  <rect x="660" y="216" width="240" height="72" fill="#ffffff" stroke="#cbd5e1" stroke-width="1" rx="3"/>
+  <text x="780" y="236" font-size="11" font-weight="bold" fill="#3730a3" text-anchor="middle">Inspired by BERT [CLS]</text>
+  <text x="780" y="256" font-size="10" fill="#334155" text-anchor="middle">Analogous to [CLS] token in NLP</text>
+  <text x="780" y="272" font-size="10" fill="#334155" text-anchor="middle">Aggregates global image info</text>
 
-  <rect x="680" y="212" width="230" height="24" fill="#eef2ff" stroke="#6366f1" stroke-width="1" rx="2"/>
-  <text x="795" y="228" font-size="11" fill="#3730a3" text-anchor="middle" font-weight="bold">Inspired by BERT [CLS] token</text>
+  <!-- 说明 3：Position Embedding -->
+  <rect x="660" y="304" width="240" height="72" fill="#ffffff" stroke="#cbd5e1" stroke-width="1" rx="3"/>
+  <text x="780" y="324" font-size="11" font-weight="bold" fill="#3730a3" text-anchor="middle">Position Embedding E<tspan baseline-shift="sub" font-size="75%">pos</tspan></text>
+  <text x="780" y="344" font-size="10" fill="#334155" text-anchor="middle">1D learnable position encoding</text>
+  <text x="780" y="360" font-size="10" fill="#334155" text-anchor="middle">Added to all patch embeddings</text>
 
-  <text x="680" y="260" font-size="11" fill="#334155">1. [class] token is a learnable vector</text>
-  <text x="680" y="278" font-size="11" fill="#334155">   (initialized randomly, optimized via SGD)</text>
+  <!-- 说明 4：Layer Norm -->
+  <rect x="660" y="392" width="240" height="72" fill="#ffffff" stroke="#cbd5e1" stroke-width="1" rx="3"/>
+  <text x="780" y="412" font-size="11" font-weight="bold" fill="#3730a3" text-anchor="middle">Layer Normalization (LN)</text>
+  <text x="780" y="432" font-size="10" fill="#334155" text-anchor="middle">Applied before each MSA &amp; MLP</text>
+  <text x="780" y="448" font-size="10" fill="#334155" text-anchor="middle">Applied to final [class] output</text>
 
-  <text x="680" y="302" font-size="11" fill="#334155">2. Positioned at index 0 of input sequence</text>
+  <!-- 图例 -->
+  <rect x="660" y="480" width="240" height="100" fill="#ffffff" stroke="#cbd5e1" stroke-width="1" rx="3"/>
+  <text x="780" y="500" font-size="11" font-weight="bold" fill="#334155" text-anchor="middle">Legend</text>
 
-  <text x="680" y="326" font-size="11" fill="#334155">3. Interacts with all patch tokens via</text>
-  <text x="680" y="344" font-size="11" fill="#334155">   self-attention in each Transformer block</text>
+  <line x1="680" y1="520" x2="720" y2="520" stroke="#475569" stroke-width="1.2"/>
+  <polygon points="720,515 732,520 720,525" fill="#475569"/>
+  <text x="745" y="524" font-size="10" fill="#334155">Data flow</text>
 
-  <text x="680" y="368" font-size="11" fill="#334155">4. After L blocks, its representation</text>
-  <text x="680" y="386" font-size="11" fill="#334155">   aggregates global image information</text>
+  <line x1="680" y1="540" x2="720" y2="540" stroke="#94a3b8" stroke-width="0.8" stroke-dasharray="5,4"/>
+  <polygon points="720,535 732,540 720,545" fill="#94a3b8"/>
+  <text x="745" y="544" font-size="10" fill="#334155">Reference / skip connection</text>
 
-  <text x="680" y="410" font-size="11" fill="#334155">5. Only z_L⁰ is passed to classification</text>
-  <text x="680" y="428" font-size="11" fill="#334155">   head; patch outputs are not used</text>
+  <rect x="680" y="556" width="12" height="12" fill="#6366f1" rx="1"/>
+  <text x="745" y="566" font-size="10" fill="#334155">[class] token / key element</text>
 
-  <!-- 对比：与 CNN 归纳偏置 -->
-  <text x="680" y="466" font-size="12" font-weight="bold" fill="#475569">Inductive Bias Comparison</text>
-  <rect x="680" y="478" width="230" height="60" fill="#f1f5f9" stroke="#cbd5e1" stroke-width="1" rx="3"/>
-  <text x="690" y="496" font-size="11" fill="#334155">CNN: translation equivariance, locality</text>
-  <text x="690" y="514" font-size="11" fill="#334155">ViT: minimal inductive bias;</text>
-  <text x="690" y="532" font-size="11" fill="#334155">relies on large-scale pre-training</text>
-
-  <!-- 底部引用 -->
-  <text x="795" y="618" font-size="10" fill="#94a3b8" text-anchor="middle">Dosovitskiy et al. ICLR 2021</text>
 </svg>

@@ -1,109 +1,110 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 960 680" font-family="'Segoe UI','PingFang SC','Microsoft YaHei',sans-serif" width="960" height="680">
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 960 680" font-family="'Segoe UI','PingFang SC','Microsoft YaHei',sans-serif" font-size="14" fill="#1e293b" width="960" height="680">
   <rect x="0" y="0" width="960" height="680" fill="#ffffff"/>
 
   <!-- 标题 -->
-  <text x="480" y="36" font-size="20" font-weight="bold" fill="#1e293b" text-anchor="middle">Proximal Policy Optimization (PPO) — Actor-Critic with Multiple Epochs &amp; Minibatches</text>
+  <text x="480" y="32" text-anchor="middle" font-size="20" font-weight="700" fill="#1e293b">Proximal Policy Optimization (PPO) — Multiple Epochs &amp; Minibatches</text>
 
-  <!-- ===== 主流程：纵向三阶段 ===== -->
-  <!-- 阶段1：数据收集 -->
-  <rect x="60" y="60" width="840" height="130" rx="4" fill="#f8fafc" stroke="#cbd5e1" stroke-width="1.2"/>
-  <text x="80" y="84" font-size="13" font-weight="bold" fill="#334155">Stage 1: Data Collection</text>
+  <!-- ===== 左侧主流程：纵向 ===== -->
+  <!-- 面板1：数据收集 -->
+  <rect x="40" y="60" width="520" height="130" rx="6" fill="#f8fafc" stroke="#cbd5e1" stroke-width="1.2"/>
+  <text x="300" y="84" text-anchor="middle" font-size="15" font-weight="600" fill="#334155">1. Data Collection (Rollout)</text>
+  <text x="300" y="108" text-anchor="middle" font-size="13" fill="#475569">N parallel actors each collect T timesteps</text>
+  <text x="300" y="130" text-anchor="middle" font-size="13" fill="#475569">Total: N &#215; T transitions (s, a, r, s')</text>
+  <text x="300" y="152" text-anchor="middle" font-size="13" fill="#475569">Compute advantage estimates &#194;<tspan baseline-shift="sub" font-size="75%">t</tspan> (e.g. GAE)</text>
+  <text x="300" y="174" text-anchor="middle" font-size="13" fill="#475569">Store in replay buffer</text>
 
-  <!-- N个actor -->
-  <text x="120" y="112" font-size="12" fill="#475569" text-anchor="middle">Actor 1</text>
-  <rect x="90" y="118" width="60" height="24" rx="3" fill="#eef2ff" stroke="#6366f1" stroke-width="1.2"/>
-  <text x="120" y="134" font-size="11" fill="#3730a3" text-anchor="middle">π_θ</text>
+  <!-- 箭头1：数据收集 → 替代损失 -->
+  <line x1="300" y1="190" x2="300" y2="220" stroke="#6366f1" stroke-width="2"/>
+  <polygon points="300,224 294,214 306,214" fill="#6366f1"/>
 
-  <text x="220" y="112" font-size="12" fill="#475569" text-anchor="middle">Actor 2</text>
-  <rect x="190" y="118" width="60" height="24" rx="3" fill="#eef2ff" stroke="#6366f1" stroke-width="1.2"/>
-  <text x="220" y="134" font-size="11" fill="#3730a3" text-anchor="middle">π_θ</text>
+  <!-- 面板2：替代损失（核心，强调色） -->
+  <rect x="40" y="228" width="520" height="140" rx="6" fill="#eef2ff" stroke="#6366f1" stroke-width="2"/>
+  <text x="300" y="254" text-anchor="middle" font-size="15" font-weight="600" fill="#3730a3">2. Surrogate Objective (Core)</text>
+  <text x="300" y="280" text-anchor="middle" font-size="14" font-weight="500" fill="#3730a3">L<tspan baseline-shift="super" font-size="75%">CLIP</tspan>(θ) = &#296;E<tspan baseline-shift="sub" font-size="75%">t</tspan>[ min( r<tspan baseline-shift="sub" font-size="75%">t</tspan>(θ) &#194;<tspan baseline-shift="sub" font-size="75%">t</tspan>, clip(r<tspan baseline-shift="sub" font-size="75%">t</tspan>(θ), 1−ε, 1+ε) &#194;<tspan baseline-shift="sub" font-size="75%">t</tspan> ) ]</text>
+  <text x="300" y="306" text-anchor="middle" font-size="13" fill="#475569">where r<tspan baseline-shift="sub" font-size="75%">t</tspan>(θ) = π<tspan baseline-shift="sub" font-size="75%">θ</tspan>(a<tspan baseline-shift="sub" font-size="75%">t</tspan>|s<tspan baseline-shift="sub" font-size="75%">t</tspan>) / π<tspan baseline-shift="sub" font-size="75%">θ_old</tspan>(a<tspan baseline-shift="sub" font-size="75%">t</tspan>|s<tspan baseline-shift="sub" font-size="75%">t</tspan>)</text>
+  <text x="300" y="330" text-anchor="middle" font-size="13" fill="#475569">ε = 0.2 (clipping hyperparameter)</text>
+  <text x="300" y="352" text-anchor="middle" font-size="13" fill="#475569">Pessimistic lower bound prevents large policy updates</text>
 
-  <text x="320" y="112" font-size="12" fill="#475569" text-anchor="middle">…</text>
+  <!-- 箭头2：替代损失 → 多epoch优化 -->
+  <line x1="300" y1="368" x2="300" y2="398" stroke="#6366f1" stroke-width="2"/>
+  <polygon points="300,402 294,392 306,392" fill="#6366f1"/>
 
-  <text x="400" y="112" font-size="12" fill="#475569" text-anchor="middle">Actor N</text>
-  <rect x="370" y="118" width="60" height="24" rx="3" fill="#eef2ff" stroke="#6366f1" stroke-width="1.2"/>
-  <text x="400" y="134" font-size="11" fill="#3730a3" text-anchor="middle">π_θ</text>
+  <!-- 面板3：多epoch小批量优化 -->
+  <rect x="40" y="406" width="520" height="130" rx="6" fill="#f8fafc" stroke="#cbd5e1" stroke-width="1.2"/>
+  <text x="300" y="430" text-anchor="middle" font-size="15" font-weight="600" fill="#334155">3. Multi-Epoch Minibatch Optimization</text>
+  <text x="300" y="456" text-anchor="middle" font-size="13" fill="#475569">For K epochs (e.g. K=3 or 10):</text>
+  <text x="300" y="478" text-anchor="middle" font-size="13" fill="#475569">Shuffle the N&#215;T transitions into minibatches of size M</text>
+  <text x="300" y="500" text-anchor="middle" font-size="13" fill="#475569">Update θ via SGD (Adam) on L<tspan baseline-shift="super" font-size="75%">CLIP</tspan>(θ) for each minibatch</text>
+  <text x="300" y="522" text-anchor="middle" font-size="13" fill="#475569">Reuse same data K times → better sample efficiency</text>
 
-  <!-- 每个actor收集T步 -->
-  <text x="120" y="168" font-size="11" fill="#64748b" text-anchor="middle">T steps</text>
-  <text x="220" y="168" font-size="11" fill="#64748b" text-anchor="middle">T steps</text>
-  <text x="400" y="168" font-size="11" fill="#64748b" text-anchor="middle">T steps</text>
+  <!-- 箭头3：多epoch → 新策略 -->
+  <line x1="300" y1="536" x2="300" y2="566" stroke="#6366f1" stroke-width="2"/>
+  <polygon points="300,570 294,560 306,560" fill="#6366f1"/>
 
-  <!-- 箭头：actor → 数据池 -->
-  <line x1="120" y1="142" x2="120" y2="155" stroke="#6366f1" stroke-width="1.5"/>
-  <polygon points="116,153 120,160 124,153" fill="#6366f1"/>
-  <line x1="220" y1="142" x2="220" y2="155" stroke="#6366f1" stroke-width="1.5"/>
-  <polygon points="216,153 220,160 224,153" fill="#6366f1"/>
-  <line x1="400" y1="142" x2="400" y2="155" stroke="#6366f1" stroke-width="1.5"/>
-  <polygon points="396,153 400,160 404,153" fill="#6366f1"/>
+  <!-- 面板4：新策略 -->
+  <rect x="40" y="574" width="520" height="70" rx="6" fill="#f1f5f9" stroke="#94a3b8" stroke-width="1.2"/>
+  <text x="300" y="600" text-anchor="middle" font-size="15" font-weight="600" fill="#334155">4. Updated Policy π<tspan baseline-shift="sub" font-size="75%">θ_new</tspan></text>
+  <text x="300" y="624" text-anchor="middle" font-size="13" fill="#475569">θ<tspan baseline-shift="sub" font-size="75%">old</tspan> ← θ<tspan baseline-shift="sub" font-size="75%">new</tspan> ; repeat from step 1</text>
 
-  <!-- 数据池 -->
-  <rect x="520" y="80" width="160" height="90" rx="4" fill="#f1f5f9" stroke="#94a3b8" stroke-width="1.2"/>
-  <text x="600" y="104" font-size="13" font-weight="bold" fill="#334155" text-anchor="middle">Data Buffer</text>
-  <text x="600" y="126" font-size="11" fill="#475569" text-anchor="middle">N × T transitions</text>
-  <text x="600" y="146" font-size="11" fill="#475569" text-anchor="middle">(s_t, a_t, r_t, s_{t+1})</text>
-  <text x="600" y="164" font-size="11" fill="#475569" text-anchor="middle">Advantage Â_t</text>
+  <!-- ===== 右侧：图例 + 机制拆解 ===== -->
+  <rect x="600" y="60" width="320" height="584" rx="6" fill="#fbfcfe" stroke="#e2e8f0" stroke-width="1.2"/>
 
-  <!-- 箭头：数据池 → 阶段2 -->
-  <line x1="680" y1="125" x2="720" y2="125" stroke="#6366f1" stroke-width="1.5"/>
-  <polygon points="718,121 726,125 718,129" fill="#6366f1"/>
+  <!-- 图例 -->
+  <text x="760" y="88" text-anchor="middle" font-size="14" font-weight="600" fill="#334155">Legend</text>
+  <line x1="620" y1="110" x2="670" y2="110" stroke="#6366f1" stroke-width="2"/>
+  <polygon points="670,114 664,104 676,104" fill="#6366f1"/>
+  <text x="680" y="114" font-size="12" fill="#475569">Data flow / forward pass</text>
 
-  <!-- 阶段2：替代损失优化 -->
-  <rect x="60" y="210" width="840" height="200" rx="4" fill="#f8fafc" stroke="#cbd5e1" stroke-width="1.2"/>
-  <text x="80" y="234" font-size="13" font-weight="bold" fill="#334155">Stage 2: Surrogate Objective Optimization (K Epochs, Minibatch SGD)</text>
+  <line x1="620" y1="134" x2="670" y2="134" stroke="#94a3b8" stroke-width="1.5" stroke-dasharray="5,4"/>
+  <polygon points="670,138 664,128 676,128" fill="#94a3b8"/>
+  <text x="680" y="138" font-size="12" fill="#475569">Reference / baseline</text>
 
-  <!-- 核心公式框（视觉焦点） -->
-  <rect x="80" y="250" width="400" height="140" rx="4" fill="#eef2ff" stroke="#6366f1" stroke-width="2"/>
-  <text x="280" y="274" font-size="14" font-weight="bold" fill="#3730a3" text-anchor="middle">Clipped Surrogate Objective</text>
-  <text x="280" y="302" font-size="16" fill="#1e293b" text-anchor="middle">L^{CLIP}(θ) = Ê_t [ min( r_t(θ) Â_t,</text>
-  <text x="280" y="326" font-size="16" fill="#1e293b" text-anchor="middle">clip(r_t(θ), 1−ε, 1+ε) Â_t ) ]</text>
-  <text x="280" y="352" font-size="13" fill="#475569" text-anchor="middle">where r_t(θ) = π_θ(a_t|s_t) / π_{θ_old}(a_t|s_t)</text>
-  <text x="280" y="374" font-size="12" fill="#64748b" text-anchor="middle">ε = 0.2 (default clipping range)</text>
+  <!-- 关键公式拆解 -->
+  <text x="760" y="172" text-anchor="middle" font-size="14" font-weight="600" fill="#334155">Key Mechanism</text>
 
-  <!-- 右侧：minibatch SGD 说明 -->
-  <rect x="510" y="250" width="370" height="140" rx="4" fill="#f1f5f9" stroke="#94a3b8" stroke-width="1.2"/>
-  <text x="695" y="274" font-size="13" font-weight="bold" fill="#334155" text-anchor="middle">Minibatch SGD (Adam)</text>
+  <rect x="620" y="186" width="280" height="100" rx="4" fill="#f1f5f9" stroke="#cbd5e1" stroke-width="1"/>
+  <text x="760" y="208" text-anchor="middle" font-size="13" font-weight="500" fill="#334155">Probability Ratio r<tspan baseline-shift="sub" font-size="75%">t</tspan>(θ)</text>
+  <text x="760" y="230" text-anchor="middle" font-size="12" fill="#475569">r<tspan baseline-shift="sub" font-size="75%">t</tspan>(θ) = π<tspan baseline-shift="sub" font-size="75%">θ</tspan>(a<tspan baseline-shift="sub" font-size="75%">t</tspan>|s<tspan baseline-shift="sub" font-size="75%">t</tspan>) / π<tspan baseline-shift="sub" font-size="75%">θ_old</tspan>(a<tspan baseline-shift="sub" font-size="75%">t</tspan>|s<tspan baseline-shift="sub" font-size="75%">t</tspan>)</text>
+  <text x="760" y="252" text-anchor="middle" font-size="12" fill="#475569">Measures how much new policy deviates from old</text>
+  <text x="760" y="272" text-anchor="middle" font-size="12" fill="#475569">r=1 → no change; r&gt;1 → more likely; r&lt;1 → less likely</text>
 
-  <text x="530" y="300" font-size="12" fill="#475569">For each epoch k = 1…K:</text>
-  <text x="530" y="322" font-size="12" fill="#475569">• Shuffle N×T samples</text>
-  <text x="530" y="344" font-size="12" fill="#475569">• Split into minibatches of size M</text>
-  <text x="530" y="366" font-size="12" fill="#475569">• θ ← θ + α ∇_θ L^{CLIP}(θ)</text>
+  <rect x="620" y="300" width="280" height="100" rx="4" fill="#f1f5f9" stroke="#cbd5e1" stroke-width="1"/>
+  <text x="760" y="322" text-anchor="middle" font-size="13" font-weight="500" fill="#334155">Clipping Effect</text>
+  <text x="760" y="344" text-anchor="middle" font-size="12" fill="#475569">clip(r, 1−ε, 1+ε) restricts ratio to [0.8, 1.2]</text>
+  <text x="760" y="366" text-anchor="middle" font-size="12" fill="#475569">When &#194; &gt; 0: min(r&#194;, clip(r)&#194;) = clip(r)&#194; if r &gt; 1+ε</text>
+  <text x="760" y="388" text-anchor="middle" font-size="12" fill="#475569">When &#194; &lt; 0: min(r&#194;, clip(r)&#194;) = clip(r)&#194; if r &lt; 1−ε</text>
 
-  <!-- 箭头：阶段2 → 阶段3 -->
-  <line x1="480" y1="410" x2="480" y2="440" stroke="#6366f1" stroke-width="1.5"/>
-  <polygon points="476,438 480,446 484,438" fill="#6366f1"/>
+  <!-- 二部图示意：旧策略 → 新策略的映射 -->
+  <text x="760" y="424" text-anchor="middle" font-size="14" font-weight="600" fill="#334155">Policy Update Mapping</text>
+  <rect x="620" y="436" width="280" height="130" rx="4" fill="#f1f5f9" stroke="#cbd5e1" stroke-width="1"/>
 
-  <!-- 阶段3：更新策略 -->
-  <rect x="60" y="450" width="840" height="100" rx="4" fill="#f8fafc" stroke="#cbd5e1" stroke-width="1.2"/>
-  <text x="80" y="474" font-size="13" font-weight="bold" fill="#334155">Stage 3: Policy Update &amp; Repeat</text>
+  <!-- 左列：旧策略动作 -->
+  <text x="660" y="460" text-anchor="middle" font-size="12" font-weight="500" fill="#475569">π<tspan baseline-shift="sub" font-size="75%">θ_old</tspan></text>
+  <circle cx="660" cy="482" r="4" fill="#94a3b8"/>
+  <text x="660" y="500" text-anchor="middle" font-size="11" fill="#64748b">a<tspan baseline-shift="sub" font-size="75%">1</tspan></text>
+  <circle cx="660" cy="520" r="4" fill="#94a3b8"/>
+  <text x="660" y="538" text-anchor="middle" font-size="11" fill="#64748b">a<tspan baseline-shift="sub" font-size="75%">2</tspan></text>
+  <circle cx="660" cy="556" r="4" fill="#94a3b8"/>
+  <text x="660" y="554" text-anchor="middle" font-size="11" fill="#64748b">a<tspan baseline-shift="sub" font-size="75%">3</tspan></text>
 
-  <rect x="100" y="490" width="200" height="40" rx="4" fill="#eef2ff" stroke="#6366f1" stroke-width="1.2"/>
-  <text x="200" y="514" font-size="13" fill="#3730a3" text-anchor="middle">θ_old ← θ</text>
+  <!-- 右列：新策略动作 -->
+  <text x="860" y="460" text-anchor="middle" font-size="12" font-weight="500" fill="#475569">π<tspan baseline-shift="sub" font-size="75%">θ_new</tspan></text>
+  <circle cx="860" cy="482" r="4" fill="#6366f1"/>
+  <text x="860" y="500" text-anchor="middle" font-size="11" fill="#3730a3">a<tspan baseline-shift="sub" font-size="75%">1</tspan></text>
+  <circle cx="860" cy="520" r="4" fill="#6366f1"/>
+  <text x="860" y="538" text-anchor="middle" font-size="11" fill="#3730a3">a<tspan baseline-shift="sub" font-size="75%">2</tspan></text>
+  <circle cx="860" cy="556" r="4" fill="#6366f1"/>
+  <text x="860" y="554" text-anchor="middle" font-size="11" fill="#3730a3">a<tspan baseline-shift="sub" font-size="75%">3</tspan></text>
 
-  <text x="340" y="514" font-size="13" fill="#475569" text-anchor="middle">→ 回到 Stage 1 继续迭代</text>
+  <!-- 连边：选中边加粗 -->
+  <line x1="664" y1="482" x2="856" y2="482" stroke="#6366f1" stroke-width="2.5"/>
+  <line x1="664" y1="520" x2="856" y2="520" stroke="#94a3b8" stroke-width="1.2"/>
+  <line x1="664" y1="556" x2="856" y2="556" stroke="#6366f1" stroke-width="2.5"/>
 
-  <!-- ===== 右侧图例面板 ===== -->
-  <rect x="740" y="60" width="180" height="180" rx="4" fill="#fbfcfe" stroke="#e2e8f0" stroke-width="1"/>
-  <text x="830" y="82" font-size="12" font-weight="bold" fill="#334155" text-anchor="middle">Legend</text>
+  <text x="760" y="580" text-anchor="middle" font-size="11" fill="#64748b">Bold = selected actions (higher probability)</text>
 
-  <line x1="755" y1="100" x2="795" y2="100" stroke="#6366f1" stroke-width="1.5"/>
-  <polygon points="793,96 800,100 793,104" fill="#6366f1"/>
-  <text x="810" y="104" font-size="11" fill="#475569">Data flow</text>
-
-  <line x1="755" y1="124" x2="795" y2="124" stroke="#94a3b8" stroke-width="1.2" stroke-dasharray="5,4"/>
-  <polygon points="793,120 800,124 793,128" fill="#94a3b8"/>
-  <text x="810" y="128" font-size="11" fill="#475569">Reference / old policy</text>
-
-  <rect x="755" y="142" width="40" height="16" rx="2" fill="#eef2ff" stroke="#6366f1" stroke-width="1.2"/>
-  <text x="810" y="156" font-size="11" fill="#475569">Key component</text>
-
-  <rect x="755" y="170" width="40" height="16" rx="2" fill="#f1f5f9" stroke="#94a3b8" stroke-width="1"/>
-  <text x="810" y="184" font-size="11" fill="#475569">Supporting info</text>
-
-  <!-- ===== 底部说明 ===== -->
-  <rect x="60" y="570" width="840" height="90" rx="4" fill="#f1f5f9" stroke="#cbd5e1" stroke-width="1"/>
-  <text x="80" y="594" font-size="12" font-weight="bold" fill="#334155">Key Design Choices</text>
-  <text x="80" y="616" font-size="11" fill="#475569">• Multiple epochs (K) on same data: improves sample efficiency vs. vanilla policy gradient (one update per sample).</text>
-  <text x="80" y="636" font-size="11" fill="#475569">• Clipping (ε=0.2): prevents destructively large policy updates; forms a pessimistic lower bound on performance.</text>
-  <text x="80" y="656" font-size="11" fill="#475569">• Parallel actors (N) + fixed-length segments (T): balances exploration and computational efficiency.</text>
+  <!-- 底部说明 -->
+  <text x="760" y="620" text-anchor="middle" font-size="12" fill="#475569">PPO alternates between sampling data</text>
+  <text x="760" y="638" text-anchor="middle" font-size="12" fill="#475569">and optimizing the clipped surrogate</text>
+  <text x="760" y="656" text-anchor="middle" font-size="12" fill="#475569">objective via multi-epoch minibatches.</text>
 </svg>

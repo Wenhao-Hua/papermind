@@ -239,6 +239,20 @@ def _clean_svg(value) -> str:
     svg = re.sub(r"<sup\b[^>]*>(.*?)</sup>", r'<tspan baseline-shift="super" font-size="75%">\1</tspan>',
                  svg, flags=re.DOTALL | re.IGNORECASE)
     svg = re.sub(r"<br\s*/?>", "", svg, flags=re.IGNORECASE)
+    # Un-double-escaped entities the model sometimes emits: "&amp;#8730;" should be "&#8730;"
+    # (√) and "&amp;nbsp;" a space — otherwise the literal string "&#8730;" / "&nbsp;" shows.
+    svg = re.sub(r"&amp;(#\d+;|#x[0-9a-fA-F]+;)", r"&\1", svg)
+    svg = re.sub(r"&amp;nbsp;", "&#160;", svg)
+    # The model sometimes HTML-escapes its own <tspan> tags ("&lt;tspan …&gt;…&lt;/tspan&gt;"),
+    # which then show as literal text instead of rendering the sub/superscript. Un-escape tspan
+    # tags specifically (attribute quotes inside are real "), restoring them to real elements.
+    svg = re.sub(r"&lt;(/?tspan\b[^&]*?)&gt;", r"<\1>", svg)
+    # LaTeX-style sub/superscripts don't typeset in SVG — the braces/carets show literally
+    # (ℝ^{N×N}, M_{i,j}, ℝ^(d×k)). Convert simple braced/paren groups to native <tspan> so they
+    # render as real super/subscripts. (Bare "d_k" is left alone — too ambiguous to touch safely;
+    # the SVG generation prompt now forbids LaTeX, so this is a backstop for older/stray output.)
+    svg = re.sub(r"\^[\{(]([^{}()<>]{1,28})[\})]", r'<tspan baseline-shift="super" font-size="75%">\1</tspan>', svg)
+    svg = re.sub(r"_[\{(]([^{}()<>]{1,28})[\})]", r'<tspan baseline-shift="sub" font-size="75%">\1</tspan>', svg)
     # LLM-drawn SVGs routinely contain a raw "&" (e.g. "Add & Norm") which is invalid
     # XML and was silently sinking the whole figure to the Mermaid fallback. Escape any
     # "&" that isn't already a valid entity so well-formedness checks can pass.

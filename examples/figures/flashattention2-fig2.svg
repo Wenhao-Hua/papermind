@@ -1,112 +1,98 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 960 620" font-family="'Segoe UI','PingFang SC','Microsoft YaHei',sans-serif" width="960" height="620">
-  <rect x="0" y="0" width="960" height="620" fill="#ffffff"/>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 960 580" font-family="'Segoe UI','PingFang SC','Microsoft YaHei',sans-serif" width="960" height="580">
+  <rect x="0" y="0" width="960" height="580" fill="#ffffff"/>
 
   <!-- 标题 -->
-  <text x="480" y="36" text-anchor="middle" font-size="18" font-weight="bold" fill="#1e293b">FlashAttention-2 Backward Pass: Logsumexp Simplification</text>
-  <line x1="160" y1="48" x2="800" y2="48" stroke="#cbd5e1" stroke-width="1"/>
+  <text x="480" y="36" text-anchor="middle" font-size="20" font-weight="bold" fill="#1e293b">FlashAttention-2 Backward Pass: Logsumexp Simplification</text>
 
   <!-- 左侧主面板：核心公式与映射 -->
-  <rect x="40" y="68" width="560" height="520" fill="#f8fafc" stroke="#e2e8f0" stroke-width="1" rx="4"/>
-  <text x="320" y="94" text-anchor="middle" font-size="14" font-weight="bold" fill="#334155">Core: Softmax Probability via Logsumexp</text>
+  <rect x="40" y="56" width="540" height="490" fill="#f8fafc" stroke="#cbd5e1" stroke-width="1.2" rx="4"/>
+  <text x="310" y="82" text-anchor="middle" font-size="14" font-weight="bold" fill="#334155">Core Definition: Softmax via Logsumexp</text>
 
   <!-- 公式框（强调色） -->
-  <rect x="80" y="112" width="480" height="60" fill="#eef2ff" stroke="#6366f1" stroke-width="2" rx="4"/>
-  <text x="320" y="138" text-anchor="middle" font-size="16" font-weight="bold" fill="#3730a3">P = exp(S − L)</text>
-  <text x="320" y="160" text-anchor="middle" font-size="12" fill="#475569">element-wise: P&#8320;&#8321; = exp(S&#8320;&#8321; − L&#8320;)</text>
+  <rect x="80" y="100" width="460" height="64" fill="#eef2ff" stroke="#6366f1" stroke-width="1.5" rx="4"/>
+  <text x="310" y="126" text-anchor="middle" font-size="16" font-weight="bold" fill="#3730a3">P</text>
+  <text x="340" y="126" text-anchor="start" font-size="16" fill="#3730a3">= exp( S − L )</text>
+  <text x="310" y="150" text-anchor="middle" font-size="12" fill="#64748b">elementwise: P<tspan baseline-shift="sub" font-size="75%">i</tspan> = exp( S<tspan baseline-shift="sub" font-size="75%">i</tspan> − L<tspan baseline-shift="sub" font-size="75%">i</tspan> )</text>
 
-  <!-- 符号说明 -->
-  <text x="100" y="200" font-size="12" fill="#1e293b" font-weight="bold">Notation:</text>
-  <text x="100" y="222" font-size="12" fill="#334155">S : attention scores (QK&#8868;)</text>
-  <text x="100" y="242" font-size="12" fill="#334155">L : logsumexp per row (stored from forward)</text>
-  <text x="100" y="262" font-size="12" fill="#334155">P : softmax probabilities</text>
+  <!-- 集合与映射 -->
+  <text x="310" y="192" text-anchor="middle" font-size="13" font-weight="bold" fill="#334155">Key Sets and Mapping</text>
 
-  <!-- 集合显式表示 -->
-  <text x="100" y="296" font-size="12" fill="#1e293b" font-weight="bold">Explicit mapping (row i):</text>
+  <!-- 集合 S -->
+  <rect x="80" y="208" width="200" height="80" fill="#ffffff" stroke="#94a3b8" stroke-width="1" rx="3"/>
+  <text x="180" y="228" text-anchor="middle" font-size="12" font-weight="bold" fill="#1e293b">S = { S<tspan baseline-shift="sub" font-size="75%">1</tspan>, S<tspan baseline-shift="sub" font-size="75%">2</tspan>, …, S<tspan baseline-shift="sub" font-size="75%">N</tspan> }</text>
+  <text x="180" y="250" text-anchor="middle" font-size="11" fill="#64748b">raw attention scores</text>
+  <text x="180" y="270" text-anchor="middle" font-size="11" fill="#64748b">(pre-softmax)</text>
 
-  <!-- 左侧集合 S -->
-  <rect x="100" y="310" width="140" height="80" fill="#ffffff" stroke="#94a3b8" stroke-width="1" rx="3"/>
-  <text x="170" y="330" text-anchor="middle" font-size="11" fill="#475569" font-weight="bold">S&#8320; (scores)</text>
-  <text x="170" y="350" text-anchor="middle" font-size="11" fill="#334155">{ s&#8320;&#8321;, s&#8320;&#8322;, …, s&#8320;&#8341; }</text>
-  <text x="170" y="370" text-anchor="middle" font-size="10" fill="#64748b">each s&#8320;&#8341; = Q&#8320;·K&#8341;&#8868;</text>
+  <!-- 集合 L -->
+  <rect x="320" y="208" width="200" height="80" fill="#ffffff" stroke="#94a3b8" stroke-width="1" rx="3"/>
+  <text x="420" y="228" text-anchor="middle" font-size="12" font-weight="bold" fill="#1e293b">L = { L<tspan baseline-shift="sub" font-size="75%">1</tspan>, L<tspan baseline-shift="sub" font-size="75%">2</tspan>, …, L<tspan baseline-shift="sub" font-size="75%">N</tspan> }</text>
+  <text x="420" y="250" text-anchor="middle" font-size="11" fill="#64748b">logsumexp per row</text>
+  <text x="420" y="270" text-anchor="middle" font-size="11" fill="#64748b">(stored from forward)</text>
 
-  <!-- 中间操作 -->
-  <text x="320" y="350" text-anchor="middle" font-size="14" fill="#6366f1" font-weight="bold">− L&#8320;</text>
+  <!-- 映射箭头：S → P -->
+  <line x1="280" y1="248" x2="318" y2="248" stroke="#6366f1" stroke-width="1.5"/>
+  <polygon points="318,244 328,248 318,252" fill="#6366f1"/>
 
-  <!-- 右侧集合 P -->
-  <rect x="400" y="310" width="140" height="80" fill="#ffffff" stroke="#94a3b8" stroke-width="1" rx="3"/>
-  <text x="470" y="330" text-anchor="middle" font-size="11" fill="#475569" font-weight="bold">P&#8320; (probabilities)</text>
-  <text x="470" y="350" text-anchor="middle" font-size="11" fill="#334155">{ p&#8320;&#8321;, p&#8320;&#8322;, …, p&#8320;&#8341; }</text>
-  <text x="470" y="370" text-anchor="middle" font-size="10" fill="#64748b">p&#8320;&#8341; = exp(s&#8320;&#8341; − L&#8320;)</text>
+  <!-- 映射标签 -->
+  <text x="300" y="240" text-anchor="middle" font-size="10" fill="#6366f1">exp(· − L)</text>
 
-  <!-- 箭头：S → P -->
-  <polygon points="245,350 260,345 260,355" fill="#6366f1"/>
-  <line x1="240" y1="350" x2="260" y2="350" stroke="#6366f1" stroke-width="1.5"/>
+  <!-- 集合 P -->
+  <rect x="200" y="304" width="220" height="80" fill="#eef2ff" stroke="#6366f1" stroke-width="1.2" rx="3"/>
+  <text x="310" y="324" text-anchor="middle" font-size="12" font-weight="bold" fill="#3730a3">P = { P<tspan baseline-shift="sub" font-size="75%">1</tspan>, P<tspan baseline-shift="sub" font-size="75%">2</tspan>, …, P<tspan baseline-shift="sub" font-size="75%">N</tspan> }</text>
+  <text x="310" y="346" text-anchor="middle" font-size="11" fill="#64748b">softmax probabilities</text>
+  <text x="310" y="366" text-anchor="middle" font-size="11" fill="#64748b">P<tspan baseline-shift="sub" font-size="75%">i</tspan> = exp(S<tspan baseline-shift="sub" font-size="75%">i</tspan> − L<tspan baseline-shift="sub" font-size="75%">i</tspan>)</text>
 
-  <!-- 下方：前向存储说明 -->
-  <rect x="80" y="420" width="480" height="50" fill="#f1f5f9" stroke="#cbd5e1" stroke-width="1" rx="3"/>
-  <text x="320" y="442" text-anchor="middle" font-size="12" fill="#334155">Forward pass stores only L (logsumexp), not row max + row sum</text>
-  <text x="320" y="460" text-anchor="middle" font-size="11" fill="#64748b">Reduces memory footprint; simplifies backward code</text>
+  <!-- 从 S 和 L 到 P 的箭头 -->
+  <line x1="180" y1="288" x2="260" y2="302" stroke="#94a3b8" stroke-width="1" stroke-dasharray="4,3"/>
+  <line x1="420" y1="288" x2="360" y2="302" stroke="#94a3b8" stroke-width="1" stroke-dasharray="4,3"/>
 
-  <!-- 下方：梯度计算示意 -->
-  <text x="100" y="498" font-size="12" fill="#1e293b" font-weight="bold">Gradient contribution (simplified):</text>
-  <text x="100" y="520" font-size="12" fill="#334155">dS = dP · P − (dP · P) · 1 · P</text>
-  <text x="100" y="540" font-size="11" fill="#64748b">where dP = dO · V&#8868; (from upstream)</text>
-  <text x="100" y="558" font-size="11" fill="#64748b">No need to store P explicitly; recomputed from S and L</text>
+  <!-- 梯度计算说明 -->
+  <text x="310" y="412" text-anchor="middle" font-size="13" font-weight="bold" fill="#334155">Gradient Computation</text>
 
-  <!-- 右侧图例/说明面板 -->
-  <rect x="630" y="68" width="290" height="520" fill="#fbfcfe" stroke="#e2e8f0" stroke-width="1" rx="4"/>
-  <text x="775" y="94" text-anchor="middle" font-size="13" font-weight="bold" fill="#334155">Legend &amp; Mechanism</text>
+  <rect x="80" y="424" width="460" height="52" fill="#ffffff" stroke="#cbd5e1" stroke-width="1" rx="3"/>
+  <text x="310" y="446" text-anchor="middle" font-size="12" fill="#1e293b">dS = P ⊙ (dP − rowsum(P ⊙ dP))</text>
+  <text x="310" y="466" text-anchor="middle" font-size="11" fill="#64748b">where dP = dO V⊤ and P = exp(S − L) via logsumexp L</text>
+
+  <!-- 右侧面板：图例与机制拆解 -->
+  <rect x="610" y="56" width="310" height="490" fill="#f8fafc" stroke="#cbd5e1" stroke-width="1.2" rx="4"/>
+  <text x="765" y="82" text-anchor="middle" font-size="14" font-weight="bold" fill="#334155">Legend &amp; Mechanism</text>
 
   <!-- 图例 -->
-  <text x="650" y="122" font-size="11" fill="#1e293b" font-weight="bold">Arrow types:</text>
-  <line x1="650" y1="140" x2="690" y2="140" stroke="#6366f1" stroke-width="1.5"/>
-  <polygon points="690,136 700,140 690,144" fill="#6366f1"/>
-  <text x="705" y="144" font-size="11" fill="#475569">Data flow / mapping</text>
+  <text x="630" y="110" font-size="12" font-weight="bold" fill="#334155">Arrow Types</text>
 
-  <!-- 对比表格 -->
-  <text x="650" y="180" font-size="11" fill="#1e293b" font-weight="bold">Comparison: FlashAttention vs FlashAttention-2</text>
+  <line x1="630" y1="130" x2="680" y2="130" stroke="#6366f1" stroke-width="1.5"/>
+  <polygon points="680,126 690,130 680,134" fill="#6366f1"/>
+  <text x="700" y="134" font-size="11" fill="#475569">Forward mapping (S → P)</text>
 
-  <!-- 表头 -->
-  <rect x="650" y="192" width="250" height="24" fill="#e2e8f0" stroke="#cbd5e1" stroke-width="1"/>
-  <text x="725" y="208" text-anchor="middle" font-size="10" fill="#1e293b" font-weight="bold">Aspect</text>
-  <text x="840" y="208" text-anchor="middle" font-size="10" fill="#1e293b" font-weight="bold">FA1</text>
-  <text x="890" y="208" text-anchor="middle" font-size="10" fill="#1e293b" font-weight="bold">FA2</text>
+  <line x1="630" y1="158" x2="680" y2="158" stroke="#94a3b8" stroke-width="1" stroke-dasharray="4,3"/>
+  <text x="700" y="162" font-size="11" fill="#475569">Data dependency (S, L → P)</text>
 
-  <!-- 行1 -->
-  <rect x="650" y="216" width="250" height="22" fill="#ffffff" stroke="#e2e8f0" stroke-width="0.5"/>
-  <text x="725" y="231" text-anchor="middle" font-size="10" fill="#334155">Stored stats</text>
-  <text x="840" y="231" text-anchor="middle" font-size="10" fill="#334155">m, ℓ</text>
-  <text x="890" y="231" text-anchor="middle" font-size="10" fill="#6366f1" font-weight="bold">L</text>
-
-  <!-- 行2 -->
-  <rect x="650" y="238" width="250" height="22" fill="#f8fafc" stroke="#e2e8f0" stroke-width="0.5"/>
-  <text x="725" y="253" text-anchor="middle" font-size="10" fill="#334155">Rescale in backward</text>
-  <text x="840" y="253" text-anchor="middle" font-size="10" fill="#334155">diag(ℓ)⁻¹</text>
-  <text x="890" y="253" text-anchor="middle" font-size="10" fill="#64748b">none</text>
-
-  <!-- 行3 -->
-  <rect x="650" y="260" width="250" height="22" fill="#ffffff" stroke="#e2e8f0" stroke-width="0.5"/>
-  <text x="725" y="275" text-anchor="middle" font-size="10" fill="#334155">Non-matmul FLOPs</text>
-  <text x="840" y="275" text-anchor="middle" font-size="10" fill="#334155">higher</text>
-  <text x="890" y="275" text-anchor="middle" font-size="10" fill="#6366f1" font-weight="bold">lower</text>
+  <line x1="630" y1="186" x2="680" y2="186" stroke="#1e293b" stroke-width="1.2"/>
+  <polygon points="680,182 690,186 680,190" fill="#1e293b"/>
+  <text x="700" y="190" font-size="11" fill="#475569">Gradient flow (dO → dS)</text>
 
   <!-- 机制拆解 -->
-  <text x="650" y="310" font-size="11" fill="#1e293b" font-weight="bold">Why logsumpexp works:</text>
-  <text x="650" y="330" font-size="10" fill="#475569">L&#8320; = log Σ&#8341; exp(s&#8320;&#8341;)</text>
-  <text x="650" y="348" font-size="10" fill="#475569">exp(s&#8320;&#8341; − L&#8320;) = exp(s&#8320;&#8341;) / Σ&#8341; exp(s&#8320;&#8341;)</text>
-  <text x="650" y="366" font-size="10" fill="#475569">= softmax probability p&#8320;&#8341;</text>
+  <text x="630" y="224" font-size="12" font-weight="bold" fill="#334155">Why Logsumexp Only?</text>
 
-  <text x="650" y="396" font-size="11" fill="#1e293b" font-weight="bold">Backward pass steps (simplified):</text>
-  <text x="650" y="416" font-size="10" fill="#334155">1. Load L from HBM (stored in forward)</text>
-  <text x="650" y="434" font-size="10" fill="#334155">2. Recompute P = exp(S − L) on the fly</text>
-  <text x="650" y="452" font-size="10" fill="#334155">3. Compute dS = (dP − (dP·P)·1) · P</text>
-  <text x="650" y="470" font-size="10" fill="#334155">4. dQ = dS·K, dK = dS&#8868;·Q, dV = P&#8868;·dO</text>
+  <rect x="630" y="236" width="270" height="100" fill="#ffffff" stroke="#cbd5e1" stroke-width="1" rx="3"/>
+  <text x="765" y="256" text-anchor="middle" font-size="11" fill="#1e293b">FlashAttention stores L (logsumexp)</text>
+  <text x="765" y="276" text-anchor="middle" font-size="11" fill="#1e293b">during forward pass.</text>
+  <text x="765" y="300" text-anchor="middle" font-size="11" fill="#1e293b">Backward computes P = exp(S − L)</text>
+  <text x="765" y="320" text-anchor="middle" font-size="11" fill="#1e293b">without needing row max or sum.</text>
 
-  <text x="650" y="502" font-size="11" fill="#1e293b" font-weight="bold">Key benefit:</text>
-  <text x="650" y="520" font-size="10" fill="#475569">No need to store m (row max) and ℓ (row sum)</text>
-  <text x="650" y="538" font-size="10" fill="#475569">separately; single L suffices.</text>
-  <text x="650" y="556" font-size="10" fill="#475569">Reduces HBM writes by ~33%.</text>
+  <text x="630" y="360" font-size="12" font-weight="bold" fill="#334155">Memory Saving</text>
+
+  <rect x="630" y="372" width="270" height="80" fill="#ffffff" stroke="#cbd5e1" stroke-width="1" rx="3"/>
+  <text x="765" y="394" text-anchor="middle" font-size="11" fill="#1e293b">FlashAttention: stores L (N floats)</text>
+  <text x="765" y="414" text-anchor="middle" font-size="11" fill="#64748b">vs. standard: stores P (N&#215;N floats)</text>
+  <text x="765" y="438" text-anchor="middle" font-size="11" fill="#6366f1" font-weight="bold">O(N) vs. O(N&#178;) memory</text>
+
+  <text x="630" y="476" font-size="12" font-weight="bold" fill="#334155">Key Benefit</text>
+
+  <rect x="630" y="488" width="270" height="48" fill="#eef2ff" stroke="#6366f1" stroke-width="1.2" rx="3"/>
+  <text x="765" y="510" text-anchor="middle" font-size="11" fill="#3730a3">Simpler code, fewer stored tensors,</text>
+  <text x="765" y="528" text-anchor="middle" font-size="11" fill="#3730a3">same numerical stability.</text>
 
   <!-- 底部说明 -->
-  <text x="480" y="606" text-anchor="middle" font-size="10" fill="#94a3b8">Figure: FlashAttention-2 backward pass simplification — softmax probability computed from logsumpexp L, eliminating redundant rescaling.</text>
+  <text x="480" y="566" text-anchor="middle" font-size="10" fill="#94a3b8">Figure: FlashAttention-2 backward pass uses only logsumexp L (stored from forward) to reconstruct softmax probabilities P, eliminating the need to store row max and sum.</text>
 </svg>

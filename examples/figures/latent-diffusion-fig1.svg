@@ -1,112 +1,148 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 960 680" font-family="'Segoe UI','PingFang SC','Microsoft YaHei',sans-serif" width="960" height="680">
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 960 680" font-family="'Segoe UI','PingFang SC','Microsoft YaHei',sans-serif" font-size="14" fill="#1e293b" width="960" height="680">
   <rect x="0" y="0" width="960" height="680" fill="#ffffff"/>
 
   <!-- 标题 -->
-  <text x="480" y="36" font-size="18" font-weight="700" fill="#1e293b" text-anchor="middle">Cross-Attention Conditioning in Latent Diffusion Models</text>
-  <line x1="200" y1="46" x2="760" y2="46" stroke="#cbd5e1" stroke-width="1"/>
+  <text x="480" y="32" text-anchor="middle" font-size="18" font-weight="bold" fill="#1e293b">Cross-Attention Conditioning Mechanism in Latent Diffusion Models</text>
 
-  <!-- ===== 左侧主面板：核心机制 ===== -->
-  <!-- 条件编码器框 -->
-  <rect x="40" y="70" width="280" height="110" rx="4" fill="#f8fafc" stroke="#475569" stroke-width="1.5"/>
-  <text x="180" y="94" font-size="13" font-weight="600" fill="#1e293b" text-anchor="middle">Condition Encoder</text>
-  <text x="180" y="114" font-size="11" fill="#334155" text-anchor="middle">Domain-specific encoder</text>
-  <text x="180" y="132" font-size="11" fill="#334155" text-anchor="middle">y (text / bbox / class)</text>
-  <text x="180" y="152" font-size="11" fill="#64748b" text-anchor="middle">&#8595;</text>
-  <text x="180" y="170" font-size="12" font-weight="600" fill="#3730a3" text-anchor="middle">&#964;<tspan font-size="9" baseline-shift="sub">&#952;</tspan>(y) &#8712; &#8477;<tspan font-size="9" baseline-shift="super">M&#215;d<tspan font-size="9" baseline-shift="sub">&#964;</tspan></tspan></text>
+  <!-- ===== 左侧主面板：条件注入流程（纵向） ===== -->
+  <!-- 条件输入 y -->
+  <rect x="60" y="60" width="200" height="44" rx="4" fill="#f1f5f9" stroke="#475569" stroke-width="1.5"/>
+  <text x="160" y="87" text-anchor="middle" font-size="14" fill="#1e293b">Condition Input y</text>
+  <text x="160" y="105" text-anchor="middle" font-size="11" fill="#64748b">(text, bbox, etc.)</text>
 
-  <!-- 箭头：条件编码器 → 交叉注意力 -->
-  <line x1="320" y1="125" x2="370" y2="125" stroke="#6366f1" stroke-width="2"/>
-  <polygon points="370,120 382,125 370,130" fill="#6366f1"/>
+  <!-- 箭头 y → τ_θ -->
+  <line x1="260" y1="82" x2="310" y2="82" stroke="#6366f1" stroke-width="2"/>
+  <polygon points="310,76 322,82 310,88" fill="#6366f1"/>
 
-  <!-- 交叉注意力核心框（强调色） -->
-  <rect x="385" y="60" width="280" height="130" rx="4" fill="#eef2ff" stroke="#6366f1" stroke-width="2"/>
-  <text x="525" y="84" font-size="14" font-weight="700" fill="#3730a3" text-anchor="middle">Cross-Attention Layer</text>
-  <text x="525" y="104" font-size="11" fill="#334155" text-anchor="middle">Attention(Q, K, V) = softmax</text>
-  <text x="525" y="122" font-size="12" font-weight="600" fill="#3730a3" text-anchor="middle">( QK<tspan font-size="9" baseline-shift="super">&#8868;</tspan> / &#8730;d ) V</text>
-  <line x1="410" y1="132" x2="640" y2="132" stroke="#cbd5e1" stroke-width="0.8"/>
-  <text x="525" y="150" font-size="10" fill="#64748b" text-anchor="middle">Q = W<tspan font-size="7" baseline-shift="sub">Q</tspan><tspan font-size="7" baseline-shift="super">(i)</tspan> &#183; &#966;<tspan font-size="7" baseline-shift="sub">i</tspan>(z<tspan font-size="7" baseline-shift="sub">t</tspan>)</text>
-  <text x="525" y="166" font-size="10" fill="#64748b" text-anchor="middle">K = W<tspan font-size="7" baseline-shift="sub">K</tspan><tspan font-size="7" baseline-shift="super">(i)</tspan> &#183; &#964;<tspan font-size="7" baseline-shift="sub">&#952;</tspan>(y)</text>
-  <text x="525" y="182" font-size="10" fill="#64748b" text-anchor="middle">V = W<tspan font-size="7" baseline-shift="sub">V</tspan><tspan font-size="7" baseline-shift="super">(i)</tspan> &#183; &#964;<tspan font-size="7" baseline-shift="sub">&#952;</tspan>(y)</text>
+  <!-- τ_θ 编码器 -->
+  <rect x="325" y="60" width="200" height="44" rx="4" fill="#eef2ff" stroke="#6366f1" stroke-width="2"/>
+  <text x="425" y="87" text-anchor="middle" font-size="14" fill="#3730a3" font-weight="bold">Domain-Specific Encoder &#964;<tspan baseline-shift="sub" font-size="75%">&#952;</tspan></text>
 
-  <!-- 箭头：交叉注意力 → UNet 特征 -->
-  <line x1="665" y1="125" x2="715" y2="125" stroke="#6366f1" stroke-width="2"/>
-  <polygon points="715,120 727,125 715,130" fill="#6366f1"/>
+  <!-- 箭头 τ_θ(y) → 中间表示 -->
+  <line x1="525" y1="82" x2="575" y2="82" stroke="#6366f1" stroke-width="2"/>
+  <polygon points="575,76 587,82 575,88" fill="#6366f1"/>
 
-  <!-- UNet 特征框 -->
-  <rect x="730" y="70" width="190" height="110" rx="4" fill="#f8fafc" stroke="#475569" stroke-width="1.5"/>
-  <text x="825" y="94" font-size="13" font-weight="600" fill="#1e293b" text-anchor="middle">UNet Feature</text>
-  <text x="825" y="114" font-size="11" fill="#334155" text-anchor="middle">&#966;<tspan font-size="8" baseline-shift="sub">i</tspan>(z<tspan font-size="8" baseline-shift="sub">t</tspan>)</text>
-  <text x="825" y="134" font-size="10" fill="#64748b" text-anchor="middle">Intermediate feature</text>
-  <text x="825" y="152" font-size="10" fill="#64748b" text-anchor="middle">at layer i</text>
-  <text x="825" y="170" font-size="10" fill="#64748b" text-anchor="middle">z<tspan font-size="7" baseline-shift="sub">t</tspan> : noisy latent</text>
+  <!-- 中间表示 τ_θ(y) -->
+  <rect x="590" y="60" width="200" height="44" rx="4" fill="#f8fafc" stroke="#475569" stroke-width="1.5"/>
+  <text x="690" y="87" text-anchor="middle" font-size="13" fill="#1e293b">&#964;<tspan baseline-shift="sub" font-size="75%">&#952;</tspan>(y) &#8712; &#8477;<tspan baseline-shift="super" font-size="75%">M&#215;d<tspan baseline-shift="sub" font-size="75%">&#964;</tspan></tspan></text>
+
+  <!-- 向下箭头：注入 UNet -->
+  <line x1="690" y1="104" x2="690" y2="150" stroke="#6366f1" stroke-width="2"/>
+  <polygon points="684,150 690,162 696,150" fill="#6366f1"/>
+
+  <!-- UNet 特征 φ_i(z_t) -->
+  <rect x="60" y="168" width="200" height="44" rx="4" fill="#f1f5f9" stroke="#475569" stroke-width="1.5"/>
+  <text x="160" y="195" text-anchor="middle" font-size="13" fill="#1e293b">UNet Feature &#966;<tspan baseline-shift="sub" font-size="75%">i</tspan>(z<tspan baseline-shift="sub" font-size="75%">t</tspan>)</text>
+
+  <!-- 箭头：φ_i(z_t) → Q -->
+  <line x1="260" y1="190" x2="310" y2="190" stroke="#6366f1" stroke-width="2"/>
+  <polygon points="310,184 322,190 310,196" fill="#6366f1"/>
+
+  <!-- Q 投影 -->
+  <rect x="325" y="168" width="120" height="44" rx="4" fill="#eef2ff" stroke="#6366f1" stroke-width="1.5"/>
+  <text x="385" y="195" text-anchor="middle" font-size="13" fill="#3730a3">Q = W<tspan baseline-shift="sub" font-size="75%">Q</tspan><tspan baseline-shift="super" font-size="75%">(i)</tspan> &#183; &#966;<tspan baseline-shift="sub" font-size="75%">i</tspan>(z<tspan baseline-shift="sub" font-size="75%">t</tspan>)</text>
+
+  <!-- 箭头：τ_θ(y) → K, V -->
+  <line x1="690" y1="150" x2="690" y2="168" stroke="#6366f1" stroke-width="2"/>
+  <line x1="690" y1="168" x2="550" y2="190" stroke="#6366f1" stroke-width="2"/>
+  <polygon points="550,184 538,190 550,196" fill="#6366f1"/>
+  <line x1="690" y1="168" x2="690" y2="190" stroke="#6366f1" stroke-width="2"/>
+  <polygon points="684,190 690,202 696,190" fill="#6366f1"/>
+
+  <!-- K 投影 -->
+  <rect x="460" y="168" width="120" height="44" rx="4" fill="#eef2ff" stroke="#6366f1" stroke-width="1.5"/>
+  <text x="520" y="195" text-anchor="middle" font-size="13" fill="#3730a3">K = W<tspan baseline-shift="sub" font-size="75%">K</tspan><tspan baseline-shift="super" font-size="75%">(i)</tspan> &#183; &#964;<tspan baseline-shift="sub" font-size="75%">&#952;</tspan>(y)</text>
+
+  <!-- V 投影 -->
+  <rect x="620" y="168" width="120" height="44" rx="4" fill="#eef2ff" stroke="#6366f1" stroke-width="1.5"/>
+  <text x="680" y="195" text-anchor="middle" font-size="13" fill="#3730a3">V = W<tspan baseline-shift="sub" font-size="75%">V</tspan><tspan baseline-shift="super" font-size="75%">(i)</tspan> &#183; &#964;<tspan baseline-shift="sub" font-size="75%">&#952;</tspan>(y)</text>
+
+  <!-- 向下箭头：Q, K, V → Attention -->
+  <line x1="385" y1="212" x2="385" y2="250" stroke="#6366f1" stroke-width="2"/>
+  <polygon points="379,250 385,262 391,250" fill="#6366f1"/>
+  <line x1="520" y1="212" x2="520" y2="250" stroke="#6366f1" stroke-width="2"/>
+  <polygon points="514,250 520,262 526,250" fill="#6366f1"/>
+  <line x1="680" y1="212" x2="680" y2="250" stroke="#6366f1" stroke-width="2"/>
+  <polygon points="674,250 680,262 686,250" fill="#6366f1"/>
+
+  <!-- Attention 计算框（核心公式） -->
+  <rect x="60" y="268" width="680" height="80" rx="6" fill="#eef2ff" stroke="#6366f1" stroke-width="2.5"/>
+  <text x="400" y="296" text-anchor="middle" font-size="15" font-weight="bold" fill="#3730a3">Cross-Attention: Attention(Q, K, V) = softmax( QK<tspan baseline-shift="super" font-size="75%">&#8868;</tspan> / &#8730;d ) V</text>
+  <text x="400" y="326" text-anchor="middle" font-size="12" fill="#334155">where Q = W<tspan baseline-shift="sub" font-size="75%">Q</tspan><tspan baseline-shift="super" font-size="75%">(i)</tspan> &#183; &#966;<tspan baseline-shift="sub" font-size="75%">i</tspan>(z<tspan baseline-shift="sub" font-size="75%">t</tspan>), K = W<tspan baseline-shift="sub" font-size="75%">K</tspan><tspan baseline-shift="super" font-size="75%">(i)</tspan> &#183; &#964;<tspan baseline-shift="sub" font-size="75%">&#952;</tspan>(y), V = W<tspan baseline-shift="sub" font-size="75%">V</tspan><tspan baseline-shift="super" font-size="75%">(i)</tspan> &#183; &#964;<tspan baseline-shift="sub" font-size="75%">&#952;</tspan>(y)</text>
+
+  <!-- 箭头：Attention → 输出特征 -->
+  <line x1="400" y1="348" x2="400" y2="390" stroke="#6366f1" stroke-width="2"/>
+  <polygon points="394,390 400,402 406,390" fill="#6366f1"/>
+
+  <!-- 输出特征 -->
+  <rect x="250" y="406" width="300" height="44" rx="4" fill="#f1f5f9" stroke="#475569" stroke-width="1.5"/>
+  <text x="400" y="433" text-anchor="middle" font-size="13" fill="#1e293b">Conditioned Feature (injected into UNet)</text>
 
   <!-- ===== 右侧面板：图例与机制拆解 ===== -->
-  <rect x="40" y="210" width="880" height="450" rx="4" fill="#fbfcfe" stroke="#e2e8f0" stroke-width="1"/>
+  <rect x="770" y="60" width="170" height="390" rx="4" fill="#f8fafc" stroke="#cbd5e1" stroke-width="1"/>
 
-  <!-- 图例 -->
-  <text x="60" y="240" font-size="13" font-weight="600" fill="#1e293b">Legend</text>
-  <line x1="60" y1="256" x2="130" y2="256" stroke="#6366f1" stroke-width="2"/>
-  <polygon points="130,251 140,256 130,261" fill="#6366f1"/>
-  <text x="148" y="260" font-size="11" fill="#334155">Data flow / forward pass</text>
+  <!-- 图例标题 -->
+  <text x="855" y="84" text-anchor="middle" font-size="13" font-weight="bold" fill="#1e293b">Legend</text>
 
-  <line x1="60" y1="278" x2="130" y2="278" stroke="#94a3b8" stroke-width="1.5" stroke-dasharray="5,4"/>
-  <polygon points="130,273 140,278 130,283" fill="#94a3b8"/>
-  <text x="148" y="282" font-size="11" fill="#334155">Reference / skip connection</text>
+  <!-- 图例项 -->
+  <line x1="785" y1="108" x2="825" y2="108" stroke="#6366f1" stroke-width="2"/>
+  <polygon points="825,102 835,108 825,114" fill="#6366f1"/>
+  <text x="845" y="112" font-size="11" fill="#334155">Data flow</text>
 
-  <line x1="60" y1="300" x2="130" y2="300" stroke="#6366f1" stroke-width="3"/>
-  <polygon points="130,294 142,300 130,306" fill="#6366f1"/>
-  <text x="148" y="304" font-size="11" fill="#334155">Selected mapping (highlighted)</text>
+  <line x1="785" y1="132" x2="825" y2="132" stroke="#94a3b8" stroke-width="1.5" stroke-dasharray="5,4"/>
+  <polygon points="825,126 835,132 825,138" fill="#94a3b8"/>
+  <text x="845" y="136" font-size="11" fill="#334155">Reference</text>
 
-  <!-- 机制拆解：二部图 -->
-  <text x="60" y="340" font-size="13" font-weight="600" fill="#1e293b">Explicit Mapping: Condition &#8594; Latent Feature</text>
+  <rect x="785" y="150" width="50" height="16" rx="2" fill="#eef2ff" stroke="#6366f1" stroke-width="1.5"/>
+  <text x="845" y="163" font-size="11" fill="#334155">Key module</text>
 
-  <!-- 左列：条件表示 -->
-  <text x="120" y="370" font-size="11" font-weight="600" fill="#3730a3" text-anchor="middle">&#964;<tspan font-size="8" baseline-shift="sub">&#952;</tspan>(y) &#8712; &#8477;<tspan font-size="8" baseline-shift="super">M&#215;d<tspan font-size="8" baseline-shift="sub">&#964;</tspan></tspan></text>
-  <rect x="80" y="380" width="80" height="24" rx="3" fill="#eef2ff" stroke="#6366f1" stroke-width="1"/>
-  <text x="120" y="396" font-size="10" fill="#3730a3" text-anchor="middle">token 1</text>
-  <rect x="80" y="410" width="80" height="24" rx="3" fill="#eef2ff" stroke="#6366f1" stroke-width="1"/>
-  <text x="120" y="426" font-size="10" fill="#3730a3" text-anchor="middle">token 2</text>
-  <rect x="80" y="440" width="80" height="24" rx="3" fill="#eef2ff" stroke="#6366f1" stroke-width="1"/>
-  <text x="120" y="456" font-size="10" fill="#3730a3" text-anchor="middle">token 3</text>
-  <text x="120" y="478" font-size="10" fill="#64748b" text-anchor="middle">&#8942;</text>
-  <rect x="80" y="486" width="80" height="24" rx="3" fill="#eef2ff" stroke="#6366f1" stroke-width="1"/>
-  <text x="120" y="502" font-size="10" fill="#3730a3" text-anchor="middle">token M</text>
+  <!-- 机制拆解 -->
+  <text x="855" y="200" text-anchor="middle" font-size="12" font-weight="bold" fill="#1e293b">Mechanism</text>
 
-  <!-- 右列：UNet 特征 -->
-  <text x="520" y="370" font-size="11" font-weight="600" fill="#1e293b" text-anchor="middle">&#966;<tspan font-size="8" baseline-shift="sub">i</tspan>(z<tspan font-size="8" baseline-shift="sub">t</tspan>) &#8712; &#8477;<tspan font-size="8" baseline-shift="super">N&#215;d<tspan font-size="8" baseline-shift="sub">i</tspan></tspan></text>
-  <rect x="480" y="380" width="80" height="24" rx="3" fill="#f1f5f9" stroke="#475569" stroke-width="1"/>
-  <text x="520" y="396" font-size="10" fill="#1e293b" text-anchor="middle">feat 1</text>
-  <rect x="480" y="410" width="80" height="24" rx="3" fill="#f1f5f9" stroke="#475569" stroke-width="1"/>
-  <text x="520" y="426" font-size="10" fill="#1e293b" text-anchor="middle">feat 2</text>
-  <rect x="480" y="440" width="80" height="24" rx="3" fill="#f1f5f9" stroke="#475569" stroke-width="1"/>
-  <text x="520" y="456" font-size="10" fill="#1e293b" text-anchor="middle">feat 3</text>
-  <text x="520" y="478" font-size="10" fill="#64748b" text-anchor="middle">&#8942;</text>
-  <rect x="480" y="486" width="80" height="24" rx="3" fill="#f1f5f9" stroke="#475569" stroke-width="1"/>
-  <text x="520" y="502" font-size="10" fill="#1e293b" text-anchor="middle">feat N</text>
+  <text x="785" y="222" font-size="11" fill="#334155">1. Encode y via &#964;<tspan baseline-shift="sub" font-size="75%">&#952;</tspan></text>
+  <text x="785" y="240" font-size="11" fill="#334155">   &#8594; &#964;<tspan baseline-shift="sub" font-size="75%">&#952;</tspan>(y) &#8712; &#8477;<tspan baseline-shift="super" font-size="75%">M&#215;d<tspan baseline-shift="sub" font-size="75%">&#964;</tspan></tspan></text>
 
-  <!-- 连边：二部图（选中加粗） -->
-  <!-- 选中边（token 2 → feat 1）加粗强调色 -->
-  <line x1="160" y1="422" x2="480" y2="392" stroke="#6366f1" stroke-width="3"/>
-  <!-- 其他边灰色虚线 -->
-  <line x1="160" y1="396" x2="480" y2="422" stroke="#94a3b8" stroke-width="1" stroke-dasharray="4,3"/>
-  <line x1="160" y1="396" x2="480" y2="456" stroke="#94a3b8" stroke-width="1" stroke-dasharray="4,3"/>
-  <line x1="160" y1="422" x2="480" y2="456" stroke="#94a3b8" stroke-width="1" stroke-dasharray="4,3"/>
-  <line x1="160" y1="456" x2="480" y2="392" stroke="#94a3b8" stroke-width="1" stroke-dasharray="4,3"/>
-  <line x1="160" y1="456" x2="480" y2="422" stroke="#94a3b8" stroke-width="1" stroke-dasharray="4,3"/>
-  <line x1="160" y1="502" x2="480" y2="392" stroke="#94a3b8" stroke-width="1" stroke-dasharray="4,3"/>
-  <line x1="160" y1="502" x2="480" y2="456" stroke="#94a3b8" stroke-width="1" stroke-dasharray="4,3"/>
+  <text x="785" y="262" font-size="11" fill="#334155">2. Project UNet feature &#966;<tspan baseline-shift="sub" font-size="75%">i</tspan></text>
+  <text x="785" y="280" font-size="11" fill="#334155">   &#8594; Q = W<tspan baseline-shift="sub" font-size="75%">Q</tspan><tspan baseline-shift="super" font-size="75%">(i)</tspan> &#183; &#966;<tspan baseline-shift="sub" font-size="75%">i</tspan>(z<tspan baseline-shift="sub" font-size="75%">t</tspan>)</text>
 
-  <!-- 标注：选中映射 -->
-  <text x="320" y="380" font-size="10" fill="#6366f1" text-anchor="middle" font-weight="600">selected mapping</text>
-  <text x="320" y="396" font-size="9" fill="#64748b" text-anchor="middle">(attention weight max)</text>
+  <text x="785" y="302" font-size="11" fill="#334155">3. Project &#964;<tspan baseline-shift="sub" font-size="75%">&#952;</tspan>(y) &#8594; K, V</text>
+  <text x="785" y="320" font-size="11" fill="#334155">   K = W<tspan baseline-shift="sub" font-size="75%">K</tspan><tspan baseline-shift="super" font-size="75%">(i)</tspan> &#183; &#964;<tspan baseline-shift="sub" font-size="75%">&#952;</tspan>(y)</text>
+  <text x="785" y="338" font-size="11" fill="#334155">   V = W<tspan baseline-shift="sub" font-size="75%">V</tspan><tspan baseline-shift="super" font-size="75%">(i)</tspan> &#183; &#964;<tspan baseline-shift="sub" font-size="75%">&#952;</tspan>(y)</text>
 
-  <!-- 底部说明 -->
-  <text x="60" y="540" font-size="11" font-weight="600" fill="#1e293b">Key Insight</text>
-  <text x="60" y="560" font-size="10" fill="#334155">Cross-attention enables a single model to handle diverse conditioning modalities</text>
-  <text x="60" y="578" font-size="10" fill="#334155">(text, bounding boxes, class labels) without retraining.</text>
-  <text x="60" y="598" font-size="10" fill="#334155">The condition encoder projects each modality into a shared latent space,</text>
-  <text x="60" y="616" font-size="10" fill="#334155">and attention layers learn to align condition tokens with image features.</text>
+  <text x="785" y="360" font-size="11" fill="#334155">4. Compute attention:</text>
+  <text x="785" y="378" font-size="11" fill="#334155">   softmax(QK<tspan baseline-shift="super" font-size="75%">&#8868;</tspan>/&#8730;d)V</text>
 
-  <!-- 公式注脚 -->
-  <text x="60" y="644" font-size="10" fill="#64748b">Notation: d = key dimension; W<tspan font-size="7" baseline-shift="sub">Q</tspan>, W<tspan font-size="7" baseline-shift="sub">K</tspan>, W<tspan font-size="7" baseline-shift="sub">V</tspan> = learned projection matrices per layer i.</text>
+  <text x="785" y="400" font-size="11" fill="#334155">5. Inject into UNet</text>
+  <text x="785" y="418" font-size="11" fill="#334155">   (no retraining needed)</text>
+
+  <!-- ===== 底部说明 ===== -->
+  <rect x="60" y="480" width="880" height="56" rx="4" fill="#f1f5f9" stroke="#cbd5e1" stroke-width="1"/>
+  <text x="500" y="504" text-anchor="middle" font-size="12" fill="#334155">The cross-attention mechanism enables LDMs to handle diverse conditioning modalities (text, bounding boxes, etc.)</text>
+  <text x="500" y="524" text-anchor="middle" font-size="12" fill="#334155">within a single framework by projecting all conditions into a shared latent space and injecting them via attention.</text>
+
+  <!-- ===== 二部图示意（左下角小图） ===== -->
+  <rect x="60" y="560" width="400" height="100" rx="4" fill="#fbfcfe" stroke="#cbd5e1" stroke-width="1"/>
+  <text x="260" y="582" text-anchor="middle" font-size="12" font-weight="bold" fill="#1e293b">Bipartite Matching: Q (UNet) vs K (Condition)</text>
+
+  <!-- 左侧节点：Q 序列 -->
+  <circle cx="120" cy="610" r="6" fill="#6366f1"/>
+  <text x="120" y="632" text-anchor="middle" font-size="10" fill="#334155">q<tspan baseline-shift="sub" font-size="75%">1</tspan></text>
+  <circle cx="120" cy="650" r="6" fill="#6366f1"/>
+  <text x="120" y="672" text-anchor="middle" font-size="10" fill="#334155">q<tspan baseline-shift="sub" font-size="75%">2</tspan></text>
+
+  <!-- 右侧节点：K 序列 -->
+  <circle cx="380" cy="610" r="6" fill="#94a3b8"/>
+  <text x="380" y="632" text-anchor="middle" font-size="10" fill="#334155">k<tspan baseline-shift="sub" font-size="75%">1</tspan></text>
+  <circle cx="380" cy="650" r="6" fill="#94a3b8"/>
+  <text x="380" y="672" text-anchor="middle" font-size="10" fill="#334155">k<tspan baseline-shift="sub" font-size="75%">2</tspan></text>
+
+  <!-- 连边：选中的加粗 -->
+  <line x1="126" y1="610" x2="374" y2="610" stroke="#6366f1" stroke-width="2.5"/>
+  <line x1="126" y1="650" x2="374" y2="650" stroke="#6366f1" stroke-width="2.5"/>
+  <line x1="126" y1="610" x2="374" y2="650" stroke="#94a3b8" stroke-width="1" stroke-dasharray="4,3"/>
+  <line x1="126" y1="650" x2="374" y2="610" stroke="#94a3b8" stroke-width="1" stroke-dasharray="4,3"/>
+
+  <!-- 图注 -->
+  <text x="260" y="700" text-anchor="middle" font-size="10" fill="#64748b">Solid = selected alignment; dashed = other possible matches</text>
+
 </svg>

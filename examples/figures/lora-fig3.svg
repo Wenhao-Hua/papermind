@@ -1,124 +1,113 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 960 680" font-family="'Segoe UI','PingFang SC','Microsoft YaHei',sans-serif" width="960" height="680">
-  <rect x="0" y="0" width="960" height="680" fill="#ffffff"/>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 960 620" font-family="'Segoe UI','PingFang SC','Microsoft YaHei',sans-serif" width="960" height="620">
+  <rect x="0" y="0" width="960" height="620" fill="#ffffff"/>
 
   <!-- 标题 -->
-  <text x="480" y="36" text-anchor="middle" font-size="20" font-weight="bold" fill="#1e293b">LoRA: Low-Rank Adaptation</text>
-  <text x="480" y="58" text-anchor="middle" font-size="13" fill="#64748b">冻结预训练权重，注入可训练的低秩分解矩阵</text>
+  <text x="480" y="36" font-size="20" font-weight="bold" fill="#1e293b" text-anchor="middle">LoRA: Low-Rank Adaptation — 核心机制</text>
 
-  <!-- ===== 左侧主面板：核心公式与机制 ===== -->
-  <rect x="32" y="80" width="580" height="560" fill="#f8fafc" stroke="#cbd5e1" stroke-width="1.2" rx="4"/>
+  <!-- 主公式框（视觉焦点） -->
+  <rect x="200" y="56" width="560" height="72" rx="6" fill="#eef2ff" stroke="#6366f1" stroke-width="2"/>
+  <text x="480" y="84" font-size="22" font-weight="bold" fill="#3730a3" text-anchor="middle">前向传播：h = W&#8320; x + B A x</text>
+  <text x="480" y="112" font-size="15" fill="#334155" text-anchor="middle">冻结预训练权重 W&#8320; &#8712; &#8477;<tspan baseline-shift="super" font-size="75%">d&#215;k</tspan>，注入可训练低秩矩阵 B &#8712; &#8477;<tspan baseline-shift="super" font-size="75%">d&#215;r</tspan>，A &#8712; &#8477;<tspan baseline-shift="super" font-size="75%">r&#215;k</tspan>，r &#8810; min(d,k)</text>
 
-  <!-- 核心公式（视觉焦点） -->
-  <rect x="52" y="96" width="540" height="72" fill="#eef2ff" stroke="#6366f1" stroke-width="1.5" rx="4"/>
-  <text x="322" y="126" text-anchor="middle" font-size="18" font-weight="bold" fill="#3730a3">前向传播：h = W₀ x + BA x</text>
-  <text x="322" y="152" text-anchor="middle" font-size="12" fill="#475569">W₀ ∈ ℝ^(d×k) 冻结 · B ∈ ℝ^(d×r) · A ∈ ℝ^(r×k) · r ≪ min(d,k)</text>
+  <!-- 左侧：矩阵结构示意 -->
+  <rect x="60" y="156" width="380" height="240" rx="4" fill="#f8fafc" stroke="#cbd5e1" stroke-width="1.5"/>
+  <text x="250" y="180" font-size="15" font-weight="bold" fill="#1e293b" text-anchor="middle">参数分解结构</text>
 
-  <!-- 初始化说明 -->
-  <text x="52" y="200" font-size="12" fill="#334155" font-weight="bold">初始化策略</text>
-  <rect x="52" y="210" width="540" height="44" fill="#ffffff" stroke="#e2e8f0" stroke-width="1" rx="3"/>
-  <text x="322" y="232" text-anchor="middle" font-size="12" fill="#475569">A ∼ 𝒩(0, σ²)（高斯随机） · B = 0 → ΔW = BA = 0（训练起点）</text>
-  <text x="322" y="248" text-anchor="middle" font-size="11" fill="#64748b">缩放因子：ΔWx 乘以 α/r（α 为常数，通常设为首次尝试的 r）</text>
-
-  <!-- 参数量对比 -->
-  <text x="52" y="280" font-size="12" fill="#334155" font-weight="bold">参数量对比（GPT-3 175B 示例）</text>
-  <rect x="52" y="290" width="540" height="60" fill="#ffffff" stroke="#e2e8f0" stroke-width="1" rx="3"/>
-  <text x="322" y="312" text-anchor="middle" font-size="12" fill="#475569">全微调：175B 参数 · 1.2TB VRAM · 350GB 检查点</text>
-  <text x="322" y="332" text-anchor="middle" font-size="12" fill="#475569">LoRA (r=4, 仅 Wq+Wv)：~17M 参数 · 350GB VRAM · 35MB 检查点</text>
-  <text x="322" y="348" text-anchor="middle" font-size="11" fill="#6366f1" font-weight="bold">可训练参数减少 10,000× · GPU 内存减少 3× · 训练提速 25%</text>
-
-  <!-- 推理合并 -->
-  <text x="52" y="380" font-size="12" fill="#334155" font-weight="bold">推理时零额外延迟</text>
-  <rect x="52" y="390" width="540" height="36" fill="#ffffff" stroke="#e2e8f0" stroke-width="1" rx="3"/>
-  <text x="322" y="412" text-anchor="middle" font-size="12" fill="#475569">合并权重：W′ = W₀ + BA → 推理计算与原始模型完全相同</text>
-
-  <!-- 低秩分解示意图 -->
-  <text x="52" y="456" font-size="12" fill="#334155" font-weight="bold">低秩分解示意图</text>
-
-  <!-- 矩阵图：W₀ (d×k) -->
-  <rect x="80" y="468" width="80" height="60" fill="#e2e8f0" stroke="#94a3b8" stroke-width="1" rx="2"/>
-  <text x="120" y="504" text-anchor="middle" font-size="11" fill="#475569">W₀</text>
-  <text x="120" y="518" text-anchor="middle" font-size="9" fill="#64748b">d×k</text>
+  <!-- W0 矩阵 -->
+  <rect x="100" y="196" width="120" height="80" rx="2" fill="#f1f5f9" stroke="#475569" stroke-width="1.5"/>
+  <text x="160" y="240" font-size="13" fill="#1e293b" text-anchor="middle">W&#8320;</text>
+  <text x="160" y="258" font-size="11" fill="#64748b" text-anchor="middle">d &#215; k（冻结）</text>
 
   <!-- 加号 -->
-  <text x="172" y="504" text-anchor="middle" font-size="16" fill="#1e293b">+</text>
+  <text x="240" y="240" font-size="20" fill="#1e293b" text-anchor="middle">+</text>
 
-  <!-- B (d×r) -->
-  <rect x="190" y="468" width="40" height="60" fill="#c7d2fe" stroke="#6366f1" stroke-width="1.2" rx="2"/>
-  <text x="210" y="504" text-anchor="middle" font-size="11" fill="#3730a3" font-weight="bold">B</text>
-  <text x="210" y="518" text-anchor="middle" font-size="9" fill="#475569">d×r</text>
+  <!-- B 矩阵 -->
+  <rect x="260" y="196" width="60" height="80" rx="2" fill="#eef2ff" stroke="#6366f1" stroke-width="1.5"/>
+  <text x="290" y="240" font-size="13" fill="#3730a3" text-anchor="middle">B</text>
+  <text x="290" y="258" font-size="11" fill="#64748b" text-anchor="middle">d&#215;r</text>
 
-  <!-- 乘号 -->
-  <text x="242" y="504" text-anchor="middle" font-size="14" fill="#1e293b">×</text>
+  <!-- A 矩阵 -->
+  <rect x="330" y="196" width="80" height="80" rx="2" fill="#eef2ff" stroke="#6366f1" stroke-width="1.5"/>
+  <text x="370" y="240" font-size="13" fill="#3730a3" text-anchor="middle">A</text>
+  <text x="370" y="258" font-size="11" fill="#64748b" text-anchor="middle">r&#215;k</text>
 
-  <!-- A (r×k) -->
-  <rect x="258" y="480" width="80" height="36" fill="#c7d2fe" stroke="#6366f1" stroke-width="1.2" rx="2"/>
-  <text x="298" y="504" text-anchor="middle" font-size="11" fill="#3730a3" font-weight="bold">A</text>
-  <text x="298" y="518" text-anchor="middle" font-size="9" fill="#475569">r×k</text>
+  <!-- 连乘箭头 -->
+  <line x1="320" y1="236" x2="330" y2="236" stroke="#6366f1" stroke-width="1.5"/>
+  <polygon points="330,232 338,236 330,240" fill="#6366f1"/>
 
-  <!-- 等号 -->
-  <text x="350" y="504" text-anchor="middle" font-size="16" fill="#1e293b">=</text>
+  <!-- 初始化说明 -->
+  <text x="250" y="300" font-size="12" fill="#334155" text-anchor="middle">初始化：A ~ &#8474;(0, &#963;<tspan baseline-shift="super" font-size="75%">2</tspan>)，B = 0</text>
+  <text x="250" y="320" font-size="12" fill="#334155" text-anchor="middle">训练开始时 &#8710;W = BA = 0</text>
+  <text x="250" y="340" font-size="12" fill="#334155" text-anchor="middle">推理时可合并：W&#8242; = W&#8320; + BA</text>
 
-  <!-- W₀ + BA (d×k) -->
-  <rect x="368" y="468" width="80" height="60" fill="#eef2ff" stroke="#6366f1" stroke-width="1.5" rx="2"/>
-  <text x="408" y="504" text-anchor="middle" font-size="11" fill="#3730a3" font-weight="bold">W′</text>
-  <text x="408" y="518" text-anchor="middle" font-size="9" fill="#475569">d×k</text>
+  <!-- 右侧：二部图映射 -->
+  <rect x="470" y="156" width="430" height="240" rx="4" fill="#f8fafc" stroke="#cbd5e1" stroke-width="1.5"/>
+  <text x="685" y="180" font-size="15" font-weight="bold" fill="#1e293b" text-anchor="middle">低秩映射示意（r = 2 示例）</text>
 
-  <!-- 箭头标注：r 很小 -->
-  <line x1="210" y1="530" x2="210" y2="548" stroke="#6366f1" stroke-width="1"/>
-  <polygon points="210,552 206,544 214,544" fill="#6366f1"/>
-  <text x="210" y="564" text-anchor="middle" font-size="10" fill="#6366f1">r ≪ min(d,k)</text>
+  <!-- 左列节点：输入维度 d -->
+  <circle cx="520" cy="210" r="6" fill="#475569"/>
+  <circle cx="520" cy="240" r="6" fill="#475569"/>
+  <circle cx="520" cy="270" r="6" fill="#475569"/>
+  <circle cx="520" cy="300" r="6" fill="#475569"/>
+  <circle cx="520" cy="330" r="6" fill="#475569"/>
+  <text x="520" y="360" font-size="11" fill="#64748b" text-anchor="middle">d 维</text>
 
-  <!-- ===== 右侧面板：图例与机制拆解 ===== -->
-  <rect x="640" y="80" width="288" height="560" fill="#f8fafc" stroke="#cbd5e1" stroke-width="1.2" rx="4"/>
+  <!-- 中间节点：低秩 r -->
+  <circle cx="685" cy="225" r="8" fill="#6366f1"/>
+  <circle cx="685" cy="285" r="8" fill="#6366f1"/>
+  <text x="685" y="360" font-size="11" fill="#64748b" text-anchor="middle">r 维（r &#8810; d,k）</text>
 
-  <text x="784" y="106" text-anchor="middle" font-size="13" font-weight="bold" fill="#1e293b">图例与机制拆解</text>
+  <!-- 右列节点：输出维度 k -->
+  <circle cx="850" cy="210" r="6" fill="#475569"/>
+  <circle cx="850" cy="240" r="6" fill="#475569"/>
+  <circle cx="850" cy="270" r="6" fill="#475569"/>
+  <circle cx="850" cy="300" r="6" fill="#475569"/>
+  <circle cx="850" cy="330" r="6" fill="#475569"/>
+  <text x="850" y="360" font-size="11" fill="#64748b" text-anchor="middle">k 维</text>
+
+  <!-- 连边：A 映射（d→r） -->
+  <line x1="526" y1="210" x2="677" y2="225" stroke="#94a3b8" stroke-width="1" stroke-dasharray="3,3"/>
+  <line x1="526" y1="240" x2="677" y2="225" stroke="#94a3b8" stroke-width="1" stroke-dasharray="3,3"/>
+  <line x1="526" y1="270" x2="677" y2="285" stroke="#94a3b8" stroke-width="1" stroke-dasharray="3,3"/>
+  <line x1="526" y1="300" x2="677" y2="285" stroke="#94a3b8" stroke-width="1" stroke-dasharray="3,3"/>
+  <line x1="526" y1="330" x2="677" y2="285" stroke="#94a3b8" stroke-width="1" stroke-dasharray="3,3"/>
+
+  <!-- 连边：B 映射（r→k） -->
+  <line x1="693" y1="225" x2="844" y2="210" stroke="#6366f1" stroke-width="1.5"/>
+  <line x1="693" y1="225" x2="844" y2="240" stroke="#6366f1" stroke-width="1.5"/>
+  <line x1="693" y1="285" x2="844" y2="270" stroke="#6366f1" stroke-width="1.5"/>
+  <line x1="693" y1="285" x2="844" y2="300" stroke="#6366f1" stroke-width="1.5"/>
+  <line x1="693" y1="285" x2="844" y2="330" stroke="#6366f1" stroke-width="1.5"/>
+
+  <!-- 标签 -->
+  <text x="600" y="210" font-size="11" fill="#64748b" text-anchor="middle">A</text>
+  <text x="770" y="240" font-size="11" fill="#6366f1" text-anchor="middle">B</text>
+
+  <!-- 底部：参数量对比 -->
+  <rect x="60" y="420" width="840" height="100" rx="4" fill="#f8fafc" stroke="#cbd5e1" stroke-width="1.5"/>
+  <text x="480" y="446" font-size="15" font-weight="bold" fill="#1e293b" text-anchor="middle">参数量对比（以 GPT-3 175B 为例）</text>
+
+  <!-- 全微调 -->
+  <rect x="100" y="462" width="220" height="40" rx="4" fill="#f1f5f9" stroke="#475569" stroke-width="1.5"/>
+  <text x="210" y="488" font-size="14" fill="#1e293b" text-anchor="middle">全微调：175B 参数</text>
+
+  <!-- LoRA -->
+  <rect x="370" y="462" width="220" height="40" rx="4" fill="#eef2ff" stroke="#6366f1" stroke-width="1.5"/>
+  <text x="480" y="488" font-size="14" fill="#3730a3" text-anchor="middle">LoRA：~17M 参数（&#215;10,000）</text>
+
+  <!-- 推理 -->
+  <rect x="640" y="462" width="220" height="40" rx="4" fill="#f1f5f9" stroke="#475569" stroke-width="1.5"/>
+  <text x="750" y="488" font-size="14" fill="#1e293b" text-anchor="middle">推理延迟：零增加</text>
 
   <!-- 图例 -->
-  <rect x="660" y="120" width="248" height="120" fill="#ffffff" stroke="#e2e8f0" stroke-width="1" rx="3"/>
-  <text x="672" y="142" font-size="11" fill="#334155" font-weight="bold">箭头含义</text>
-
-  <line x1="672" y1="162" x2="720" y2="162" stroke="#475569" stroke-width="1.5"/>
-  <polygon points="722,162 716,158 716,166" fill="#475569"/>
-  <text x="732" y="166" font-size="10" fill="#475569">前向数据流</text>
-
-  <line x1="672" y1="182" x2="720" y2="182" stroke="#6366f1" stroke-width="1.5"/>
-  <polygon points="722,182 716,178 716,186" fill="#6366f1"/>
-  <text x="732" y="186" font-size="10" fill="#6366f1">低秩路径（可训练）</text>
-
-  <line x1="672" y1="202" x2="720" y2="202" stroke="#94a3b8" stroke-width="1" stroke-dasharray="5,4"/>
-  <polygon points="722,202 716,198 716,206" fill="#94a3b8"/>
-  <text x="732" y="206" font-size="10" fill="#64748b">对照/参照</text>
-
-  <text x="672" y="228" font-size="10" fill="#64748b">颜色：靛蓝 = 可训练组件</text>
-
-  <!-- 机制拆解 -->
-  <text x="660" y="268" font-size="11" fill="#334155" font-weight="bold">机制拆解</text>
-
-  <rect x="660" y="278" width="248" height="200" fill="#ffffff" stroke="#e2e8f0" stroke-width="1" rx="3"/>
-
-  <text x="672" y="300" font-size="11" fill="#1e293b" font-weight="bold">1. 冻结预训练权重</text>
-  <text x="672" y="318" font-size="10" fill="#475569">W₀ 在训练中保持不变</text>
-  <text x="672" y="334" font-size="10" fill="#475569">不计算梯度，不更新</text>
-
-  <text x="672" y="358" font-size="11" fill="#1e293b" font-weight="bold">2. 注入低秩矩阵</text>
-  <text x="672" y="376" font-size="10" fill="#475569">B 和 A 为可训练参数</text>
-  <text x="672" y="392" font-size="10" fill="#475569">r 通常取 1–64（远小于 d,k）</text>
-
-  <text x="672" y="416" font-size="11" fill="#1e293b" font-weight="bold">3. 前向传播</text>
-  <text x="672" y="434" font-size="10" fill="#475569">h = W₀x + BAx</text>
-  <text x="672" y="450" font-size="10" fill="#475569">两条路径并行计算后相加</text>
-
-  <text x="672" y="474" font-size="11" fill="#1e293b" font-weight="bold">4. 推理合并</text>
-  <text x="672" y="492" font-size="10" fill="#475569">W′ = W₀ + BA 合并为单一矩阵</text>
-  <text x="672" y="508" font-size="10" fill="#475569">推理延迟与原始模型完全相同</text>
-
-  <!-- 应用位置 -->
-  <text x="660" y="548" font-size="11" fill="#334155" font-weight="bold">应用位置（Transformer）</text>
-  <rect x="660" y="558" width="248" height="70" fill="#ffffff" stroke="#e2e8f0" stroke-width="1" rx="3"/>
-  <text x="672" y="578" font-size="10" fill="#475569">仅适配注意力权重（Wq, Wv）</text>
-  <text x="672" y="596" font-size="10" fill="#475569">冻结 MLP 模块（不训练）</text>
-  <text x="672" y="614" font-size="10" fill="#475569">经验最优：同时适配 Wq 和 Wv</text>
-
-  <!-- 底部说明 -->
-  <text x="480" y="664" text-anchor="middle" font-size="10" fill="#94a3b8">Figure 1: LoRA 低秩参数化更新矩阵示意图。冻结预训练权重 W₀，注入可训练的低秩分解矩阵 B 和 A。</text>
+  <rect x="60" y="540" width="840" height="60" rx="4" fill="#fbfcfe" stroke="#e2e8f0" stroke-width="1"/>
+  <text x="80" y="562" font-size="12" font-weight="bold" fill="#1e293b">图例：</text>
+  <line x1="120" y1="558" x2="160" y2="558" stroke="#6366f1" stroke-width="2"/>
+  <text x="165" y="562" font-size="11" fill="#334155">前向/数据流（实线）</text>
+  <line x1="300" y1="558" x2="340" y2="558" stroke="#94a3b8" stroke-width="1" stroke-dasharray="3,3"/>
+  <text x="345" y="562" font-size="11" fill="#334155">低秩映射 A（虚线）</text>
+  <rect x="500" y="550" width="16" height="16" rx="2" fill="#eef2ff" stroke="#6366f1" stroke-width="1.5"/>
+  <text x="522" y="562" font-size="11" fill="#334155">可训练组件</text>
+  <rect x="640" y="550" width="16" height="16" rx="2" fill="#f1f5f9" stroke="#475569" stroke-width="1.5"/>
+  <text x="662" y="562" font-size="11" fill="#334155">冻结组件</text>
 </svg>

@@ -73,14 +73,14 @@ $$
 ![教学示意图：Optimized causal masking](figures/flashattention2-fig1.svg)
 *教学示意图：Optimized causal masking（教学示意图）*
 
-> **读图**：FlashAttention-2通过跳过完全遮蔽的块优化因果掩码。
+> **读图**：FlashAttention-2通过分块跳过全掩码块优化因果注意力。
 >
-> - Q行K列矩阵，对角线以下有效。
-> - 块跳过策略：列索引>行索引时跳过。
-> - 跳过块零计算，其余正常计算无需掩码。
-> - 相比标准因果注意力加速约1.7-1.8倍。
+> - Q行块与K列块划分注意力矩阵。
+> - 全掩码块（col>row）直接跳过计算。
+> - 部分可见块计算时无需显式掩码。
+> - 对角线边界（row=col）区分块类型。
 >
-> **关键**：利用分块特性跳过全遮蔽块，减少计算量。
+> **关键**：跳过约50%块，加速1.7-1.8倍，减少非矩阵乘开销。
 
 ### 5. Backward pass simplification with logsumexp  `🟡 mid`
 
@@ -97,14 +97,14 @@ $$
 ![教学示意图：Backward pass simplification with logsumexp](figures/flashattention2-fig2.svg)
 *教学示意图：Backward pass simplification with logsumexp（教学示意图）*
 
-> **读图**：FlashAttention-2反向传播用logsumexp简化softmax概率计算
+> **读图**：反向传播用logsumexp重建softmax概率，省存储。
 >
-> - L是前向存储的每行logsumexp
-> - P = exp(S - L) 逐元素计算softmax概率
-> - 反向传播中P从S和L重算，无需存储
-> - 相比FA1，FA2只存L，减少内存和计算
+> - S: 原始注意力分数（pre-softmax）。
+> - L: 前向存储的每行logsumexp。
+> - P = exp(S - L): 用L计算softmax概率。
+> - dS = P ⊙ (dO - rowsum(P ⊙ dO)): 梯度公式。
 >
-> **关键**：核心：用L代替m和ℓ，简化反向传播
+> **关键**：仅存L（O(N)）而非P（O(N²)），大幅降低内存。
 
 ### 6. Block size tuning  `🟢 low`
 
@@ -117,14 +117,14 @@ FlashAttention-2通过手动调优选择块大小$B_r$和$B_c$，通常在$\{64,
 ![教学示意图：Block size tuning](figures/flashattention2-fig3.svg)
 *教学示意图：Block size tuning（教学示意图）*
 
-> **读图**：FlashAttention-2块大小调优的权衡与选择空间
+> **读图**：FlashAttention-2块大小调优的权衡与选择映射
 >
-> - Br和Bc是块大小，在{64,128}×{64,128}中选择
-> - 状态：safe/optimal/overflow表示可行性
-> - 权衡：大块减少读写但增加寄存器压力
-> - 依赖因素：头维度d和GPU共享内存大小
+> - 块大小(Br,Bc)基于头维度d和SM共享内存大小手动选择
+> - 增大块大小减少共享内存读写，但增加寄存器压力
+> - 减小块大小降低寄存器压力，但增加共享内存访问次数
+> - 映射表(d,SM大小)→(Br,Bc)示例：d=64,SM=48KB→(64,64)
 >
-> **关键**：在有限候选集中手动调优，平衡吞吐与资源约束
+> **关键**：根据d和SM大小在{64,128}×{64,128}中选最优块大小
 
 <a id="connections"></a>
 

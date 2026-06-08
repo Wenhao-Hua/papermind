@@ -32,7 +32,7 @@
 Instead of performing a single attention function, the model linearly projects queries, keys and values $h$ times with different learned projections to dimensions $d_k$, $d_k$ and $d_v$. Attention is computed in parallel on each projected version, and the outputs are concatenated and projected again. This allows the model to jointly attend to information from different representation subspaces at different positions, avoiding the averaging effect of a single head.
 
 $$
-MultiHead(Q,K,V) = Concat(head_1,\dots,head_h)W^O \\ \text{where } head_i = Attention(QW_i^Q, KW_i^K, VW_i^V)
+\begin{aligned} MultiHead(Q,K,V) &= Concat(head_1,\dots,head_h)W^O \\ \text{where } head_i &= Attention(QW_i^Q, KW_i^K, VW_i^V) \end{aligned}
 $$
 
 > 💡 **类比:** Like having multiple detectives examining different aspects of a case simultaneously, then combining their insights to form a complete picture.
@@ -57,21 +57,21 @@ $$
 ![教学示意图：Scaled Dot-Product Attention](figures/transformer-fig1.svg)
 *教学示意图：Scaled Dot-Product Attention（教学示意图）*
 
-> **读图**：Scaled Dot-Product Attention的计算流程与公式。
+> **读图**：Scaled Dot-Product Attention的计算流程与缩放原因。
 >
 > - Q, K, V分别为查询、键、值矩阵。
-> - QK⊤/√d₀计算注意力分数，再经softmax归一化。
-> - 输出为注意力权重对V的加权和。
-> - 缩放因子√d₀防止softmax饱和。
+> - QK⊤计算注意力分数，除以√dk缩放。
+> - Softmax得到权重，加权求和V得输出。
+> - 缩放防止大dk下梯度消失。
 >
-> **关键**：核心公式：Attention(Q,K,V)=softmax(QK⊤/√d₀)V。
+> **关键**：核心公式：Attention(Q,K,V)=softmax(QK⊤/√dk)V。
 
 ### 3. Positional Encoding  `🟡 mid`
 
 To give the model information about sequence order, sinusoidal positional encodings are added to the input embeddings. Each dimension of the encoding uses a sinusoid of a different frequency: $PE_{(pos,2i)} = \sin(pos/10000^{2i/d_{model}})$ and $PE_{(pos,2i+1)} = \cos(pos/10000^{2i/d_{model}})$. The authors hypothesised that this allows the model to easily learn to attend by relative positions because $PE_{pos+k}$ can be represented as a linear function of $PE_{pos}$.
 
 $$
-PE_{(pos,2i)} = \sin(pos/10000^{2i/d_{model}}) \\ PE_{(pos,2i+1)} = \cos(pos/10000^{2i/d_{model}})
+\begin{aligned} PE_{(pos,2i)} &= \sin(pos/10000^{2i/d_{model}}) \\ PE_{(pos,2i+1)} &= \cos(pos/10000^{2i/d_{model}}) \end{aligned}
 $$
 
 > 💡 **类比:** Like adding a unique timestamp to each word in a sentence so the model knows the order, using periodic signals that can later be combined to measure distance.
@@ -92,13 +92,14 @@ In the decoder self-attention, to preserve the auto-regressive property, future 
 ![教学示意图：Masked Self-Attention in Decoder](figures/transformer-fig2.svg)
 *教学示意图：Masked Self-Attention in Decoder（教学示意图）*
 
-> **读图**：解码器中的掩码自注意力机制，保持自回归性质。
+> **读图**：解码器掩码自注意力机制定义与图示
 >
-> - 掩码矩阵：未来位置j>i设为负无穷，softmax后权重为0。
-> - 注意力计算：Q=当前yᵢ，K,V=过去及当前y₁…yᵢ。
-> - 自回归性质：预测ŷᵢ仅依赖y₁…yᵢ₋₁。
+> - 掩码矩阵：下三角蓝色允许，灰色禁止
+> - QK^T/√d_k：缩放点积注意力计算
+> - 未来位置掩码：j>i时logit设为-∞
+> - 自回归：位置i仅关注≤i的位置
 >
-> **关键**：掩码确保解码时不能看到未来位置，实现自回归。
+> **关键**：掩码确保解码器自回归，防止未来信息泄露
 
 ### 5. Learning Rate Schedule  `🟢 low`
 
@@ -115,14 +116,13 @@ $$
 ![教学示意图：Learning Rate Schedule](figures/transformer-fig3.svg)
 *教学示意图：Learning Rate Schedule（教学示意图）*
 
-> **读图**：Transformer学习率调度：线性预热后按平方根倒数衰减。
+> **读图**：Transformer学习率调度：先线性预热后反平方根衰减
 >
-> - lrate公式：d_model^-0.5 * min(step_num^-0.5, step_num * warmup_steps^-1.5)
-> - d_model=512, warmup_steps=4000, 使用Adam优化器
-> - Phase1线性预热：step_num≤4000时lrate∝step_num
-> - Phase2平方根衰减：step_num>4000时lrate∝step_num^-0.5
+> - 预热阶段：step≤4000时学习率线性增加
+> - 衰减阶段：step>4000时学习率按step^-0.5衰减
+> - 峰值学习率：约5.2e-4（d=512时）
 >
-> **关键**：预热阶段线性增长，之后按步数平方根倒数衰减。
+> **关键**：预热防止早期梯度爆炸，衰减保证收敛稳定
 
 ### 6. Label Smoothing  `🟢 low`
 
@@ -135,13 +135,14 @@ During training, label smoothing with $\epsilon_{ls}=0.1$ is used, which makes t
 ![教学示意图：Label Smoothing](figures/transformer-fig4.svg)
 *教学示意图：Label Smoothing（教学示意图）*
 
-> **读图**：Label Smoothing通过软化目标分布提升模型泛化能力。
+> **读图**：Label Smoothing在Transformer训练中的定义与效果
 >
-> - 标准目标：正确类概率1，其余0。
-> - 平滑目标：正确类概率1-ε+ε/K，其余ε/K。
-> - 效果：降低模型自信，提高准确率和BLEU。
+> - 原始one-hot目标分布y=[0,0,1,0,0]
+> - 平滑后目标分布y'=[0.02,0.02,0.90,0.02,0.02]
+> - 平滑参数εls=0.1，K为类别数
+> - Perplexity上升，Accuracy和BLEU改善
 >
-> **关键**：平滑目标分布可减少过拟合，提升泛化性能。
+> **关键**：Label Smoothing降低模型置信度，提升泛化与BLEU
 
 <a id="connections"></a>
 

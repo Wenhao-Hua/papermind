@@ -1,118 +1,97 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 960 620" font-family="'Segoe UI','PingFang SC','Microsoft YaHei',sans-serif" width="960" height="620">
   <rect x="0" y="0" width="960" height="620" fill="#ffffff"/>
 
-  <!-- 主标题 -->
-  <text x="480" y="38" text-anchor="middle" font-size="22" font-weight="700" fill="#1e293b">LoRA: 推理时零延迟的权重合并</text>
-  <line x1="200" y1="50" x2="760" y2="50" stroke="#cbd5e1" stroke-width="1"/>
+  <!-- 标题 -->
+  <text x="480" y="36" font-size="20" font-weight="bold" fill="#1e293b" text-anchor="middle">LoRA: Low-Rank Adaptation — Inference-Time Zero Latency via Weight Merging</text>
 
-  <!-- 核心公式框（视觉焦点） -->
-  <rect x="280" y="72" width="400" height="80" rx="6" fill="#eef2ff" stroke="#6366f1" stroke-width="2"/>
-  <text x="480" y="104" text-anchor="middle" font-size="16" fill="#334155" font-weight="600">训练后合并权重</text>
-  <text x="480" y="136" text-anchor="middle" font-size="24" font-weight="700" fill="#3730a3">W = W₀ + BA</text>
+  <!-- 核心公式面板（强调色框） -->
+  <rect x="240" y="56" width="480" height="80" rx="6" fill="#eef2ff" stroke="#6366f1" stroke-width="2"/>
+  <text x="480" y="82" font-size="14" fill="#3730a3" text-anchor="middle" font-weight="bold">Core Formula: Merged Weight after Training</text>
+  <text x="480" y="118" font-size="22" fill="#1e293b" text-anchor="middle" font-family="'Segoe UI','PingFang SC','Microsoft YaHei',sans-serif">
+    W = W<tspan baseline-shift="sub" font-size="75%">0</tspan> + B A
+  </text>
 
-  <!-- 左侧：训练阶段 -->
-  <rect x="40" y="180" width="420" height="260" rx="4" fill="#f8fafc" stroke="#e2e8f0" stroke-width="1"/>
-  <text x="250" y="208" text-anchor="middle" font-size="14" font-weight="600" fill="#1e293b">训练阶段（冻结 W₀，更新 A、B）</text>
+  <!-- 左侧：训练时结构（冻结 + 低秩适配） -->
+  <rect x="40" y="160" width="420" height="200" rx="4" fill="#f8fafc" stroke="#cbd5e1" stroke-width="1.5"/>
+  <text x="250" y="186" font-size="14" font-weight="bold" fill="#1e293b" text-anchor="middle">Training Phase (frozen + low-rank adapters)</text>
 
-  <!-- 预训练权重 W₀ 框 -->
-  <rect x="80" y="226" width="160" height="50" rx="4" fill="#f1f5f9" stroke="#94a3b8" stroke-width="1.5"/>
-  <text x="160" y="256" text-anchor="middle" font-size="14" font-weight="600" fill="#334155">W₀（冻结）</text>
+  <!-- 预训练权重 W0 框 -->
+  <rect x="80" y="200" width="160" height="60" rx="4" fill="#f1f5f9" stroke="#475569" stroke-width="1.5"/>
+  <text x="160" y="228" font-size="13" fill="#334155" text-anchor="middle">Pre-trained</text>
+  <text x="160" y="246" font-size="13" fill="#334155" text-anchor="middle">W<tspan baseline-shift="sub" font-size="75%">0</tspan> (frozen)</text>
 
-  <!-- 低秩分解 A、B -->
-  <rect x="280" y="226" width="60" height="50" rx="4" fill="#eef2ff" stroke="#6366f1" stroke-width="1.5"/>
-  <text x="310" y="256" text-anchor="middle" font-size="13" font-weight="600" fill="#3730a3">A</text>
+  <!-- 低秩矩阵 A 和 B -->
+  <rect x="280" y="200" width="60" height="60" rx="4" fill="#eef2ff" stroke="#6366f1" stroke-width="1.5"/>
+  <text x="310" y="228" font-size="13" fill="#3730a3" text-anchor="middle">A</text>
+  <text x="310" y="246" font-size="11" fill="#64748b" text-anchor="middle">r&#215;d</text>
 
-  <rect x="360" y="226" width="60" height="50" rx="4" fill="#eef2ff" stroke="#6366f1" stroke-width="1.5"/>
-  <text x="390" y="256" text-anchor="middle" font-size="13" font-weight="600" fill="#3730a3">B</text>
+  <rect x="360" y="200" width="60" height="60" rx="4" fill="#eef2ff" stroke="#6366f1" stroke-width="1.5"/>
+  <text x="390" y="228" font-size="13" fill="#3730a3" text-anchor="middle">B</text>
+  <text x="390" y="246" font-size="11" fill="#64748b" text-anchor="middle">d&#215;r</text>
 
-  <!-- 箭头：W₀ → 加法 -->
-  <line x1="240" y1="251" x2="280" y2="251" stroke="#475569" stroke-width="1.5"/>
-  <polygon points="278,246 288,251 278,256" fill="#475569"/>
+  <!-- 箭头：W0 → 输出 -->
+  <line x1="240" y1="230" x2="280" y2="230" stroke="#475569" stroke-width="1.5"/>
+  <polygon points="278,224 288,230 278,236" fill="#475569"/>
 
   <!-- 箭头：A → B -->
-  <line x1="340" y1="251" x2="360" y2="251" stroke="#475569" stroke-width="1.5"/>
-  <polygon points="358,246 368,251 358,256" fill="#475569"/>
+  <line x1="340" y1="230" x2="360" y2="230" stroke="#6366f1" stroke-width="1.5"/>
+  <polygon points="358,224 368,230 358,236" fill="#6366f1"/>
 
-  <!-- 加法节点 -->
-  <circle cx="310" cy="310" r="16" fill="#eef2ff" stroke="#6366f1" stroke-width="1.5"/>
-  <text x="310" y="315" text-anchor="middle" font-size="16" font-weight="700" fill="#3730a3">+</text>
+  <!-- 输出 -->
+  <rect x="80" y="280" width="340" height="40" rx="4" fill="#f1f5f9" stroke="#94a3b8" stroke-width="1"/>
+  <text x="250" y="306" font-size="13" fill="#334155" text-anchor="middle">Output = W<tspan baseline-shift="sub" font-size="75%">0</tspan> x + B A x</text>
 
-  <!-- 连线：W₀ 到加法 -->
-  <line x1="160" y1="276" x2="160" y2="310" stroke="#94a3b8" stroke-width="1.5" stroke-dasharray="5,3"/>
-  <line x1="160" y1="310" x2="294" y2="310" stroke="#475569" stroke-width="1.5"/>
-  <polygon points="292,305 302,310 292,315" fill="#475569"/>
+  <!-- 右侧：推理时合并权重 -->
+  <rect x="500" y="160" width="420" height="200" rx="4" fill="#f8fafc" stroke="#cbd5e1" stroke-width="1.5"/>
+  <text x="710" y="186" font-size="14" font-weight="bold" fill="#1e293b" text-anchor="middle">Inference Phase (merged weight, zero latency)</text>
 
-  <!-- 连线：B 到加法 -->
-  <line x1="390" y1="276" x2="390" y2="310" stroke="#475569" stroke-width="1.5"/>
-  <line x1="390" y1="310" x2="326" y2="310" stroke="#475569" stroke-width="1.5"/>
-  <polygon points="324,305 334,310 324,315" fill="#475569"/>
+  <!-- 合并权重框 -->
+  <rect x="540" y="200" width="340" height="60" rx="4" fill="#eef2ff" stroke="#6366f1" stroke-width="2"/>
+  <text x="710" y="228" font-size="14" fill="#3730a3" text-anchor="middle" font-weight="bold">W = W<tspan baseline-shift="sub" font-size="75%">0</tspan> + B A</text>
+  <text x="710" y="248" font-size="12" fill="#64748b" text-anchor="middle">(merged into single matrix)</text>
 
-  <!-- 输出 h -->
-  <rect x="250" y="350" width="120" height="40" rx="4" fill="#f1f5f9" stroke="#475569" stroke-width="1.5"/>
-  <text x="310" y="375" text-anchor="middle" font-size="14" font-weight="600" fill="#1e293b">h = W₀x + BAx</text>
+  <!-- 输出 -->
+  <rect x="540" y="280" width="340" height="40" rx="4" fill="#f1f5f9" stroke="#94a3b8" stroke-width="1"/>
+  <text x="710" y="306" font-size="13" fill="#334155" text-anchor="middle">Output = W x</text>
 
-  <!-- 箭头：加法 → 输出 -->
-  <line x1="310" y1="326" x2="310" y2="350" stroke="#475569" stroke-width="1.5"/>
-  <polygon points="305,348 310,358 315,348" fill="#475569"/>
+  <!-- 箭头：训练 → 推理 -->
+  <line x1="460" y1="260" x2="500" y2="260" stroke="#475569" stroke-width="1.5" stroke-dasharray="6,3"/>
+  <polygon points="498,254 508,260 498,266" fill="#475569"/>
+  <text x="480" y="252" font-size="11" fill="#64748b" text-anchor="middle">after</text>
+  <text x="480" y="266" font-size="11" fill="#64748b" text-anchor="middle">training</text>
 
-  <!-- 右侧：推理阶段 -->
-  <rect x="500" y="180" width="420" height="260" rx="4" fill="#f8fafc" stroke="#e2e8f0" stroke-width="1"/>
-  <text x="710" y="208" text-anchor="middle" font-size="14" font-weight="600" fill="#1e293b">推理阶段（使用合并权重 W）</text>
+  <!-- 底部：对比适配器（带延迟） -->
+  <rect x="40" y="390" width="880" height="100" rx="4" fill="#f8fafc" stroke="#cbd5e1" stroke-width="1.5"/>
+  <text x="480" y="416" font-size="14" font-weight="bold" fill="#1e293b" text-anchor="middle">Why No Latency? — Comparison with Adapter Layers</text>
 
-  <!-- 合并权重 W 框 -->
-  <rect x="580" y="240" width="260" height="60" rx="4" fill="#eef2ff" stroke="#6366f1" stroke-width="2"/>
-  <text x="710" y="268" text-anchor="middle" font-size="16" font-weight="700" fill="#3730a3">W = W₀ + BA</text>
-  <text x="710" y="288" text-anchor="middle" font-size="12" fill="#64748b">（合并后权重，与原始模型同结构）</text>
+  <!-- 适配器（带延迟） -->
+  <rect x="80" y="432" width="360" height="44" rx="4" fill="#f1f5f9" stroke="#94a3b8" stroke-width="1"/>
+  <text x="260" y="452" font-size="13" fill="#334155" text-anchor="middle">Adapter: sequential extra layers &#8594; latency added</text>
+  <text x="260" y="468" font-size="11" fill="#64748b" text-anchor="middle">(must execute adapter after each Transformer block)</text>
 
-  <!-- 输入 x -->
-  <rect x="580" y="330" width="100" height="40" rx="4" fill="#f1f5f9" stroke="#475569" stroke-width="1.5"/>
-  <text x="630" y="355" text-anchor="middle" font-size="14" font-weight="600" fill="#1e293b">x</text>
-
-  <!-- 输出 h -->
-  <rect x="740" y="330" width="100" height="40" rx="4" fill="#f1f5f9" stroke="#475569" stroke-width="1.5"/>
-  <text x="790" y="355" text-anchor="middle" font-size="14" font-weight="600" fill="#1e293b">h = Wx</text>
-
-  <!-- 箭头：输入 → W -->
-  <line x1="630" y1="300" x2="630" y2="330" stroke="#475569" stroke-width="1.5"/>
-  <polygon points="625,328 630,338 635,328" fill="#475569"/>
-
-  <!-- 箭头：W → 输出 -->
-  <line x1="710" y1="300" x2="710" y2="330" stroke="#475569" stroke-width="1.5"/>
-  <line x1="710" y1="350" x2="740" y2="350" stroke="#475569" stroke-width="1.5"/>
-  <polygon points="738,345 748,350 738,355" fill="#475569"/>
-
-  <!-- 零延迟标注 -->
-  <rect x="580" y="400" width="260" height="30" rx="4" fill="#f1f5f9" stroke="#94a3b8" stroke-width="1" stroke-dasharray="4,3"/>
-  <text x="710" y="420" text-anchor="middle" font-size="12" font-weight="600" fill="#334155">零额外推理延迟（无顺序模块）</text>
-
-  <!-- 底部说明面板 -->
-  <rect x="40" y="470" width="880" height="130" rx="4" fill="#fbfcfe" stroke="#e2e8f0" stroke-width="1"/>
-  <text x="480" y="498" text-anchor="middle" font-size="14" font-weight="600" fill="#1e293b">关键机制拆解</text>
-
-  <!-- 三列说明 -->
-  <!-- 列1 -->
-  <text x="160" y="530" text-anchor="middle" font-size="13" font-weight="600" fill="#334155">冻结预训练权重</text>
-  <text x="160" y="552" text-anchor="middle" font-size="11" fill="#64748b">W₀ 在训练中保持不变</text>
-  <text x="160" y="570" text-anchor="middle" font-size="11" fill="#64748b">仅更新低秩矩阵 A、B</text>
-
-  <!-- 列2 -->
-  <text x="480" y="530" text-anchor="middle" font-size="13" font-weight="600" fill="#334155">低秩分解</text>
-  <text x="480" y="552" text-anchor="middle" font-size="11" fill="#64748b">A ∈ ℝ^(r×d)，B ∈ ℝ^(d×r)</text>
-  <text x="480" y="570" text-anchor="middle" font-size="11" fill="#64748b">r ≪ d，参数量减少 10,000×</text>
-
-  <!-- 列3 -->
-  <text x="800" y="530" text-anchor="middle" font-size="13" font-weight="600" fill="#334155">推理零延迟</text>
-  <text x="800" y="552" text-anchor="middle" font-size="11" fill="#64748b">W = W₀ + BA 合并为单矩阵</text>
-  <text x="800" y="570" text-anchor="middle" font-size="11" fill="#64748b">与原始模型结构完全一致</text>
+  <!-- LoRA（零延迟） -->
+  <rect x="520" y="432" width="360" height="44" rx="4" fill="#eef2ff" stroke="#6366f1" stroke-width="1.5"/>
+  <text x="700" y="452" font-size="13" fill="#3730a3" text-anchor="middle">LoRA: weights merged &#8594; zero additional latency</text>
+  <text x="700" y="468" font-size="11" fill="#64748b" text-anchor="middle">(same architecture as original model)</text>
 
   <!-- 图例 -->
-  <rect x="40" y="600" width="880" height="1" fill="#e2e8f0"/>
-  <text x="60" y="614" font-size="11" fill="#64748b">图例：</text>
-  <line x1="100" y1="610" x2="130" y2="610" stroke="#475569" stroke-width="1.5"/>
-  <polygon points="128,606 136,610 128,614" fill="#475569"/>
-  <text x="142" y="614" font-size="11" fill="#64748b">前向/数据流</text>
-  <line x1="240" y1="610" x2="270" y2="610" stroke="#94a3b8" stroke-width="1.5" stroke-dasharray="5,3"/>
-  <text x="278" y="614" font-size="11" fill="#64748b">参照/对照</text>
-  <rect x="370" y="604" width="14" height="12" rx="2" fill="#eef2ff" stroke="#6366f1" stroke-width="1.5"/>
-  <text x="390" y="614" font-size="11" fill="#64748b">强调/核心组件</text>
+  <rect x="40" y="510" width="880" height="60" rx="4" fill="#fbfcfe" stroke="#e2e8f0" stroke-width="1"/>
+  <text x="60" y="534" font-size="12" font-weight="bold" fill="#1e293b">Legend:</text>
+
+  <line x1="120" y1="530" x2="160" y2="530" stroke="#475569" stroke-width="1.5"/>
+  <polygon points="158,524 168,530 158,536" fill="#475569"/>
+  <text x="176" y="534" font-size="11" fill="#334155">Data flow</text>
+
+  <line x1="260" y1="530" x2="300" y2="530" stroke="#475569" stroke-width="1.5" stroke-dasharray="6,3"/>
+  <polygon points="298,524 308,530 298,536" fill="#475569"/>
+  <text x="316" y="534" font-size="11" fill="#334155">Transition (after training)</text>
+
+  <rect x="460" y="522" width="16" height="16" rx="2" fill="#eef2ff" stroke="#6366f1" stroke-width="1.5"/>
+  <text x="484" y="534" font-size="11" fill="#334155">Trainable (A, B)</text>
+
+  <rect x="580" y="522" width="16" height="16" rx="2" fill="#f1f5f9" stroke="#475569" stroke-width="1.5"/>
+  <text x="604" y="534" font-size="11" fill="#334155">Frozen (W<tspan baseline-shift="sub" font-size="75%">0</tspan>)</text>
+
+  <rect x="700" y="522" width="16" height="16" rx="2" fill="#eef2ff" stroke="#6366f1" stroke-width="2"/>
+  <text x="724" y="534" font-size="11" fill="#334155">Merged weight</text>
 </svg>

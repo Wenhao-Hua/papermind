@@ -41,14 +41,14 @@ $$
 ![教学示意图：Clipped Surrogate Objective](figures/ppo-fig1.svg)
 *教学示意图：Clipped Surrogate Objective（教学示意图）*
 
-> **读图**：PPO的截断替代目标函数，通过截断概率比防止策略更新过大。
+> **读图**：PPO截断代理目标函数定义及不同条件下的取值
 >
-> - L^CLIP(θ) = E[min(r_t(θ)Â_t, clip(r_t,1-ε,1+ε)Â_t)]
-> - r_t(θ) = π_θ(a_t|s_t)/π_θ_old(a_t|s_t) 概率比
-> - clip(r,1-ε,1+ε) 将r限制在[1-ε,1+ε]内
-> - min操作形成悲观下界，只考虑目标变差的情况
+> - L^{CLIP}：截断代理目标，取min(rÂ, clip(r)Â)
+> - r_t(θ)：新旧策略概率比 π_θ/π_{θ_old}
+> - clip(r,1-ε,1+ε)：将r限制在[1-ε,1+ε]内
+> - 条件分支：Â正负与r范围决定L^{CLIP}取值
 >
-> **关键**：截断与min结合，确保策略更新保守且稳定。
+> **关键**：通过截断和取min形成下界，防止策略更新过大
 
 ### 2. Adaptive KL Penalty Coefficient  `🟡 mid`
 
@@ -65,13 +65,14 @@ $$
 ![教学示意图：Adaptive KL Penalty Coefficient](figures/ppo-fig2.svg)
 *教学示意图：Adaptive KL Penalty Coefficient（教学示意图）*
 
-> **读图**：自适应KL惩罚系数的PPO目标函数与调整规则
+> **读图**：自适应KL惩罚系数PPO算法流程与β调整机制
 >
-> - L^KLPEN(θ) = E_t[ r_t(θ) A_t - β·KL ]
-> - r_t(θ) = π_θ(a_t|s_t) / π_θ_old(a_t|s_t)
-> - β根据实际KL散度d与目标d_targ自适应调整
+> - LKLPEN：含KL散度惩罚项的目标函数
+> - rt：新旧策略概率比，用于计算目标
+> - Adaptive β Adjustment：根据实际KL散度调整β
+> - d与dtarg：实际与目标KL散度，决定β缩放
 >
-> **关键**：β调整使KL散度围绕目标值波动，平衡更新幅度
+> **关键**：β自适应调整使KL散度围绕dtarg波动，稳定更新
 
 ### 3. Overall Combined Loss Function  `🟡 mid`
 
@@ -88,14 +89,14 @@ $$
 ![教学示意图：Overall Combined Loss Function](figures/ppo-fig3.svg)
 *教学示意图：Overall Combined Loss Function（教学示意图）*
 
-> **读图**：PPO组合损失函数，包含CLIP、VF和熵项。
+> **读图**：PPO组合损失函数，包含CLIP、VF和熵奖励三项。
 >
-> - Lt: 时间步t的组合损失函数。
-> - CLIP项: 裁剪替代损失，防止策略更新过大。
-> - VF项: 价值函数平方误差损失，改进价值估计。
-> - S项: 策略熵奖励，鼓励探索。
+> - Term 1: 裁剪替代目标LCLIP，限制概率比在[1-ε,1+ε]。
+> - Term 2: 价值函数损失LVF，预测值与目标值的均方误差。
+> - Term 3: 熵奖励S[πθ]，鼓励探索，惩罚确定性策略。
+> - 系数c1=0.5, c2=0.01，策略与价值网络共享参数。
 >
-> **关键**：最大化Lt以同时优化策略、价值估计和探索。
+> **关键**：组合损失同时优化策略、价值估计并保持探索。
 
 ### 4. Proximal Policy Optimization Algorithm with Multiple Epochs and Minibatches  `🟡 mid`
 
@@ -108,14 +109,14 @@ PPO 的 Actor-Critic 实现采用固定长度的轨迹片段：每个迭代让 $
 ![教学示意图：Proximal Policy Optimization Algorithm with Multiple Epochs and Minibatches](figures/ppo-fig4.svg)
 *教学示意图：Proximal Policy Optimization Algorithm with Multiple Epochs and Minibatches（教学示意图）*
 
-> **读图**：PPO算法通过多epoch小批量SGD优化截断替代目标。
+> **读图**：PPO算法通过多epoch小批量优化提高样本效率
 >
-> - N个并行actor各收集T步数据存入缓冲。
-> - 替代目标含截断项，限制策略更新幅度。
-> - K个epoch内用小批量SGD多次更新策略。
-> - 更新后旧策略参数替换，重复数据收集。
+> - N个并行actor各收集T步数据，共NT个转移
+> - 使用截断替代损失LCLIP限制策略更新幅度
+> - 同一批数据重复使用K个epoch进行小批量SGD
+> - 概率比rt衡量新旧策略偏差，裁剪至[0.8,1.2]
 >
-> **关键**：多epoch利用同批数据，截断防止策略更新过大。
+> **关键**：关注数据流、替代损失裁剪及多轮重用机制
 
 ### 5. Truncated Generalized Advantage Estimation  `🟡 mid`
 
@@ -132,14 +133,14 @@ $$
 ![教学示意图：Truncated Generalized Advantage Estimation](figures/ppo-fig5.svg)
 *教学示意图：Truncated Generalized Advantage Estimation（教学示意图）*
 
-> **读图**：截断GAE：在有限片段内加权求和TD残差估计优势。
+> **读图**：PPO中截断广义优势估计的定义与展开。
 >
-> - δt = rt + γV(st+1) - V(st)：TD残差定义。
-> - Ât = Σk=0^{T-t-1} (γλ)^k δt+k：截断窗口内加权求和。
-> - λ=1时退化为蒙特卡洛返回差，不依赖未来信号。
-> - γ折扣因子，λ平滑参数，T片段长度。
+> - 核心公式：截断优势估计的加权和。
+> - δt = rt + γV(st+1) - V(st) 是时序差分误差。
+> - γλ加权：对后续δ项指数衰减。
+> - 截断边界：不依赖T-1之后的信号。
 >
-> **关键**：仅用片段内TD残差加权求和，避免未来信号依赖。
+> **关键**：λ=1时退化为蒙特卡洛返回差。
 
 <a id="connections"></a>
 

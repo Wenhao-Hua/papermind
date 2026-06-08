@@ -1,0 +1,108 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 960 640" font-family="'Segoe UI','PingFang SC','Microsoft YaHei',sans-serif" width="960" height="640">
+  <rect x="0" y="0" width="960" height="640" fill="#ffffff"/>
+
+  <!-- 标题 -->
+  <text x="480" y="36" font-size="18" font-weight="bold" fill="#1e293b" text-anchor="middle">Vision Transformer (ViT) — 1D Learnable Position Embeddings</text>
+
+  <!-- 核心定义框（强调色） -->
+  <rect x="60" y="60" width="840" height="100" rx="6" fill="#eef2ff" stroke="#6366f1" stroke-width="2"/>
+  <text x="480" y="88" font-size="16" font-weight="bold" fill="#3730a3" text-anchor="middle">Position Embedding Definition</text>
+  <text x="480" y="120" font-size="20" fill="#1e293b" text-anchor="middle">
+    E<tspan baseline-shift="sub" font-size="75%">pos</tspan> &#8712; &#8477;<tspan baseline-shift="super" font-size="75%">(N+1)&#215;D</tspan>
+  </text>
+  <text x="480" y="148" font-size="13" fill="#334155" text-anchor="middle">Learnable 1D embedding added to patch embeddings; no 2D positional bias needed</text>
+
+  <!-- 左侧：结构图 -->
+  <!-- 输入图像 -->
+  <rect x="100" y="190" width="200" height="120" rx="4" fill="#f8fafc" stroke="#475569" stroke-width="1.5"/>
+  <text x="200" y="230" font-size="14" font-weight="bold" fill="#1e293b" text-anchor="middle">Input Image</text>
+  <text x="200" y="252" font-size="12" fill="#334155" text-anchor="middle">H &#215; W &#215; 3</text>
+  <text x="200" y="272" font-size="12" fill="#64748b" text-anchor="middle">split into N patches</text>
+  <text x="200" y="292" font-size="12" fill="#64748b" text-anchor="middle">each 16&#215;16 pixels</text>
+
+  <!-- 箭头：图像 → 展平 -->
+  <line x1="300" y1="250" x2="360" y2="250" stroke="#475569" stroke-width="1.5"/>
+  <polygon points="358,244 370,250 358,256" fill="#475569"/>
+
+  <!-- 展平 + 线性投影 -->
+  <rect x="370" y="200" width="180" height="100" rx="4" fill="#f1f5f9" stroke="#475569" stroke-width="1.5"/>
+  <text x="460" y="232" font-size="13" font-weight="bold" fill="#1e293b" text-anchor="middle">Linear Projection</text>
+  <text x="460" y="254" font-size="12" fill="#334155" text-anchor="middle">x<tspan baseline-shift="sub" font-size="75%">i</tspan> = flatten(patch<tspan baseline-shift="sub" font-size="75%">i</tspan>)</text>
+  <text x="460" y="274" font-size="12" fill="#64748b" text-anchor="middle">&#215; W<tspan baseline-shift="sub" font-size="75%">E</tspan> &#8712; &#8477;<tspan baseline-shift="super" font-size="75%">D</tspan></text>
+
+  <!-- 箭头：展平 → 嵌入序列 -->
+  <line x1="550" y1="250" x2="610" y2="250" stroke="#475569" stroke-width="1.5"/>
+  <polygon points="608,244 620,250 608,256" fill="#475569"/>
+
+  <!-- 嵌入序列 + 位置编码 -->
+  <rect x="620" y="180" width="240" height="140" rx="4" fill="#f8fafc" stroke="#6366f1" stroke-width="2"/>
+  <text x="740" y="206" font-size="13" font-weight="bold" fill="#3730a3" text-anchor="middle">Patch + Position Embeddings</text>
+  <text x="740" y="226" font-size="12" fill="#1e293b" text-anchor="middle">z<tspan baseline-shift="sub" font-size="75%">0</tspan> = [x<tspan baseline-shift="sub" font-size="75%">class</tspan> ; x<tspan baseline-shift="sub" font-size="75%">1</tspan> ; … ; x<tspan baseline-shift="sub" font-size="75%">N</tspan>] + E<tspan baseline-shift="sub" font-size="75%">pos</tspan></text>
+  <text x="740" y="248" font-size="12" fill="#334155" text-anchor="middle">E<tspan baseline-shift="sub" font-size="75%">pos</tspan> &#8712; &#8477;<tspan baseline-shift="super" font-size="75%">(N+1)&#215;D</tspan> (learned)</text>
+  <text x="740" y="270" font-size="12" fill="#64748b" text-anchor="middle">1D positions: 0, 1, 2, …, N</text>
+  <text x="740" y="290" font-size="12" fill="#64748b" text-anchor="middle">No 2D grid used (no gain)</text>
+
+  <!-- 箭头：嵌入 → Transformer -->
+  <line x1="860" y1="250" x2="920" y2="250" stroke="#475569" stroke-width="1.5"/>
+  <polygon points="918,244 930,250 918,256" fill="#475569"/>
+
+  <!-- Transformer 示意 -->
+  <rect x="930" y="190" width="30" height="120" rx="4" fill="#eef2ff" stroke="#6366f1" stroke-width="1.5"/>
+  <text x="945" y="260" font-size="11" fill="#3730a3" text-anchor="middle" transform="rotate(-90,945,260)">Transformer Encoder</text>
+
+  <!-- 右侧：图例与说明面板 -->
+  <rect x="60" y="340" width="840" height="270" rx="4" fill="#fbfcfe" stroke="#cbd5e1" stroke-width="1"/>
+
+  <!-- 图例 -->
+  <text x="80" y="368" font-size="14" font-weight="bold" fill="#1e293b">Legend</text>
+  <line x1="80" y1="392" x2="130" y2="392" stroke="#475569" stroke-width="1.5"/>
+  <polygon points="128,386 140,392 128,398" fill="#475569"/>
+  <text x="150" y="396" font-size="12" fill="#334155">Data flow / forward pass</text>
+
+  <line x1="80" y1="416" x2="130" y2="416" stroke="#6366f1" stroke-width="2"/>
+  <polygon points="128,410 140,416 128,422" fill="#6366f1"/>
+  <text x="150" y="420" font-size="12" fill="#334155">Key component (position embedding)</text>
+
+  <line x1="80" y1="440" x2="130" y2="440" stroke="#94a3b8" stroke-width="1.5" stroke-dasharray="5,4"/>
+  <polygon points="128,434 140,440 128,446" fill="#94a3b8"/>
+  <text x="150" y="444" font-size="12" fill="#334155">Reference / comparison (not used)</text>
+
+  <!-- 机制拆解 -->
+  <text x="80" y="480" font-size="14" font-weight="bold" fill="#1e293b">Mechanism</text>
+
+  <text x="80" y="504" font-size="12" fill="#334155">1. Each patch position i gets a learnable vector e<tspan baseline-shift="sub" font-size="75%">i</tspan> &#8712; &#8477;<tspan baseline-shift="super" font-size="75%">D</tspan></text>
+  <text x="80" y="526" font-size="12" fill="#334155">2. e<tspan baseline-shift="sub" font-size="75%">i</tspan> is added element-wise to the patch embedding x<tspan baseline-shift="sub" font-size="75%">i</tspan></text>
+  <text x="80" y="548" font-size="12" fill="#334155">3. [class] token gets position 0; patches get positions 1…N</text>
+  <text x="80" y="570" font-size="12" fill="#334155">4. 1D ordering (left-to-right, top-to-bottom) — no 2D spatial structure</text>
+
+  <!-- 右侧小矩阵示意 -->
+  <text x="520" y="480" font-size="13" font-weight="bold" fill="#1e293b">E<tspan baseline-shift="sub" font-size="75%">pos</tspan> Matrix (N+1 rows &#215; D columns)</text>
+
+  <!-- 矩阵网格 -->
+  <rect x="520" y="492" width="360" height="108" fill="none" stroke="#475569" stroke-width="1"/>
+  <line x1="520" y1="528" x2="880" y2="528" stroke="#475569" stroke-width="0.8"/>
+  <line x1="520" y1="564" x2="880" y2="564" stroke="#475569" stroke-width="0.8"/>
+  <line x1="520" y1="600" x2="880" y2="600" stroke="#475569" stroke-width="0.8"/>
+
+  <line x1="610" y1="492" x2="610" y2="600" stroke="#475569" stroke-width="0.8"/>
+  <line x1="700" y1="492" x2="700" y2="600" stroke="#475569" stroke-width="0.8"/>
+  <line x1="790" y1="492" x2="790" y2="600" stroke="#475569" stroke-width="0.8"/>
+
+  <text x="565" y="514" font-size="11" fill="#334155" text-anchor="middle">pos 0</text>
+  <text x="565" y="550" font-size="11" fill="#334155" text-anchor="middle">pos 1</text>
+  <text x="565" y="586" font-size="11" fill="#334155" text-anchor="middle">pos N</text>
+
+  <text x="655" y="514" font-size="11" fill="#64748b" text-anchor="middle">e<tspan baseline-shift="sub" font-size="75%">0,1</tspan></text>
+  <text x="655" y="550" font-size="11" fill="#64748b" text-anchor="middle">e<tspan baseline-shift="sub" font-size="75%">1,1</tspan></text>
+  <text x="655" y="586" font-size="11" fill="#64748b" text-anchor="middle">e<tspan baseline-shift="sub" font-size="75%">N,1</tspan></text>
+
+  <text x="745" y="514" font-size="11" fill="#64748b" text-anchor="middle">…</text>
+  <text x="745" y="550" font-size="11" fill="#64748b" text-anchor="middle">…</text>
+  <text x="745" y="586" font-size="11" fill="#64748b" text-anchor="middle">…</text>
+
+  <text x="835" y="514" font-size="11" fill="#64748b" text-anchor="middle">e<tspan baseline-shift="sub" font-size="75%">0,D</tspan></text>
+  <text x="835" y="550" font-size="11" fill="#64748b" text-anchor="middle">e<tspan baseline-shift="sub" font-size="75%">1,D</tspan></text>
+  <text x="835" y="586" font-size="11" fill="#64748b" text-anchor="middle">e<tspan baseline-shift="sub" font-size="75%">N,D</tspan></text>
+
+  <text x="520" y="620" font-size="11" fill="#64748b">All entries are learnable parameters, initialized randomly</text>
+</svg>

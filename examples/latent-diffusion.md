@@ -36,13 +36,14 @@ $$
 ![教学示意图：Cross-Attention Conditioning Mechanism](figures/latent-diffusion-fig1.svg)
 *教学示意图：Cross-Attention Conditioning Mechanism（教学示意图）*
 
-> **读图**：交叉注意力机制将多种条件注入潜扩散模型
+> **读图**：跨注意力机制将条件输入注入UNet，支持多模态条件。
 >
-> - 条件编码器将文本/边界框等投影为M×dτ矩阵
-> - 交叉注意力层用UNet特征作Q，条件投影作K,V
-> - 注意力权重最大映射高亮显示条件与特征的对应
+> - 条件输入y经领域编码器τθ投影为中间表示。
+> - UNet特征φi投影为Q，条件投影为K、V。
+> - 注意力计算softmax(QK^T/√d)V，输出注入UNet。
+> - 二部匹配示意Q与K的对应关系，实线为选中对齐。
 >
-> **关键**：一个模型无需重训练即可处理多种条件输入
+> **关键**：条件通过共享注意力空间注入，无需重训练即可支持多种条件。
 
 ### 2. Latent Diffusion Model Training Objective  `🔴 high`
 
@@ -55,18 +56,6 @@ $$
 > 💡 **类比:** 类似于先让一个画家（自编码器）把复杂的街景画成简笔画（低维潜在），再教另一个画家（扩散模型）在简笔画上练习去噪与创作，最后将简笔画还原成精细油画。
 
 📍 出处: [3.2 (p.4)](https://arxiv.org/pdf/2112.10752.pdf#page=4)
-
-![教学示意图：Latent Diffusion Model Training Objective](figures/latent-diffusion-fig2.svg)
-*教学示意图：Latent Diffusion Model Training Objective（教学示意图）*
-
-> **读图**：潜在扩散模型训练目标：学习去噪函数重建潜在变量。
->
-> - E(x)编码图像为潜在表示z。
-> - 正向扩散从z生成噪声潜在zt。
-> - 去噪器εθ从zt预测噪声ε。
-> - 损失L_LDM为预测与真实噪声的MSE。
->
-> **关键**：在潜在空间训练扩散模型，降低计算成本。
 
 ### 3. Downsampling Factor Trade‑off in Perceptual Compression  `🟡 mid`
 
@@ -109,17 +98,17 @@ $$
 
 📍 出处: [3.1 (p.4)](https://arxiv.org/pdf/2112.10752.pdf#page=4)
 
-![教学示意图：KL‑Regularization vs. VQ‑Regularization](figures/latent-diffusion-fig3.svg)
+![教学示意图：KL‑Regularization vs. VQ‑Regularization](figures/latent-diffusion-fig2.svg)
 *教学示意图：KL‑Regularization vs. VQ‑Regularization（教学示意图）*
 
-> **读图**：比较KL与VQ正则化在潜扩散模型中的机制与效果。
+> **读图**：比较KL与VQ正则化在潜空间中的效果
 >
-> - KL正则化：编码器输出向N(0,I)惩罚，类似VAE。
-> - VQ正则化：连续潜变量映射到离散码本。
-> - 损失函数：KL含λ·KL项，VQ含量化损失项。
-> - 关键性质：VQ保留更多图像细节，无需精细权衡。
+> - KL正则化：施加KL散度惩罚，使潜分布接近标准正态
+> - VQ正则化：将连续潜变量量化到离散码本
+> - 示例：f=4时KL的PSNR 27.4，f=8时VQ的PSNR 22.8
+> - VQ正则化在相同下采样因子下重建质量更好
 >
-> **关键**：VQ正则化优于KL，细节保留更好，见表8。
+> **关键**：VQ正则化保留高频细节，优于KL正则化
 
 <a id="connections"></a>
 

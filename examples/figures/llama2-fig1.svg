@@ -1,114 +1,200 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 960 680" font-family="'Segoe UI','PingFang SC','Microsoft YaHei',sans-serif" width="960" height="680">
-  <rect x="0" y="0" width="960" height="680" fill="#ffffff"/>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 960 640" font-family="'Segoe UI','PingFang SC','Microsoft YaHei',sans-serif" width="960" height="640">
+  <rect x="0" y="0" width="960" height="640" fill="#ffffff"/>
 
-  <!-- 标题 -->
-  <text x="480" y="36" font-size="20" font-weight="700" fill="#1e293b" text-anchor="middle">PPO with Piecewise Reward &amp; KL Penalty (Llama 2-Chat RLHF)</text>
+  <!-- 主标题 -->
+  <text x="480" y="36" text-anchor="middle" font-size="18" font-weight="bold" fill="#1e293b">Llama 2-Chat RLHF: PPO with Piecewise Reward &amp; KL Penalty</text>
 
-  <!-- ====== 主面板：核心公式 ====== -->
-  <rect x="40" y="56" width="880" height="110" rx="6" fill="#eef2ff" stroke="#6366f1" stroke-width="2"/>
-  <text x="480" y="82" font-size="16" font-weight="600" fill="#3730a3" text-anchor="middle">Final Reward Function (Optimization Objective)</text>
-  <text x="480" y="118" font-size="22" font-weight="700" fill="#1e293b" text-anchor="middle">R(g | p) = R̃_c(g | p) − β · D_KL( π_θ(g | p) ∥ π_0(g | p) )</text>
-  <text x="480" y="148" font-size="13" fill="#334155" text-anchor="middle">where R̃_c = whitened combination reward; β = KL penalty coefficient</text>
+  <!-- ===== 左侧主面板：核心公式与流程 ===== -->
+  <rect x="40" y="56" width="620" height="560" fill="#f8fafc" stroke="#cbd5e1" stroke-width="1.2" rx="4"/>
 
-  <!-- ====== 左侧：奖励组合机制 ====== -->
-  <rect x="40" y="182" width="440" height="240" rx="4" fill="#f8fafc" stroke="#cbd5e1" stroke-width="1.2"/>
-  <text x="260" y="206" font-size="14" font-weight="600" fill="#1e293b" text-anchor="middle">Piecewise Reward Composition</text>
+  <!-- 1) 核心公式（视觉焦点） -->
+  <rect x="60" y="72" width="580" height="80" fill="#eef2ff" stroke="#6366f1" stroke-width="1.8" rx="4"/>
+  <text x="350" y="96" text-anchor="middle" font-size="14" font-weight="bold" fill="#3730a3">Objective: Maximize Reward with KL Penalty</text>
+  <text x="350" y="130" text-anchor="middle" font-size="16" font-weight="bold" fill="#1e293b">
+    R(g | p) = 
+    <tspan font-style="italic">R</tspan>
+    <tspan baseline-shift="super" font-size="75%">c</tspan>
+    <tspan font-style="italic">(g | p) &#8722; &#946; D</tspan>
+    <tspan baseline-shift="sub" font-size="75%">KL</tspan>
+    <tspan>(&#960;</tspan>
+    <tspan baseline-shift="sub" font-size="75%">&#952;</tspan>
+    <tspan>(g | p) &#8741; &#960;</tspan>
+    <tspan baseline-shift="sub" font-size="75%">0</tspan>
+    <tspan>(g | p))</tspan>
+  </text>
 
-  <!-- 条件判断框 -->
-  <rect x="80" y="220" width="360" height="36" rx="4" fill="#f1f5f9" stroke="#94a3b8" stroke-width="1"/>
-  <text x="260" y="243" font-size="13" fill="#334155" text-anchor="middle">Is prompt p in safety category OR safety score &lt; 0.15?</text>
+  <!-- 2) 组合奖励 R_c 的定义 -->
+  <rect x="60" y="168" width="580" height="100" fill="#ffffff" stroke="#cbd5e1" stroke-width="1" rx="3"/>
+  <text x="350" y="190" text-anchor="middle" font-size="13" font-weight="bold" fill="#334155">Piecewise Reward: R</text>
+  <text x="350" y="190" text-anchor="middle" font-size="13" font-weight="bold" fill="#334155">
+    <tspan>Piecewise Reward: R</tspan>
+    <tspan baseline-shift="sub" font-size="75%">c</tspan>
+    <tspan> = </tspan>
+  </text>
+  <text x="350" y="210" text-anchor="middle" font-size="12" fill="#475569">
+    <tspan font-style="italic">R</tspan>
+    <tspan baseline-shift="sub" font-size="75%">s</tspan>
+    <tspan>(g | p)  if prompt is safety category OR safety score &lt; 0.15</tspan>
+  </text>
+  <text x="350" y="232" text-anchor="middle" font-size="12" fill="#475569">
+    <tspan font-style="italic">R</tspan>
+    <tspan baseline-shift="sub" font-size="75%">h</tspan>
+    <tspan>(g | p)  otherwise</tspan>
+  </text>
+  <text x="350" y="256" text-anchor="middle" font-size="11" fill="#64748b">R</text>
+  <text x="350" y="256" text-anchor="middle" font-size="11" fill="#64748b">
+    <tspan>R</tspan>
+    <tspan baseline-shift="sub" font-size="75%">s</tspan>
+    <tspan> = safety reward model, R</tspan>
+    <tspan baseline-shift="sub" font-size="75%">h</tspan>
+    <tspan> = helpfulness reward model</tspan>
+  </text>
 
-  <!-- 分支箭头 -->
-  <line x1="260" y1="256" x2="140" y2="280" stroke="#475569" stroke-width="1.5"/>
-  <polygon points="140,280 146,274 146,286" fill="#475569"/>
-  <line x1="260" y1="256" x2="380" y2="280" stroke="#475569" stroke-width="1.5"/>
-  <polygon points="380,280 374,274 374,286" fill="#475569"/>
+  <!-- 3) 白化处理 -->
+  <rect x="60" y="284" width="580" height="70" fill="#ffffff" stroke="#cbd5e1" stroke-width="1" rx="3"/>
+  <text x="350" y="306" text-anchor="middle" font-size="13" font-weight="bold" fill="#334155">Whitening of R</text>
+  <text x="350" y="306" text-anchor="middle" font-size="13" font-weight="bold" fill="#334155">
+    <tspan>Whitening of R</tspan>
+    <tspan baseline-shift="sub" font-size="75%">c</tspan>
+    <tspan> via logit inverse sigmoid</tspan>
+  </text>
+  <text x="350" y="330" text-anchor="middle" font-size="12" fill="#475569">
+    <tspan>R</tspan>
+    <tspan baseline-shift="super" font-size="75%">&#8764;</tspan>
+    <tspan baseline-shift="sub" font-size="75%">c</tspan>
+    <tspan> = sigmoid</tspan>
+    <tspan baseline-shift="super" font-size="75%">&#8722;1</tspan>
+    <tspan>(R</tspan>
+    <tspan baseline-shift="sub" font-size="75%">c</tspan>
+    <tspan>)  then  z-score normalization</tspan>
+  </text>
+  <text x="350" y="348" text-anchor="middle" font-size="11" fill="#64748b">Stabilizes training &amp; balances with KL penalty term</text>
 
-  <text x="120" y="274" font-size="11" fill="#64748b" text-anchor="middle">Yes</text>
-  <text x="400" y="274" font-size="11" fill="#64748b" text-anchor="middle">No</text>
+  <!-- 4) PPO 优化流程 -->
+  <rect x="60" y="370" width="580" height="230" fill="#ffffff" stroke="#cbd5e1" stroke-width="1" rx="3"/>
+  <text x="350" y="394" text-anchor="middle" font-size="13" font-weight="bold" fill="#334155">PPO Optimization Loop</text>
 
-  <!-- 左分支：安全奖励 -->
-  <rect x="60" y="286" width="160" height="44" rx="4" fill="#eef2ff" stroke="#6366f1" stroke-width="1.2"/>
-  <text x="140" y="306" font-size="13" font-weight="600" fill="#3730a3" text-anchor="middle">R_s(g | p)</text>
-  <text x="140" y="322" font-size="11" fill="#64748b" text-anchor="middle">Safety Reward Model</text>
+  <!-- 流程框：纵向 -->
+  <rect x="120" y="412" width="160" height="44" fill="#f1f5f9" stroke="#94a3b8" stroke-width="1" rx="3"/>
+  <text x="200" y="438" text-anchor="middle" font-size="12" fill="#1e293b">Policy &#960;</text>
+  <text x="200" y="438" text-anchor="middle" font-size="12" fill="#1e293b">
+    <tspan>Policy &#960;</tspan>
+    <tspan baseline-shift="sub" font-size="75%">&#952;</tspan>
+    <tspan> generates g</tspan>
+  </text>
 
-  <!-- 右分支：帮助性奖励 -->
-  <rect x="300" y="286" width="160" height="44" rx="4" fill="#eef2ff" stroke="#6366f1" stroke-width="1.2"/>
-  <text x="380" y="306" font-size="13" font-weight="600" fill="#3730a3" text-anchor="middle">R_h(g | p)</text>
-  <text x="380" y="322" font-size="11" fill="#64748b" text-anchor="middle">Helpfulness Reward Model</text>
+  <rect x="120" y="476" width="160" height="44" fill="#f1f5f9" stroke="#94a3b8" stroke-width="1" rx="3"/>
+  <text x="200" y="502" text-anchor="middle" font-size="12" fill="#1e293b">Reward R</text>
+  <text x="200" y="502" text-anchor="middle" font-size="12" fill="#1e293b">
+    <tspan>Reward R</tspan>
+    <tspan baseline-shift="super" font-size="75%">&#8764;</tspan>
+    <tspan baseline-shift="sub" font-size="75%">c</tspan>
+    <tspan> computed</tspan>
+  </text>
 
-  <!-- 合并箭头 -->
-  <line x1="140" y1="330" x2="140" y2="350" stroke="#475569" stroke-width="1.2"/>
-  <line x1="140" y1="350" x2="380" y2="350" stroke="#475569" stroke-width="1.2"/>
-  <line x1="380" y1="330" x2="380" y2="350" stroke="#475569" stroke-width="1.2"/>
-  <line x1="140" y1="350" x2="260" y2="370" stroke="#475569" stroke-width="1.5"/>
-  <polygon points="260,370 252,364 252,376" fill="#475569"/>
+  <rect x="120" y="540" width="160" height="44" fill="#f1f5f9" stroke="#94a3b8" stroke-width="1" rx="3"/>
+  <text x="200" y="566" text-anchor="middle" font-size="12" fill="#1e293b">KL penalty applied</text>
 
-  <!-- 组合奖励 -->
-  <rect x="180" y="370" width="160" height="36" rx="4" fill="#f1f5f9" stroke="#94a3b8" stroke-width="1"/>
-  <text x="260" y="393" font-size="13" font-weight="600" fill="#1e293b" text-anchor="middle">R_c(g | p)</text>
+  <!-- 箭头：纵向 -->
+  <line x1="200" y1="456" x2="200" y2="476" stroke="#475569" stroke-width="1.5"/>
+  <polygon points="196,472 200,480 204,472" fill="#475569"/>
+  <line x1="200" y1="520" x2="200" y2="540" stroke="#475569" stroke-width="1.5"/>
+  <polygon points="196,536 200,544 204,536" fill="#475569"/>
 
-  <!-- 白化处理 -->
-  <line x1="260" y1="406" x2="260" y2="420" stroke="#475569" stroke-width="1.5"/>
-  <polygon points="260,420 254,414 266,414" fill="#475569"/>
-  <rect x="180" y="420" width="160" height="36" rx="4" fill="#f1f5f9" stroke="#94a3b8" stroke-width="1"/>
-  <text x="260" y="443" font-size="13" font-weight="600" fill="#1e293b" text-anchor="middle">R̃_c = whiten(R_c)</text>
+  <!-- 右侧：更新公式 -->
+  <rect x="340" y="412" width="260" height="172" fill="#f8fafc" stroke="#cbd5e1" stroke-width="1" rx="3"/>
+  <text x="470" y="436" text-anchor="middle" font-size="12" font-weight="bold" fill="#334155">Policy Gradient Update</text>
+  <text x="470" y="462" text-anchor="middle" font-size="11" fill="#475569">
+    <tspan>&#8711;J(&#952;) = E[&#8711; log &#960;</tspan>
+    <tspan baseline-shift="sub" font-size="75%">&#952;</tspan>
+    <tspan>(g|p) &#183; A]</tspan>
+  </text>
+  <text x="470" y="488" text-anchor="middle" font-size="11" fill="#475569">
+    <tspan>A = R</tspan>
+    <tspan baseline-shift="super" font-size="75%">&#8764;</tspan>
+    <tspan baseline-shift="sub" font-size="75%">c</tspan>
+    <tspan> &#8722; &#946; D</tspan>
+    <tspan baseline-shift="sub" font-size="75%">KL</tspan>
+    <tspan>(&#960;</tspan>
+    <tspan baseline-shift="sub" font-size="75%">&#952;</tspan>
+    <tspan> &#8741; &#960;</tspan>
+    <tspan baseline-shift="sub" font-size="75%">0</tspan>
+    <tspan>)</tspan>
+  </text>
+  <text x="470" y="514" text-anchor="middle" font-size="11" fill="#475569">Clip ratio to [1&#8722;&#949;, 1+&#949;]</text>
+  <text x="470" y="540" text-anchor="middle" font-size="11" fill="#475569">Update &#952; via AdamW</text>
+  <text x="470" y="566" text-anchor="middle" font-size="11" fill="#64748b">Iterate until convergence</text>
 
-  <!-- ====== 右侧：KL 惩罚与策略更新 ====== -->
-  <rect x="500" y="182" width="420" height="240" rx="4" fill="#f8fafc" stroke="#cbd5e1" stroke-width="1.2"/>
-  <text x="710" y="206" font-size="14" font-weight="600" fill="#1e293b" text-anchor="middle">KL Penalty &amp; Policy Update</text>
+  <!-- ===== 右侧面板：图例与说明 ===== -->
+  <rect x="680" y="56" width="240" height="560" fill="#f8fafc" stroke="#cbd5e1" stroke-width="1.2" rx="4"/>
 
-  <!-- 策略 π_θ -->
-  <rect x="540" y="220" width="160" height="44" rx="4" fill="#eef2ff" stroke="#6366f1" stroke-width="1.2"/>
-  <text x="620" y="240" font-size="14" font-weight="600" fill="#3730a3" text-anchor="middle">π_θ(g | p)</text>
-  <text x="620" y="256" font-size="11" fill="#64748b" text-anchor="middle">Current Policy</text>
+  <!-- 图例 -->
+  <text x="800" y="84" text-anchor="middle" font-size="13" font-weight="bold" fill="#334155">Legend</text>
 
-  <!-- 原始策略 π_0 -->
-  <rect x="720" y="220" width="160" height="44" rx="4" fill="#f1f5f9" stroke="#94a3b8" stroke-width="1"/>
-  <text x="800" y="240" font-size="14" font-weight="600" fill="#334155" text-anchor="middle">π_0(g | p)</text>
-  <text x="800" y="256" font-size="11" fill="#64748b" text-anchor="middle">Original Policy (frozen)</text>
+  <rect x="700" y="100" width="200" height="120" fill="#ffffff" stroke="#e2e8f0" stroke-width="1" rx="3"/>
+  <line x1="710" y1="120" x2="750" y2="120" stroke="#475569" stroke-width="1.5"/>
+  <polygon points="746,116 754,120 746,124" fill="#475569"/>
+  <text x="760" y="124" font-size="11" fill="#475569">Data flow</text>
 
-  <!-- KL 散度 -->
-  <line x1="700" y1="242" x2="720" y2="242" stroke="#475569" stroke-width="1.2"/>
-  <text x="710" y="236" font-size="11" fill="#64748b" text-anchor="middle">KL</text>
+  <line x1="710" y1="148" x2="750" y2="148" stroke="#94a3b8" stroke-width="1.5" stroke-dasharray="5,4"/>
+  <polygon points="746,144 754,148 746,152" fill="#94a3b8"/>
+  <text x="760" y="152" font-size="11" fill="#475569">Reference / baseline</text>
 
-  <rect x="540" y="280" width="340" height="36" rx="4" fill="#f1f5f9" stroke="#94a3b8" stroke-width="1"/>
-  <text x="710" y="303" font-size="13" font-weight="600" fill="#1e293b" text-anchor="middle">D_KL( π_θ ∥ π_0 ) = Σ π_θ log(π_θ / π_0)</text>
+  <line x1="710" y1="176" x2="750" y2="176" stroke="#6366f1" stroke-width="2.5"/>
+  <polygon points="746,172 754,176 746,180" fill="#6366f1"/>
+  <text x="760" y="180" font-size="11" fill="#475569">Selected / emphasized</text>
 
-  <!-- 最终奖励 -->
-  <line x1="710" y1="316" x2="710" y2="340" stroke="#475569" stroke-width="1.5"/>
-  <polygon points="710,340 704,334 716,334" fill="#475569"/>
-  <rect x="540" y="340" width="340" height="36" rx="4" fill="#eef2ff" stroke="#6366f1" stroke-width="1.2"/>
-  <text x="710" y="363" font-size="14" font-weight="600" fill="#3730a3" text-anchor="middle">R = R̃_c − β · D_KL</text>
+  <!-- 符号说明 -->
+  <text x="800" y="244" text-anchor="middle" font-size="13" font-weight="bold" fill="#334155">Notation</text>
 
-  <!-- PPO 更新 -->
-  <line x1="710" y1="376" x2="710" y2="400" stroke="#475569" stroke-width="1.5"/>
-  <polygon points="710,400 704,394 716,394" fill="#475569"/>
-  <rect x="540" y="400" width="340" height="36" rx="4" fill="#f1f5f9" stroke="#94a3b8" stroke-width="1"/>
-  <text x="710" y="423" font-size="13" font-weight="600" fill="#1e293b" text-anchor="middle">θ ← argmax_θ E[ R ]  (PPO clipped surrogate)</text>
+  <rect x="700" y="260" width="200" height="160" fill="#ffffff" stroke="#e2e8f0" stroke-width="1" rx="3"/>
+  <text x="710" y="282" font-size="11" fill="#475569">p = prompt</text>
+  <text x="710" y="302" font-size="11" fill="#475569">g = generated response</text>
+  <text x="710" y="322" font-size="11" fill="#475569">&#960;</text>
+  <text x="710" y="322" font-size="11" fill="#475569">
+    <tspan>&#960;</tspan>
+    <tspan baseline-shift="sub" font-size="75%">&#952;</tspan>
+    <tspan> = current policy</tspan>
+  </text>
+  <text x="710" y="342" font-size="11" fill="#475569">
+    <tspan>&#960;</tspan>
+    <tspan baseline-shift="sub" font-size="75%">0</tspan>
+    <tspan> = initial policy (SFT)</tspan>
+  </text>
+  <text x="710" y="362" font-size="11" fill="#475569">
+    <tspan>R</tspan>
+    <tspan baseline-shift="sub" font-size="75%">s</tspan>
+    <tspan> = safety reward model</tspan>
+  </text>
+  <text x="710" y="382" font-size="11" fill="#475569">
+    <tspan>R</tspan>
+    <tspan baseline-shift="sub" font-size="75%">h</tspan>
+    <tspan> = helpfulness reward model</tspan>
+  </text>
+  <text x="710" y="402" font-size="11" fill="#475569">
+    <tspan>R</tspan>
+    <tspan baseline-shift="super" font-size="75%">&#8764;</tspan>
+    <tspan baseline-shift="sub" font-size="75%">c</tspan>
+    <tspan> = whitened combined reward</tspan>
+  </text>
 
-  <!-- ====== 底部：图例 ====== -->
-  <rect x="40" y="440" width="880" height="80" rx="4" fill="#fbfcfe" stroke="#e2e8f0" stroke-width="1"/>
-  <text x="60" y="462" font-size="12" font-weight="600" fill="#1e293b">Legend</text>
+  <!-- 关键参数 -->
+  <text x="800" y="448" text-anchor="middle" font-size="13" font-weight="bold" fill="#334155">Key Parameters</text>
 
-  <!-- 图例项 -->
-  <line x1="60" y1="482" x2="100" y2="482" stroke="#6366f1" stroke-width="2"/>
-  <polygon points="100,482 96,478 96,486" fill="#6366f1"/>
-  <text x="108" y="486" font-size="11" fill="#334155">Forward flow / data dependency</text>
+  <rect x="700" y="464" width="200" height="100" fill="#ffffff" stroke="#e2e8f0" stroke-width="1" rx="3"/>
+  <text x="710" y="486" font-size="11" fill="#475569">
+    <tspan>&#946; = KL penalty coefficient</tspan>
+  </text>
+  <text x="710" y="506" font-size="11" fill="#475569">
+    <tspan>&#949; = PPO clip range (e.g., 0.2)</tspan>
+  </text>
+  <text x="710" y="526" font-size="11" fill="#475569">
+    <tspan>Safety threshold = 0.15</tspan>
+  </text>
+  <text x="710" y="546" font-size="11" fill="#475569">
+    <tspan>Learning rate: AdamW</tspan>
+  </text>
 
-  <line x1="60" y1="502" x2="100" y2="502" stroke="#94a3b8" stroke-width="1.2" stroke-dasharray="5,4"/>
-  <text x="108" y="506" font-size="11" fill="#334155">Reference / frozen component</text>
-
-  <rect x="300" y="472" width="14" height="14" rx="2" fill="#eef2ff" stroke="#6366f1" stroke-width="1.2"/>
-  <text x="320" y="484" font-size="11" fill="#334155">Active / learned component</text>
-
-  <rect x="300" y="492" width="14" height="14" rx="2" fill="#f1f5f9" stroke="#94a3b8" stroke-width="1"/>
-  <text x="320" y="504" font-size="11" fill="#334155">Fixed / auxiliary component</text>
-
-  <!-- ====== 底部说明 ====== -->
-  <text x="480" y="548" font-size="12" fill="#64748b" text-anchor="middle">R_c = piecewise(R_s, R_h) based on safety category/score; whiten via inverse sigmoid + standardization</text>
-  <text x="480" y="568" font-size="12" fill="#64748b" text-anchor="middle">β controls trade-off between reward maximization and staying close to π_0 (prevents reward hacking)</text>
-
-  <!-- 小注脚 -->
-  <text x="480" y="600" font-size="11" fill="#94a3b8" text-anchor="middle">Based on Llama 2: Open Foundation and Fine-Tuned Chat Models (Touvron et al., 2023, §3.2.3)</text>
+  <!-- 底部说明 -->
+  <text x="800" y="596" text-anchor="middle" font-size="10" fill="#64748b">Based on Llama 2: Open Foundation and Fine-Tuned Chat Models</text>
 </svg>

@@ -1,106 +1,92 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 960 680" font-family="'Segoe UI','PingFang SC','Microsoft YaHei',sans-serif" width="960" height="680">
-  <rect x="0" y="0" width="960" height="680" fill="#ffffff"/>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 960 640" font-family="'Segoe UI','PingFang SC','Microsoft YaHei',sans-serif" width="960" height="640">
+  <rect x="0" y="0" width="960" height="640" fill="#ffffff"/>
 
-  <!-- 主标题 -->
-  <text x="480" y="36" font-size="20" font-weight="bold" fill="#1e293b" text-anchor="middle">LoRA: Scaling Factor &#945;/r and Optimizer Interaction</text>
+  <!-- 标题 -->
+  <text x="480" y="36" font-size="22" font-weight="bold" fill="#1e293b" text-anchor="middle">LoRA: Low-Rank Adaptation — Core Mechanism</text>
 
-  <!-- 核心公式框（视觉焦点） -->
-  <rect x="280" y="56" width="400" height="64" rx="4" fill="#eef2ff" stroke="#6366f1" stroke-width="2"/>
-  <text x="480" y="82" font-size="18" font-weight="bold" fill="#3730a3" text-anchor="middle">Forward Pass: h = W&#8320;x + &#916;Wx</text>
-  <text x="480" y="108" font-size="16" fill="#3730a3" text-anchor="middle">&#916;Wx = (BA)x &#215; (&#945;/r)</text>
+  <!-- 左侧主面板：核心公式与重参数化 -->
+  <rect x="40" y="60" width="580" height="540" fill="#f8fafc" stroke="#cbd5e1" stroke-width="1.5" rx="4"/>
+  <text x="330" y="90" font-size="16" font-weight="bold" fill="#334155" text-anchor="middle">Reparametrization: Frozen Pre-trained Weights + Trainable Low-Rank Decomposition</text>
 
-  <!-- 左侧：低秩分解结构 -->
-  <rect x="40" y="140" width="400" height="200" rx="4" fill="#f8fafc" stroke="#cbd5e1" stroke-width="1.5"/>
-  <text x="240" y="168" font-size="14" font-weight="bold" fill="#1e293b" text-anchor="middle">Low-Rank Decomposition: &#916;W = BA</text>
+  <!-- 核心公式框（强调色） -->
+  <rect x="80" y="110" width="500" height="80" fill="#eef2ff" stroke="#6366f1" stroke-width="2" rx="4"/>
+  <text x="330" y="140" font-size="18" font-weight="bold" fill="#3730a3" text-anchor="middle">Forward Pass with LoRA</text>
+  <text x="330" y="172" font-size="20" fill="#1e293b" text-anchor="middle">
+    h = W<tspan baseline-shift="sub" font-size="75%">0</tspan> x + &#916;W x &#183; (&#945; / r)
+  </text>
 
-  <!-- 矩阵 W0 -->
-  <rect x="60" y="186" width="120" height="120" rx="2" fill="#f1f5f9" stroke="#475569" stroke-width="1.5"/>
-  <text x="120" y="250" font-size="13" fill="#334155" text-anchor="middle">W&#8320;</text>
-  <text x="120" y="270" font-size="11" fill="#64748b" text-anchor="middle">d &#215; d</text>
+  <!-- 公式分解说明 -->
+  <text x="330" y="210" font-size="14" fill="#475569" text-anchor="middle">where &#916;W = B A, with B &#8712; &#8477;<tspan baseline-shift="super" font-size="75%">d&#215;r</tspan>, A &#8712; &#8477;<tspan baseline-shift="super" font-size="75%">r&#215;d</tspan>, rank r &#8810; d</text>
+
+  <!-- 重参数化示意图：W0 冻结 + BA 训练 -->
+  <!-- 左侧：W0 冻结 -->
+  <rect x="100" y="240" width="120" height="120" fill="#f1f5f9" stroke="#94a3b8" stroke-width="1.5" rx="3"/>
+  <text x="160" y="280" font-size="14" font-weight="bold" fill="#334155" text-anchor="middle">W<tspan baseline-shift="sub" font-size="75%">0</tspan></text>
+  <text x="160" y="300" font-size="12" fill="#64748b" text-anchor="middle">(frozen)</text>
+  <text x="160" y="320" font-size="11" fill="#64748b" text-anchor="middle">&#8477;<tspan baseline-shift="super" font-size="75%">d&#215;d</tspan></text>
 
   <!-- 加号 -->
-  <text x="200" y="250" font-size="20" fill="#1e293b" text-anchor="middle">+</text>
+  <text x="260" y="305" font-size="24" fill="#1e293b" text-anchor="middle">+</text>
 
-  <!-- 矩阵 B -->
-  <rect x="220" y="186" width="80" height="120" rx="2" fill="#eef2ff" stroke="#6366f1" stroke-width="1.5"/>
-  <text x="260" y="250" font-size="13" fill="#3730a3" text-anchor="middle">B</text>
-  <text x="260" y="270" font-size="11" fill="#64748b" text-anchor="middle">d &#215; r</text>
+  <!-- 右侧：BA 分解 -->
+  <rect x="290" y="240" width="120" height="120" fill="#eef2ff" stroke="#6366f1" stroke-width="1.5" rx="3"/>
+  <text x="350" y="275" font-size="14" font-weight="bold" fill="#3730a3" text-anchor="middle">&#916;W = B A</text>
+  <text x="350" y="295" font-size="12" fill="#6366f1" text-anchor="middle">(trainable)</text>
+  <text x="350" y="315" font-size="11" fill="#6366f1" text-anchor="middle">rank r</text>
 
-  <!-- 矩阵 A -->
-  <rect x="310" y="186" width="80" height="120" rx="2" fill="#eef2ff" stroke="#6366f1" stroke-width="1.5"/>
-  <text x="350" y="250" font-size="13" fill="#3730a3" text-anchor="middle">A</text>
-  <text x="350" y="270" font-size="11" fill="#64748b" text-anchor="middle">r &#215; d</text>
+  <!-- 箭头：从 A 到 B -->
+  <line x1="290" y1="300" x2="240" y2="300" stroke="#6366f1" stroke-width="1.5"/>
+  <polygon points="240,295 250,300 240,305" fill="#6366f1"/>
 
-  <!-- 等号 -->
-  <text x="410" y="250" font-size="20" fill="#1e293b" text-anchor="middle">=</text>
+  <!-- 下方：A 和 B 的维度标注 -->
+  <rect x="100" y="390" width="160" height="50" fill="#f1f5f9" stroke="#cbd5e1" stroke-width="1" rx="3"/>
+  <text x="180" y="412" font-size="13" fill="#334155" text-anchor="middle">A: &#8477;<tspan baseline-shift="super" font-size="75%">r&#215;d</tspan></text>
+  <text x="180" y="430" font-size="11" fill="#64748b" text-anchor="middle">initialized &#8764; &#120001;(0, &#963;<tspan baseline-shift="super" font-size="75%">2</tspan>)</text>
 
-  <!-- 结果矩阵 -->
-  <rect x="430" y="186" width="80" height="120" rx="2" fill="#f1f5f9" stroke="#475569" stroke-width="1.5"/>
-  <text x="470" y="250" font-size="13" fill="#334155" text-anchor="middle">&#916;W</text>
-  <text x="470" y="270" font-size="11" fill="#64748b" text-anchor="middle">d &#215; d</text>
+  <rect x="290" y="390" width="160" height="50" fill="#f1f5f9" stroke="#cbd5e1" stroke-width="1" rx="3"/>
+  <text x="370" y="412" font-size="13" fill="#334155" text-anchor="middle">B: &#8477;<tspan baseline-shift="super" font-size="75%">d&#215;r</tspan></text>
+  <text x="370" y="430" font-size="11" fill="#64748b" text-anchor="middle">initialized = 0</text>
 
-  <!-- 初始化说明 -->
-  <text x="240" y="328" font-size="11" fill="#64748b" text-anchor="middle">A ~ N(0, &#963;&#178;), B = 0 &#8594; &#916;W = 0 at start</text>
+  <!-- 缩放因子 α/r 说明 -->
+  <rect x="100" y="460" width="350" height="60" fill="#fbfcfe" stroke="#cbd5e1" stroke-width="1" rx="3"/>
+  <text x="275" y="484" font-size="14" font-weight="bold" fill="#334155" text-anchor="middle">Scaling Factor: &#945; / r</text>
+  <text x="275" y="506" font-size="12" fill="#475569" text-anchor="middle">&#945; is fixed constant (set to first r tried); adjusting &#945; &#8776; adjusting learning rate</text>
 
-  <!-- 右侧：缩放因子与优化器交互 -->
-  <rect x="480" y="140" width="440" height="200" rx="4" fill="#f8fafc" stroke="#cbd5e1" stroke-width="1.5"/>
-  <text x="700" y="168" font-size="14" font-weight="bold" fill="#1e293b" text-anchor="middle">Scaling Factor &#945;/r with Adam Optimizer</text>
-
-  <!-- 公式 -->
-  <rect x="500" y="184" width="400" height="44" rx="2" fill="#f1f5f9" stroke="#e2e8f0" stroke-width="1"/>
-  <text x="700" y="210" font-size="15" fill="#1e293b" text-anchor="middle">&#916;Wx = (BA)x &#215; (&#945;/r)</text>
-
-  <!-- 关键观察 -->
-  <rect x="500" y="240" width="400" height="36" rx="2" fill="#eef2ff" stroke="#6366f1" stroke-width="1"/>
-  <text x="700" y="262" font-size="13" fill="#3730a3" text-anchor="middle">With Adam: tuning &#945; &#8776; tuning learning rate (if init scaled)</text>
-
-  <!-- 实践 -->
-  <text x="700" y="300" font-size="12" fill="#334155" text-anchor="middle">Set &#945; = first r tried; no separate tuning needed</text>
-  <text x="700" y="320" font-size="11" fill="#64748b" text-anchor="middle">Example: r = 4, &#945; = 4 &#8594; scale = 1.0</text>
-
-  <!-- 底部：前向与反向传播对比 -->
-  <rect x="40" y="360" width="880" height="200" rx="4" fill="#f8fafc" stroke="#cbd5e1" stroke-width="1.5"/>
-  <text x="480" y="388" font-size="14" font-weight="bold" fill="#1e293b" text-anchor="middle">Forward vs. Backward: Parameter Efficiency</text>
-
-  <!-- 前向 -->
-  <rect x="60" y="404" width="400" height="140" rx="2" fill="#f1f5f9" stroke="#e2e8f0" stroke-width="1"/>
-  <text x="260" y="426" font-size="13" font-weight="bold" fill="#1e293b" text-anchor="middle">Forward Pass</text>
-  <text x="260" y="450" font-size="12" fill="#334155" text-anchor="middle">h = W&#8320;x + (BA)x &#215; (&#945;/r)</text>
-  <text x="260" y="472" font-size="11" fill="#64748b" text-anchor="middle">W&#8320; frozen; only A, B updated</text>
-  <text x="260" y="494" font-size="11" fill="#64748b" text-anchor="middle">No extra inference latency (merge &#916;W into W&#8320;)</text>
-  <text x="260" y="516" font-size="11" fill="#64748b" text-anchor="middle">Checkpoint: 350GB &#8594; 35MB (r=4, Wq+Wv)</text>
-
-  <!-- 反向 -->
-  <rect x="500" y="404" width="400" height="140" rx="2" fill="#f1f5f9" stroke="#e2e8f0" stroke-width="1"/>
-  <text x="700" y="426" font-size="13" font-weight="bold" fill="#1e293b" text-anchor="middle">Backward Pass (Adam)</text>
-  <text x="700" y="450" font-size="12" fill="#334155" text-anchor="middle">Gradients only for A, B (&#8776; 0.01% params)</text>
-  <text x="700" y="472" font-size="11" fill="#64748b" text-anchor="middle">VRAM: 1.2TB &#8594; 350GB (GPT-3 175B)</text>
-  <text x="700" y="494" font-size="11" fill="#64748b" text-anchor="middle">Training speedup: ~25% vs. full fine-tuning</text>
-  <text x="700" y="516" font-size="11" fill="#64748b" text-anchor="middle">&#945;/r scaling compensates for low-rank bottleneck</text>
+  <!-- 右侧面板：图例与关键点 -->
+  <rect x="640" y="60" width="280" height="540" fill="#f8fafc" stroke="#cbd5e1" stroke-width="1.5" rx="4"/>
+  <text x="780" y="90" font-size="16" font-weight="bold" fill="#334155" text-anchor="middle">Legend &amp; Key Insights</text>
 
   <!-- 图例 -->
-  <rect x="40" y="580" width="880" height="80" rx="4" fill="#fbfcfe" stroke="#e2e8f0" stroke-width="1"/>
-  <text x="480" y="604" font-size="12" font-weight="bold" fill="#1e293b" text-anchor="middle">Legend</text>
+  <rect x="660" y="110" width="240" height="120" fill="#f1f5f9" stroke="#e2e8f0" stroke-width="1" rx="3"/>
+  <text x="780" y="132" font-size="13" font-weight="bold" fill="#334155" text-anchor="middle">Arrow Types</text>
 
-  <!-- 实线箭头 -->
-  <line x1="80" y1="624" x2="120" y2="624" stroke="#475569" stroke-width="1.5"/>
-  <polygon points="120,618 130,624 120,630" fill="#475569"/>
-  <text x="140" y="628" font-size="11" fill="#334155">Data flow / forward pass</text>
+  <line x1="670" y1="152" x2="710" y2="152" stroke="#475569" stroke-width="1.5"/>
+  <polygon points="710,147 718,152 710,157" fill="#475569"/>
+  <text x="730" y="156" font-size="12" fill="#475569">Data flow / forward</text>
 
-  <!-- 虚线箭头 -->
-  <line x1="320" y1="624" x2="360" y2="624" stroke="#94a3b8" stroke-width="1.5" stroke-dasharray="5,4"/>
-  <polygon points="360,618 370,624 360,630" fill="#94a3b8"/>
-  <text x="380" y="628" font-size="11" fill="#334155">Gradient flow / backward pass</text>
+  <line x1="670" y1="178" x2="710" y2="178" stroke="#6366f1" stroke-width="1.5"/>
+  <polygon points="710,173 718,178 710,183" fill="#6366f1"/>
+  <text x="730" y="182" font-size="12" fill="#6366f1">Decomposition mapping</text>
 
-  <!-- 强调色框 -->
-  <rect x="580" y="616" width="16" height="16" rx="2" fill="#eef2ff" stroke="#6366f1" stroke-width="1.5"/>
-  <text x="604" y="628" font-size="11" fill="#334155">Key formula / insight</text>
+  <line x1="670" y1="204" x2="710" y2="204" stroke="#94a3b8" stroke-width="1.5" stroke-dasharray="5,4"/>
+  <polygon points="710,199 718,204 710,209" fill="#94a3b8"/>
+  <text x="730" y="208" font-size="12" fill="#64748b">Reference / comparison</text>
 
-  <!-- 箭头：从公式到右侧面板 -->
-  <line x1="680" y1="120" x2="700" y2="140" stroke="#6366f1" stroke-width="1.5"/>
-  <polygon points="695,136 704,142 693,144" fill="#6366f1"/>
+  <!-- 关键洞察 -->
+  <rect x="660" y="250" width="240" height="270" fill="#f1f5f9" stroke="#e2e8f0" stroke-width="1" rx="3"/>
+  <text x="780" y="274" font-size="13" font-weight="bold" fill="#334155" text-anchor="middle">Key Properties</text>
 
-  <!-- 箭头：从左侧到右侧 -->
-  <line x1="440" y1="240" x2="480" y2="240" stroke="#94a3b8" stroke-width="1" stroke-dasharray="5,4"/>
-  <polygon points="476,234 486,240 476,246" fill="#94a3b8"/>
+  <text x="675" y="300" font-size="12" fill="#1e293b">&#8226; Freeze W<tspan baseline-shift="sub" font-size="75%">0</tspan>; only train A, B</text>
+  <text x="675" y="322" font-size="12" fill="#1e293b">&#8226; Rank r &#8810; d (e.g., r=1,2 for GPT-3 175B)</text>
+  <text x="675" y="344" font-size="12" fill="#1e293b">&#8226; No extra inference latency</text>
+  <text x="675" y="366" font-size="12" fill="#1e293b">&#8226; &#916;W = B A has low intrinsic rank</text>
+  <text x="675" y="388" font-size="12" fill="#1e293b">&#8226; &#945;/r scaling: &#945; fixed, adjust LR instead</text>
+  <text x="675" y="410" font-size="12" fill="#1e293b">&#8226; Applied to attention W<tspan baseline-shift="sub" font-size="75%">q</tspan>, W<tspan baseline-shift="sub" font-size="75%">k</tspan>, W<tspan baseline-shift="sub" font-size="75%">v</tspan>, W<tspan baseline-shift="sub" font-size="75%">o</tspan></text>
+  <text x="675" y="432" font-size="12" fill="#1e293b">&#8226; Reduces params by 10,000&#215; (GPT-3)</text>
+  <text x="675" y="454" font-size="12" fill="#1e293b">&#8226; Reduces GPU memory by 3&#215;</text>
+  <text x="675" y="476" font-size="12" fill="#1e293b">&#8226; On-par or better than full fine-tune</text>
+
+  <!-- 底部引用 -->
+  <text x="780" y="560" font-size="11" fill="#94a3b8" text-anchor="middle">Figure 1 from LoRA paper (Hu et al., 2021)</text>
+  <text x="780" y="580" font-size="11" fill="#94a3b8" text-anchor="middle">&#916;W x &#183; (&#945;/r) with Adam: &#945; fixed, LR tuned</text>
 </svg>

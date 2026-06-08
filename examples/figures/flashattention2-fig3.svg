@@ -1,113 +1,113 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 960 680" font-family="'Segoe UI','PingFang SC','Microsoft YaHei',sans-serif" width="960" height="680">
-  <rect x="0" y="0" width="960" height="680" fill="#ffffff"/>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 960 620" font-family="'Segoe UI','PingFang SC','Microsoft YaHei',sans-serif" width="960" height="620">
+  <rect x="0" y="0" width="960" height="620" fill="#ffffff"/>
 
   <!-- 标题 -->
-  <text x="480" y="36" font-size="20" font-weight="700" fill="#1e293b" text-anchor="middle">FlashAttention-2: Block Size Tuning</text>
-  <line x1="160" y1="48" x2="800" y2="48" stroke="#cbd5e1" stroke-width="1"/>
+  <text x="480" y="36" text-anchor="middle" font-size="20" font-weight="bold" fill="#1e293b">Block Size Tuning in FlashAttention-2</text>
+  <text x="480" y="58" text-anchor="middle" font-size="13" fill="#64748b">Manual selection of tile sizes B<tspan baseline-shift="sub" font-size="75%">r</tspan> and B<tspan baseline-shift="sub" font-size="75%">c</tspan> to balance shared memory traffic, register pressure, and occupancy</text>
 
   <!-- 核心定义框（强调色） -->
-  <rect x="60" y="68" width="840" height="100" rx="6" fill="#eef2ff" stroke="#6366f1" stroke-width="2"/>
-  <text x="480" y="96" font-size="18" font-weight="700" fill="#3730a3" text-anchor="middle">Core Tuning Objective</text>
-  <text x="480" y="126" font-size="16" fill="#1e293b" text-anchor="middle">Choose block sizes B<tspan baseline-shift="sub" font-size="75%">r</tspan> (query blocks) and B<tspan baseline-shift="sub" font-size="75%">c</tspan> (key/value blocks)</text>
-  <text x="480" y="152" font-size="15" fill="#334155" text-anchor="middle">to maximize throughput while fitting within shared memory and register constraints</text>
+  <rect x="60" y="80" width="840" height="100" rx="6" fill="#eef2ff" stroke="#6366f1" stroke-width="2"/>
+  <text x="480" y="108" text-anchor="middle" font-size="16" font-weight="bold" fill="#3730a3">Core Definition: Block Size Selection</text>
+  <text x="480" y="134" text-anchor="middle" font-size="14" fill="#1e293b">B<tspan baseline-shift="sub" font-size="75%">r</tspan> &#8712; {64, 128},  B<tspan baseline-shift="sub" font-size="75%">c</tspan> &#8712; {64, 128}</text>
+  <text x="480" y="158" text-anchor="middle" font-size="13" fill="#334155">Chosen based on head dimension d and GPU shared memory size (typically 48–164 KB per SM)</text>
 
-  <!-- 左侧：块大小选择空间 -->
-  <rect x="60" y="188" width="420" height="240" rx="4" fill="#f8fafc" stroke="#cbd5e1" stroke-width="1"/>
-  <text x="270" y="214" font-size="15" font-weight="600" fill="#1e293b" text-anchor="middle">Block Size Selection Space</text>
+  <!-- 左侧：权衡因素 -->
+  <rect x="60" y="200" width="400" height="200" rx="4" fill="#f8fafc" stroke="#cbd5e1" stroke-width="1.5"/>
+  <text x="260" y="226" text-anchor="middle" font-size="14" font-weight="bold" fill="#1e293b">Trade-offs</text>
 
-  <!-- 候选块大小表格 -->
-  <rect x="80" y="228" width="380" height="30" rx="2" fill="#f1f5f9" stroke="#94a3b8" stroke-width="1"/>
-  <text x="140" y="248" font-size="13" font-weight="600" fill="#334155" text-anchor="middle">B<tspan baseline-shift="sub" font-size="75%">r</tspan> (query)</text>
-  <line x1="200" y1="228" x2="200" y2="258" stroke="#94a3b8" stroke-width="1"/>
-  <text x="290" y="248" font-size="13" font-weight="600" fill="#334155" text-anchor="middle">B<tspan baseline-shift="sub" font-size="75%">c</tspan> (key/value)</text>
-  <line x1="340" y1="228" x2="340" y2="258" stroke="#94a3b8" stroke-width="1"/>
-  <text x="420" y="248" font-size="13" font-weight="600" fill="#334155" text-anchor="middle">Status</text>
+  <!-- 增加块大小 -->
+  <rect x="80" y="244" width="360" height="60" rx="3" fill="#f1f5f9" stroke="#94a3b8" stroke-width="1"/>
+  <text x="260" y="266" text-anchor="middle" font-size="13" font-weight="bold" fill="#1e293b">Increase Block Size (e.g., 128 &#215; 128)</text>
+  <text x="260" y="286" text-anchor="middle" font-size="12" fill="#334155">&#8593; Fewer shared memory reads/writes (higher throughput)</text>
+
+  <!-- 减少块大小 -->
+  <rect x="80" y="316" width="360" height="60" rx="3" fill="#f1f5f9" stroke="#94a3b8" stroke-width="1"/>
+  <text x="260" y="338" text-anchor="middle" font-size="13" font-weight="bold" fill="#1e293b">Decrease Block Size (e.g., 64 &#215; 64)</text>
+  <text x="260" y="358" text-anchor="middle" font-size="12" fill="#334155">&#8593; Lower register pressure &amp; shared memory usage (higher occupancy)</text>
+
+  <!-- 右侧：映射表 -->
+  <rect x="500" y="200" width="400" height="200" rx="4" fill="#f8fafc" stroke="#cbd5e1" stroke-width="1.5"/>
+  <text x="700" y="226" text-anchor="middle" font-size="14" font-weight="bold" fill="#1e293b">Mapping: (d, SM size) &#8594; (B<tspan baseline-shift="sub" font-size="75%">r</tspan>, B<tspan baseline-shift="sub" font-size="75%">c</tspan>)</text>
+
+  <!-- 表头 -->
+  <rect x="520" y="240" width="120" height="28" fill="#e2e8f0" stroke="#94a3b8" stroke-width="1"/>
+  <text x="580" y="259" text-anchor="middle" font-size="12" font-weight="bold" fill="#1e293b">Head dim d</text>
+  <rect x="640" y="240" width="120" height="28" fill="#e2e8f0" stroke="#94a3b8" stroke-width="1"/>
+  <text x="700" y="259" text-anchor="middle" font-size="12" font-weight="bold" fill="#1e293b">SM size</text>
+  <rect x="760" y="240" width="120" height="28" fill="#e2e8f0" stroke="#94a3b8" stroke-width="1"/>
+  <text x="820" y="259" text-anchor="middle" font-size="12" font-weight="bold" fill="#1e293b">(B<tspan baseline-shift="sub" font-size="75%">r</tspan>, B<tspan baseline-shift="sub" font-size="75%">c</tspan>)</text>
 
   <!-- 行1 -->
-  <rect x="80" y="258" width="380" height="28" rx="2" fill="#ffffff" stroke="#e2e8f0" stroke-width="1"/>
-  <text x="140" y="276" font-size="13" fill="#1e293b" text-anchor="middle">64</text>
-  <text x="290" y="276" font-size="13" fill="#1e293b" text-anchor="middle">64</text>
-  <text x="420" y="276" font-size="13" fill="#64748b" text-anchor="middle">safe</text>
+  <rect x="520" y="268" width="120" height="28" fill="#ffffff" stroke="#cbd5e1" stroke-width="1"/>
+  <text x="580" y="287" text-anchor="middle" font-size="12" fill="#1e293b">64</text>
+  <rect x="640" y="268" width="120" height="28" fill="#ffffff" stroke="#cbd5e1" stroke-width="1"/>
+  <text x="700" y="287" text-anchor="middle" font-size="12" fill="#1e293b">48 KB</text>
+  <rect x="760" y="268" width="120" height="28" fill="#ffffff" stroke="#cbd5e1" stroke-width="1"/>
+  <text x="820" y="287" text-anchor="middle" font-size="12" fill="#1e293b">(64, 64)</text>
 
   <!-- 行2 -->
-  <rect x="80" y="286" width="380" height="28" rx="2" fill="#ffffff" stroke="#e2e8f0" stroke-width="1"/>
-  <text x="140" y="304" font-size="13" fill="#1e293b" text-anchor="middle">64</text>
-  <text x="290" y="304" font-size="13" fill="#1e293b" text-anchor="middle">128</text>
-  <text x="420" y="304" font-size="13" fill="#64748b" text-anchor="middle">safe</text>
+  <rect x="520" y="296" width="120" height="28" fill="#ffffff" stroke="#cbd5e1" stroke-width="1"/>
+  <text x="580" y="315" text-anchor="middle" font-size="12" fill="#1e293b">128</text>
+  <rect x="640" y="296" width="120" height="28" fill="#ffffff" stroke="#cbd5e1" stroke-width="1"/>
+  <text x="700" y="315" text-anchor="middle" font-size="12" fill="#1e293b">108 KB</text>
+  <rect x="760" y="296" width="120" height="28" fill="#ffffff" stroke="#cbd5e1" stroke-width="1"/>
+  <text x="820" y="315" text-anchor="middle" font-size="12" fill="#1e293b">(128, 64)</text>
 
   <!-- 行3 -->
-  <rect x="80" y="314" width="380" height="28" rx="2" fill="#ffffff" stroke="#e2e8f0" stroke-width="1"/>
-  <text x="140" y="332" font-size="13" fill="#1e293b" text-anchor="middle">128</text>
-  <text x="290" y="332" font-size="13" fill="#1e293b" text-anchor="middle">64</text>
-  <text x="420" y="332" font-size="13" fill="#64748b" text-anchor="middle">safe</text>
+  <rect x="520" y="324" width="120" height="28" fill="#ffffff" stroke="#cbd5e1" stroke-width="1"/>
+  <text x="580" y="343" text-anchor="middle" font-size="12" fill="#1e293b">128</text>
+  <rect x="640" y="324" width="120" height="28" fill="#ffffff" stroke="#cbd5e1" stroke-width="1"/>
+  <text x="700" y="343" text-anchor="middle" font-size="12" fill="#1e293b">164 KB</text>
+  <rect x="760" y="324" width="120" height="28" fill="#ffffff" stroke="#cbd5e1" stroke-width="1"/>
+  <text x="820" y="343" text-anchor="middle" font-size="12" fill="#1e293b">(128, 128)</text>
 
-  <!-- 行4（强调） -->
-  <rect x="80" y="342" width="380" height="28" rx="2" fill="#eef2ff" stroke="#6366f1" stroke-width="1.5"/>
-  <text x="140" y="360" font-size="13" font-weight="600" fill="#3730a3" text-anchor="middle">128</text>
-  <text x="290" y="360" font-size="13" font-weight="600" fill="#3730a3" text-anchor="middle">128</text>
-  <text x="420" y="360" font-size="13" font-weight="600" fill="#3730a3" text-anchor="middle">optimal</text>
+  <!-- 行4 -->
+  <rect x="520" y="352" width="120" height="28" fill="#ffffff" stroke="#cbd5e1" stroke-width="1"/>
+  <text x="580" y="371" text-anchor="middle" font-size="12" fill="#1e293b">64</text>
+  <rect x="640" y="352" width="120" height="28" fill="#ffffff" stroke="#cbd5e1" stroke-width="1"/>
+  <text x="700" y="371" text-anchor="middle" font-size="12" fill="#1e293b">108 KB</text>
+  <rect x="760" y="352" width="120" height="28" fill="#ffffff" stroke="#cbd5e1" stroke-width="1"/>
+  <text x="820" y="371" text-anchor="middle" font-size="12" fill="#1e293b">(64, 128)</text>
 
-  <!-- 行5 -->
-  <rect x="80" y="370" width="380" height="28" rx="2" fill="#ffffff" stroke="#e2e8f0" stroke-width="1"/>
-  <text x="140" y="388" font-size="13" fill="#1e293b" text-anchor="middle">256</text>
-  <text x="290" y="388" font-size="13" fill="#1e293b" text-anchor="middle">64</text>
-  <text x="420" y="388" font-size="13" fill="#ef4444" text-anchor="middle">overflow</text>
+  <!-- 底部说明面板 -->
+  <rect x="60" y="420" width="840" height="120" rx="4" fill="#f8fafc" stroke="#cbd5e1" stroke-width="1.5"/>
+  <text x="480" y="448" text-anchor="middle" font-size="14" font-weight="bold" fill="#1e293b">Mechanism: Tiling in FlashAttention-2 Forward Pass</text>
 
-  <!-- 行6 -->
-  <rect x="80" y="398" width="380" height="28" rx="2" fill="#ffffff" stroke="#e2e8f0" stroke-width="1"/>
-  <text x="140" y="416" font-size="13" fill="#1e293b" text-anchor="middle">256</text>
-  <text x="290" y="416" font-size="13" fill="#1e293b" text-anchor="middle">128</text>
-  <text x="420" y="416" font-size="13" fill="#ef4444" text-anchor="middle">overflow</text>
+  <!-- 二部图：Q块 vs K/V块 -->
+  <text x="200" y="476" text-anchor="middle" font-size="12" fill="#334155">Q tiles (B<tspan baseline-shift="sub" font-size="75%">r</tspan> &#215; d)</text>
+  <text x="760" y="476" text-anchor="middle" font-size="12" fill="#334155">K/V tiles (B<tspan baseline-shift="sub" font-size="75%">c</tspan> &#215; d)</text>
 
-  <!-- 右侧：权衡分析 -->
-  <rect x="500" y="188" width="400" height="240" rx="4" fill="#f8fafc" stroke="#cbd5e1" stroke-width="1"/>
-  <text x="700" y="214" font-size="15" font-weight="600" fill="#1e293b" text-anchor="middle">Trade-off Analysis</text>
+  <!-- 左侧节点 -->
+  <circle cx="200" cy="500" r="10" fill="#6366f1" stroke="#3730a3" stroke-width="1.5"/>
+  <text x="200" y="522" text-anchor="middle" font-size="10" fill="#1e293b">Q<tspan baseline-shift="sub" font-size="75%">0</tspan></text>
+  <circle cx="200" cy="540" r="10" fill="#6366f1" stroke="#3730a3" stroke-width="1.5"/>
+  <text x="200" y="562" text-anchor="middle" font-size="10" fill="#1e293b">Q<tspan baseline-shift="sub" font-size="75%">1</tspan></text>
 
-  <!-- 权衡1 -->
-  <rect x="520" y="228" width="360" height="60" rx="3" fill="#ffffff" stroke="#e2e8f0" stroke-width="1"/>
-  <text x="700" y="248" font-size="13" font-weight="600" fill="#1e293b" text-anchor="middle">Larger Block Size</text>
-  <text x="700" y="268" font-size="12" fill="#475569" text-anchor="middle">Fewer shared memory reads/writes</text>
-  <text x="700" y="282" font-size="12" fill="#475569" text-anchor="middle">Higher arithmetic intensity</text>
+  <!-- 右侧节点 -->
+  <circle cx="760" cy="500" r="10" fill="#94a3b8" stroke="#64748b" stroke-width="1.5"/>
+  <text x="760" y="522" text-anchor="middle" font-size="10" fill="#1e293b">K<tspan baseline-shift="sub" font-size="75%">0</tspan>,V<tspan baseline-shift="sub" font-size="75%">0</tspan></text>
+  <circle cx="760" cy="540" r="10" fill="#94a3b8" stroke="#64748b" stroke-width="1.5"/>
+  <text x="760" y="562" text-anchor="middle" font-size="10" fill="#1e293b">K<tspan baseline-shift="sub" font-size="75%">1</tspan>,V<tspan baseline-shift="sub" font-size="75%">1</tspan></text>
 
-  <!-- 权衡2 -->
-  <rect x="520" y="298" width="360" height="60" rx="3" fill="#ffffff" stroke="#e2e8f0" stroke-width="1"/>
-  <text x="700" y="318" font-size="13" font-weight="600" fill="#1e293b" text-anchor="middle">Too Large Block Size</text>
-  <text x="700" y="338" font-size="12" fill="#475569" text-anchor="middle">Register pressure / spilling</text>
-  <text x="700" y="352" font-size="12" fill="#475569" text-anchor="middle">Exceeds shared memory capacity</text>
+  <!-- 连线：Q0连K0V0（实线） -->
+  <line x1="210" y1="500" x2="750" y2="500" stroke="#6366f1" stroke-width="2"/>
+  <polygon points="750,495 760,500 750,505" fill="#6366f1"/>
 
-  <!-- 权衡3 -->
-  <rect x="520" y="368" width="360" height="50" rx="3" fill="#eef2ff" stroke="#6366f1" stroke-width="1.5"/>
-  <text x="700" y="388" font-size="13" font-weight="600" fill="#3730a3" text-anchor="middle">Optimal Balance</text>
-  <text x="700" y="406" font-size="12" fill="#334155" text-anchor="middle">B<tspan baseline-shift="sub" font-size="75%">r</tspan> = B<tspan baseline-shift="sub" font-size="75%">c</tspan> = 128 (for d=64, A100 SMEM)</text>
+  <!-- 连线：Q0连K1V1（虚线） -->
+  <line x1="210" y1="500" x2="750" y2="540" stroke="#94a3b8" stroke-width="1.5" stroke-dasharray="5,4"/>
+  <polygon points="750,535 760,540 750,545" fill="#94a3b8"/>
 
-  <!-- 底部：依赖因素 -->
-  <rect x="60" y="448" width="840" height="100" rx="4" fill="#f8fafc" stroke="#cbd5e1" stroke-width="1"/>
-  <text x="480" y="474" font-size="15" font-weight="600" fill="#1e293b" text-anchor="middle">Dependency Factors</text>
+  <!-- 连线：Q1连K0V0（虚线） -->
+  <line x1="210" y1="540" x2="750" y2="500" stroke="#94a3b8" stroke-width="1.5" stroke-dasharray="5,4"/>
+  <polygon points="750,495 760,500 750,505" fill="#94a3b8"/>
 
-  <!-- 三个因子 -->
-  <rect x="80" y="488" width="250" height="48" rx="3" fill="#ffffff" stroke="#e2e8f0" stroke-width="1"/>
-  <text x="205" y="508" font-size="13" font-weight="600" fill="#1e293b" text-anchor="middle">Head Dimension d</text>
-  <text x="205" y="526" font-size="12" fill="#475569" text-anchor="middle">d = 64 / 128 / 256</text>
-
-  <rect x="355" y="488" width="250" height="48" rx="3" fill="#ffffff" stroke="#e2e8f0" stroke-width="1"/>
-  <text x="480" y="508" font-size="13" font-weight="600" fill="#1e293b" text-anchor="middle">GPU Shared Memory Size</text>
-  <text x="480" y="526" font-size="12" fill="#475569" text-anchor="middle">A100: 192 KB / SM</text>
-
-  <rect x="630" y="488" width="250" height="48" rx="3" fill="#ffffff" stroke="#e2e8f0" stroke-width="1"/>
-  <text x="755" y="508" font-size="13" font-weight="600" fill="#1e293b" text-anchor="middle">Register File Size</text>
-  <text x="755" y="526" font-size="12" fill="#475569" text-anchor="middle">A100: 65536 regs / SM</text>
-
-  <!-- 底部说明 -->
-  <rect x="60" y="568" width="840" height="60" rx="4" fill="#f1f5f9" stroke="#cbd5e1" stroke-width="1"/>
-  <text x="480" y="594" font-size="13" fill="#334155" text-anchor="middle">Manual tuning over a small set of candidates ({64, 128} &#215; {64, 128}) balances</text>
-  <text x="480" y="614" font-size="13" fill="#334155" text-anchor="middle">shared memory traffic, register pressure, and occupancy for each GPU architecture.</text>
+  <!-- 连线：Q1连K1V1（实线） -->
+  <line x1="210" y1="540" x2="750" y2="540" stroke="#6366f1" stroke-width="2"/>
+  <polygon points="750,535 760,540 750,545" fill="#6366f1"/>
 
   <!-- 图例 -->
-  <rect x="60" y="640" width="840" height="28" rx="3" fill="#f8fafc" stroke="#e2e8f0" stroke-width="1"/>
-  <rect x="80" y="648" width="14" height="14" rx="2" fill="#eef2ff" stroke="#6366f1" stroke-width="1.5"/>
-  <text x="100" y="660" font-size="11" fill="#475569">Optimal / selected</text>
-  <rect x="220" y="648" width="14" height="14" rx="2" fill="#ffffff" stroke="#e2e8f0" stroke-width="1"/>
-  <text x="240" y="660" font-size="11" fill="#475569">Safe candidate</text>
-  <rect x="370" y="648" width="14" height="14" rx="2" fill="#ffffff" stroke="#ef4444" stroke-width="1"/>
-  <text x="390" y="660" font-size="11" fill="#475569">Overflow / invalid</text>
+  <rect x="60" y="570" width="840" height="30" rx="3" fill="#f1f5f9" stroke="#e2e8f0" stroke-width="1"/>
+  <text x="160" y="590" text-anchor="middle" font-size="11" fill="#334155">&#8212;  Solid: matched tile (inner loop)</text>
+  <text x="420" y="590" text-anchor="middle" font-size="11" fill="#334155">- - -  Dashed: cross tile (outer loop)</text>
+  <text x="680" y="590" text-anchor="middle" font-size="11" fill="#334155">&#9679;  Blue: Q tile;  Gray: K/V tile</text>
 </svg>

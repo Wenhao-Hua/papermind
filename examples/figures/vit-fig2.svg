@@ -2,146 +2,116 @@
   <rect x="0" y="0" width="960" height="680" fill="#ffffff"/>
 
   <!-- 标题 -->
-  <text x="480" y="32" font-size="18" font-weight="700" fill="#1e293b" text-anchor="middle">Masked Patch Prediction (Self-Supervised Pre-training)</text>
+  <text x="480" y="36" font-size="20" font-weight="bold" fill="#1e293b" text-anchor="middle">Masked Patch Prediction for Self-Supervised Pre-Training (ViT)</text>
 
-  <!-- ===== 左侧主流程：自上而下 ===== -->
-  <!-- 步骤1：输入图像 -->
-  <rect x="120" y="56" width="240" height="36" rx="4" fill="#f1f5f9" stroke="#475569" stroke-width="1.5"/>
-  <text x="240" y="79" font-size="14" fill="#1e293b" text-anchor="middle">Input Image (224&#215;224)</text>
+  <!-- 左侧主流程：自上而下 -->
+  <!-- 输入图像 -->
+  <rect x="120" y="60" width="240" height="160" rx="4" fill="#f8fafc" stroke="#475569" stroke-width="1.5"/>
+  <text x="240" y="90" font-size="14" font-weight="bold" fill="#1e293b" text-anchor="middle">Input Image</text>
+  <text x="240" y="112" font-size="12" fill="#334155" text-anchor="middle">H &#215; W &#215; 3</text>
+  <!-- 画网格示意 patch -->
+  <line x1="180" y1="130" x2="180" y2="200" stroke="#94a3b8" stroke-width="0.8"/>
+  <line x1="240" y1="130" x2="240" y2="200" stroke="#94a3b8" stroke-width="0.8"/>
+  <line x1="300" y1="130" x2="300" y2="200" stroke="#94a3b8" stroke-width="0.8"/>
+  <line x1="140" y1="155" x2="340" y2="155" stroke="#94a3b8" stroke-width="0.8"/>
+  <line x1="140" y1="180" x2="340" y2="180" stroke="#94a3b8" stroke-width="0.8"/>
+  <text x="160" y="143" font-size="9" fill="#64748b" text-anchor="middle">P</text>
+  <text x="220" y="143" font-size="9" fill="#64748b" text-anchor="middle">P</text>
+  <text x="280" y="143" font-size="9" fill="#64748b" text-anchor="middle">P</text>
+  <text x="340" y="143" font-size="9" fill="#64748b" text-anchor="middle">P</text>
 
-  <!-- 箭头1 -->
-  <line x1="240" y1="92" x2="240" y2="112" stroke="#475569" stroke-width="1.5"/>
-  <polygon points="240,116 236,108 244,108" fill="#475569"/>
+  <!-- 箭头 1 -->
+  <line x1="240" y1="220" x2="240" y2="260" stroke="#6366f1" stroke-width="2"/>
+  <polygon points="240,264 234,254 246,254" fill="#6366f1"/>
 
-  <!-- 步骤2：切块 + 线性嵌入 -->
-  <rect x="120" y="120" width="240" height="36" rx="4" fill="#f1f5f9" stroke="#475569" stroke-width="1.5"/>
-  <text x="240" y="143" font-size="14" fill="#1e293b" text-anchor="middle">Patchify + Linear Embedding (16&#215;16)</text>
+  <!-- 分块 + 线性投影 -->
+  <rect x="120" y="268" width="240" height="60" rx="4" fill="#eef2ff" stroke="#6366f1" stroke-width="1.5"/>
+  <text x="240" y="294" font-size="13" font-weight="bold" fill="#3730a3" text-anchor="middle">Patch Embedding</text>
+  <text x="240" y="314" font-size="11" fill="#334155" text-anchor="middle">x<tspan baseline-shift="sub" font-size="75%">i</tspan> = Linear(Flatten(Patch))</text>
 
-  <!-- 箭头2 -->
-  <line x1="240" y1="156" x2="240" y2="176" stroke="#475569" stroke-width="1.5"/>
-  <polygon points="240,180 236,172 244,172" fill="#475569"/>
+  <!-- 箭头 2 -->
+  <line x1="240" y1="328" x2="240" y2="368" stroke="#6366f1" stroke-width="2"/>
+  <polygon points="240,372 234,362 246,362" fill="#6366f1"/>
 
-  <!-- 步骤3：随机遮挡50% -->
-  <rect x="120" y="184" width="240" height="36" rx="4" fill="#eef2ff" stroke="#6366f1" stroke-width="2"/>
-  <text x="240" y="207" font-size="14" fill="#3730a3" text-anchor="middle">Random Mask 50% of Patches</text>
+  <!-- 随机遮挡 50% -->
+  <rect x="120" y="376" width="240" height="80" rx="4" fill="#f8fafc" stroke="#475569" stroke-width="1.5"/>
+  <text x="240" y="400" font-size="13" font-weight="bold" fill="#1e293b" text-anchor="middle">Random Masking (50%)</text>
+  <text x="240" y="420" font-size="11" fill="#334155" text-anchor="middle">80% &#8594; [mask] token</text>
+  <text x="240" y="436" font-size="11" fill="#334155" text-anchor="middle">10% &#8594; random patch</text>
+  <text x="240" y="452" font-size="11" fill="#334155" text-anchor="middle">10% &#8594; unchanged</text>
 
-  <!-- 箭头3 -->
-  <line x1="240" y1="220" x2="240" y2="240" stroke="#475569" stroke-width="1.5"/>
-  <polygon points="240,244 236,236 244,236" fill="#475569"/>
+  <!-- 箭头 3 -->
+  <line x1="240" y1="456" x2="240" y2="496" stroke="#6366f1" stroke-width="2"/>
+  <polygon points="240,500 234,490 246,490" fill="#6366f1"/>
 
-  <!-- 步骤4：Transformer Encoder -->
-  <rect x="120" y="248" width="240" height="36" rx="4" fill="#f1f5f9" stroke="#475569" stroke-width="1.5"/>
-  <text x="240" y="271" font-size="14" fill="#1e293b" text-anchor="middle">Transformer Encoder (L layers)</text>
+  <!-- Transformer 编码器 -->
+  <rect x="120" y="504" width="240" height="60" rx="4" fill="#eef2ff" stroke="#6366f1" stroke-width="1.5"/>
+  <text x="240" y="530" font-size="13" font-weight="bold" fill="#3730a3" text-anchor="middle">Transformer Encoder</text>
+  <text x="240" y="550" font-size="11" fill="#334155" text-anchor="middle">Output: h<tspan baseline-shift="sub" font-size="75%">i</tspan> for each patch</text>
 
-  <!-- 箭头4 -->
-  <line x1="240" y1="284" x2="240" y2="304" stroke="#475569" stroke-width="1.5"/>
-  <polygon points="240,308 236,300 244,300" fill="#475569"/>
+  <!-- 箭头 4 -->
+  <line x1="240" y1="564" x2="240" y2="604" stroke="#6366f1" stroke-width="2"/>
+  <polygon points="240,608 234,598 246,598" fill="#6366f1"/>
 
-  <!-- 步骤5：输出表示 -->
-  <rect x="120" y="312" width="240" height="36" rx="4" fill="#f1f5f9" stroke="#475569" stroke-width="1.5"/>
-  <text x="240" y="335" font-size="14" fill="#1e293b" text-anchor="middle">Output Representations (per patch)</text>
+  <!-- 预测头 -->
+  <rect x="120" y="612" width="240" height="50" rx="4" fill="#f8fafc" stroke="#475569" stroke-width="1.5"/>
+  <text x="240" y="636" font-size="13" font-weight="bold" fill="#1e293b" text-anchor="middle">Prediction Head (MLP)</text>
+  <text x="240" y="654" font-size="11" fill="#334155" text-anchor="middle">512-way classification</text>
 
-  <!-- 箭头5 -->
-  <line x1="240" y1="348" x2="240" y2="368" stroke="#475569" stroke-width="1.5"/>
-  <polygon points="240,372 236,364 244,364" fill="#475569"/>
+  <!-- ===== 右侧说明面板 ===== -->
+  <rect x="420" y="60" width="500" height="600" rx="4" fill="#fbfcfe" stroke="#cbd5e1" stroke-width="1"/>
 
-  <!-- 步骤6：分类头 -->
-  <rect x="120" y="376" width="240" height="36" rx="4" fill="#f1f5f9" stroke="#475569" stroke-width="1.5"/>
-  <text x="240" y="399" font-size="14" fill="#1e293b" text-anchor="middle">Linear Head (512 classes)</text>
+  <!-- 核心定义 -->
+  <rect x="440" y="80" width="460" height="100" rx="4" fill="#eef2ff" stroke="#6366f1" stroke-width="2"/>
+  <text x="670" y="106" font-size="15" font-weight="bold" fill="#3730a3" text-anchor="middle">Core Definition</text>
+  <text x="670" y="132" font-size="13" fill="#1e293b" text-anchor="middle">Masked Patch Prediction</text>
+  <text x="670" y="154" font-size="12" fill="#334155" text-anchor="middle">&#8467; = CrossEntropy( y<tspan baseline-shift="sub" font-size="75%">i</tspan> , f(h<tspan baseline-shift="sub" font-size="75%">i</tspan>) )</text>
+  <text x="670" y="174" font-size="11" fill="#64748b" text-anchor="middle">y<tspan baseline-shift="sub" font-size="75%">i</tspan> : 3-bit mean color (512 classes)</text>
 
-  <!-- 箭头6 -->
-  <line x1="240" y1="412" x2="240" y2="432" stroke="#475569" stroke-width="1.5"/>
-  <polygon points="240,436 236,428 244,428" fill="#475569"/>
+  <!-- 映射说明 -->
+  <rect x="440" y="200" width="460" height="130" rx="4" fill="#f8fafc" stroke="#cbd5e1" stroke-width="1"/>
+  <text x="670" y="224" font-size="13" font-weight="bold" fill="#1e293b" text-anchor="middle">Mapping: Patch &#8594; Color Class</text>
+  <text x="460" y="252" font-size="12" fill="#334155">Set of patches: P = {p<tspan baseline-shift="sub" font-size="75%">1</tspan>, p<tspan baseline-shift="sub" font-size="75%">2</tspan>, …, p<tspan baseline-shift="sub" font-size="75%">N</tspan>}</text>
+  <text x="460" y="274" font-size="12" fill="#334155">Masked set: M &#8834; P, |M| = 0.5N</text>
+  <text x="460" y="296" font-size="12" fill="#334155">f: h<tspan baseline-shift="sub" font-size="75%">i</tspan> &#8594; {0, …, 511}</text>
+  <text x="460" y="318" font-size="11" fill="#64748b">Each class = one 3-bit RGB mean (8&#215;8&#215;8 = 512)</text>
 
-  <!-- 步骤7：损失 -->
-  <rect x="120" y="440" width="240" height="36" rx="4" fill="#eef2ff" stroke="#6366f1" stroke-width="2"/>
-  <text x="240" y="463" font-size="14" fill="#3730a3" text-anchor="middle">Cross-Entropy Loss (3-bit avg color)</text>
+  <!-- 二部图示意 -->
+  <rect x="440" y="350" width="460" height="140" rx="4" fill="#f8fafc" stroke="#cbd5e1" stroke-width="1"/>
+  <text x="670" y="374" font-size="13" font-weight="bold" fill="#1e293b" text-anchor="middle">Assignment: Masked Patches &#8594; Color Classes</text>
 
-  <!-- ===== 右侧：掩码策略图例 ===== -->
-  <rect x="440" y="56" width="480" height="160" rx="6" fill="#f8fafc" stroke="#cbd5e1" stroke-width="1"/>
-  <text x="680" y="80" font-size="15" font-weight="700" fill="#1e293b" text-anchor="middle">Masking Strategy (per masked patch)</text>
+  <!-- 左列节点 -->
+  <circle cx="490" cy="410" r="14" fill="#eef2ff" stroke="#6366f1" stroke-width="1.5"/>
+  <text x="490" y="414" font-size="10" fill="#3730a3" text-anchor="middle">p<tspan baseline-shift="sub" font-size="75%">1</tspan></text>
+  <circle cx="490" cy="450" r="14" fill="#eef2ff" stroke="#6366f1" stroke-width="1.5"/>
+  <text x="490" y="454" font-size="10" fill="#3730a3" text-anchor="middle">p<tspan baseline-shift="sub" font-size="75%">2</tspan></text>
+  <circle cx="490" cy="478" r="14" fill="#eef2ff" stroke="#6366f1" stroke-width="1.5"/>
+  <text x="490" y="482" font-size="10" fill="#3730a3" text-anchor="middle">p<tspan baseline-shift="sub" font-size="75%">3</tspan></text>
 
-  <!-- 80% [mask] -->
-  <rect x="460" y="96" width="200" height="28" rx="3" fill="#eef2ff" stroke="#6366f1" stroke-width="1.5"/>
-  <text x="560" y="115" font-size="13" fill="#3730a3" text-anchor="middle">80% &#8594; learnable [mask]</text>
+  <!-- 右列节点 -->
+  <circle cx="850" cy="400" r="14" fill="#f1f5f9" stroke="#475569" stroke-width="1.2"/>
+  <text x="850" y="404" font-size="9" fill="#1e293b" text-anchor="middle">c<tspan baseline-shift="sub" font-size="75%">42</tspan></text>
+  <circle cx="850" cy="440" r="14" fill="#f1f5f9" stroke="#475569" stroke-width="1.2"/>
+  <text x="850" y="444" font-size="9" fill="#1e293b" text-anchor="middle">c<tspan baseline-shift="sub" font-size="75%">137</tspan></text>
+  <circle cx="850" cy="470" r="14" fill="#f1f5f9" stroke="#475569" stroke-width="1.2"/>
+  <text x="850" y="474" font-size="9" fill="#1e293b" text-anchor="middle">c<tspan baseline-shift="sub" font-size="75%">255</tspan></text>
 
-  <!-- 10% random -->
-  <rect x="460" y="132" width="200" height="28" rx="3" fill="#f1f5f9" stroke="#475569" stroke-width="1.5"/>
-  <text x="560" y="151" font-size="13" fill="#1e293b" text-anchor="middle">10% &#8594; random patch</text>
+  <!-- 连边 -->
+  <line x1="504" y1="410" x2="836" y2="400" stroke="#6366f1" stroke-width="2"/>
+  <line x1="504" y1="450" x2="836" y2="440" stroke="#6366f1" stroke-width="1.2"/>
+  <line x1="504" y1="478" x2="836" y2="470" stroke="#6366f1" stroke-width="1.2"/>
 
-  <!-- 10% unchanged -->
-  <rect x="460" y="168" width="200" height="28" rx="3" fill="#f1f5f9" stroke="#475569" stroke-width="1.5"/>
-  <text x="560" y="187" font-size="13" fill="#1e293b" text-anchor="middle">10% &#8594; unchanged</text>
+  <!-- 图例 -->
+  <rect x="440" y="510" width="460" height="60" rx="4" fill="#f8fafc" stroke="#cbd5e1" stroke-width="1"/>
+  <text x="670" y="534" font-size="12" font-weight="bold" fill="#1e293b" text-anchor="middle">Legend</text>
+  <line x1="470" y1="556" x2="510" y2="556" stroke="#6366f1" stroke-width="2"/>
+  <polygon points="510,560 504,552 516,552" fill="#6366f1"/>
+  <text x="520" y="560" font-size="11" fill="#334155">Forward / data flow</text>
+  <line x1="650" y1="556" x2="690" y2="556" stroke="#6366f1" stroke-width="2"/>
+  <text x="700" y="560" font-size="11" fill="#334155">Assignment (selected)</text>
 
-  <!-- 右侧说明 -->
-  <text x="700" y="115" font-size="12" fill="#64748b" text-anchor="start">Replace with special [mask] token</text>
-  <text x="700" y="151" font-size="12" fill="#64748b" text-anchor="start">Replace with random patch embedding</text>
-  <text x="700" y="187" font-size="12" fill="#64748b" text-anchor="start">Keep original patch embedding</text>
-
-  <!-- ===== 右侧：目标定义 ===== -->
-  <rect x="440" y="232" width="480" height="120" rx="6" fill="#f8fafc" stroke="#cbd5e1" stroke-width="1"/>
-  <text x="680" y="256" font-size="15" font-weight="700" fill="#1e293b" text-anchor="middle">Prediction Target: 3-bit Average Color</text>
-
-  <text x="680" y="286" font-size="13" fill="#334155" text-anchor="middle">Each masked patch &#8594; quantize its mean RGB into 8&#215;8&#215;8 = 512 bins</text>
-  <text x="680" y="310" font-size="13" fill="#334155" text-anchor="middle">(3 bits per channel &#8594; 512 classes)</text>
-  <text x="680" y="334" font-size="13" fill="#64748b" text-anchor="middle">Cross-entropy loss between predicted and true bin</text>
-
-  <!-- ===== 右侧：映射示意 ===== -->
-  <rect x="440" y="368" width="480" height="160" rx="6" fill="#f8fafc" stroke="#cbd5e1" stroke-width="1"/>
-  <text x="680" y="392" font-size="15" font-weight="700" fill="#1e293b" text-anchor="middle">Patch &#8594; Color Bin Mapping (example)</text>
-
-  <!-- 左侧：patch表示 -->
-  <text x="500" y="420" font-size="13" fill="#334155" text-anchor="middle">Output rep. z_i</text>
-  <rect x="460" y="428" width="80" height="28" rx="3" fill="#eef2ff" stroke="#6366f1" stroke-width="1.5"/>
-  <text x="500" y="447" font-size="12" fill="#3730a3" text-anchor="middle">z_i</text>
-
-  <!-- 箭头 -->
-  <line x1="540" y1="442" x2="580" y2="442" stroke="#475569" stroke-width="1.5"/>
-  <polygon points="584,442 576,438 576,446" fill="#475569"/>
-
-  <!-- 右侧：线性头 + 512类 -->
-  <text x="660" y="420" font-size="13" fill="#334155" text-anchor="middle">Linear Head</text>
-  <rect x="590" y="428" width="140" height="28" rx="3" fill="#f1f5f9" stroke="#475569" stroke-width="1.5"/>
-  <text x="660" y="447" font-size="12" fill="#1e293b" text-anchor="middle">W &#8712; &#8477;^(512&#215;D)</text>
-
-  <!-- 箭头 -->
-  <line x1="730" y1="442" x2="770" y2="442" stroke="#475569" stroke-width="1.5"/>
-  <polygon points="774,442 766,438 766,446" fill="#475569"/>
-
-  <!-- 右侧：512类输出 -->
-  <text x="840" y="420" font-size="13" fill="#334155" text-anchor="middle">512 logits</text>
-  <rect x="780" y="428" width="120" height="28" rx="3" fill="#f1f5f9" stroke="#475569" stroke-width="1.5"/>
-  <text x="840" y="447" font-size="12" fill="#1e293b" text-anchor="middle">softmax</text>
-
-  <!-- 示例：3-bit颜色 -->
-  <text x="680" y="500" font-size="13" fill="#334155" text-anchor="middle">Example: patch with avg RGB = (120, 200, 50)</text>
-  <text x="680" y="520" font-size="12" fill="#64748b" text-anchor="middle">Quantize: R=120/32=3, G=200/32=6, B=50/32=1 &#8594; bin index = 3&#215;64+6&#215;8+1 = 241</text>
-
-  <!-- ===== 底部：图例 ===== -->
-  <rect x="120" y="500" width="800" height="60" rx="6" fill="#f8fafc" stroke="#cbd5e1" stroke-width="1"/>
-  <text x="140" y="524" font-size="13" font-weight="600" fill="#1e293b">Legend</text>
-
-  <!-- 实线箭头 -->
-  <line x1="140" y1="544" x2="180" y2="544" stroke="#475569" stroke-width="1.5"/>
-  <polygon points="184,544 176,540 176,548" fill="#475569"/>
-  <text x="196" y="548" font-size="12" fill="#334155">Data flow</text>
-
-  <!-- 强调框 -->
-  <rect x="320" y="532" width="16" height="16" rx="2" fill="#eef2ff" stroke="#6366f1" stroke-width="1.5"/>
-  <text x="344" y="546" font-size="12" fill="#334155">Key component / loss</text>
-
-  <!-- 普通框 -->
-  <rect x="520" y="532" width="16" height="16" rx="2" fill="#f1f5f9" stroke="#475569" stroke-width="1.5"/>
-  <text x="544" y="546" font-size="12" fill="#334155">Intermediate operation</text>
-
-  <!-- 虚线框 -->
-  <rect x="700" y="532" width="16" height="16" rx="2" fill="#f8fafc" stroke="#cbd5e1" stroke-width="1" stroke-dasharray="4,3"/>
-  <text x="724" y="546" font-size="12" fill="#334155">Explanation panel</text>
-
-  <!-- ===== 底部说明 ===== -->
-  <text x="480" y="600" font-size="12" fill="#64748b" text-anchor="middle">Figure: Self-supervised pre-training via masked patch prediction. 50% of patches are randomly masked; the model predicts the 3-bit average color</text>
-  <text x="480" y="618" font-size="12" fill="#64748b" text-anchor="middle">(quantized into 512 bins) for each masked patch. Masking strategy follows BERT (Devlin et al., 2019): 80% [mask], 10% random, 10% unchanged.</text>
-
-  <!-- 论文引用 -->
-  <text x="480" y="650" font-size="11" fill="#94a3b8" text-anchor="middle">Dosovitskiy et al., ICLR 2021 — An Image is Worth 16x16 Words: Transformers for Image Recognition at Scale</text>
+  <!-- 底部说明 -->
+  <rect x="440" y="590" width="460" height="50" rx="4" fill="#f1f5f9" stroke="#cbd5e1" stroke-width="1"/>
+  <text x="670" y="612" font-size="11" fill="#475569" text-anchor="middle">Training objective: minimize cross-entropy loss</text>
+  <text x="670" y="630" font-size="11" fill="#475569" text-anchor="middle">over masked patches only</text>
 </svg>

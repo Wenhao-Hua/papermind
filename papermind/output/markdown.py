@@ -22,6 +22,15 @@ from papermind.output.schema import (
 _DIFFICULTY_BADGE = {"high": "🔴 high", "mid": "🟡 mid", "low": "🟢 low"}
 
 
+def _mathjax(formula: str) -> str:
+    """A multi-line formula uses ``\\\\`` line breaks, which MathJax rejects outside an
+    alignment environment ("Misplaced \\"). Wrap such formulas in ``aligned`` so they render."""
+    f = (formula or "").strip()
+    if "\\\\" in f and "\\begin{" not in f:
+        return "\\begin{aligned} " + f + " \\end{aligned}"
+    return f
+
+
 def to_markdown(report: Report, path: Optional[str] = None) -> str:
     md = "\n".join(_render(report))
     if path:
@@ -136,7 +145,7 @@ def _technical_point_md(report: Report, idx: int, point: TechnicalPoint) -> List
     out.append(point.explanation)
     out.append("")
     if point.formula:
-        out.append(f"$$\n{point.formula}\n$$")
+        out.append(f"$$\n{_mathjax(point.formula)}\n$$")
         out.append("")
     if point.analogy:
         out.append(f"> 💡 **类比:** {point.analogy}")

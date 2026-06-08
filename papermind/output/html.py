@@ -254,7 +254,9 @@ def _technical_point(report: Report, idx: int, p: TechnicalPoint) -> List[str]:
         f"<p>{esc(p.explanation)}</p>",
     ]
     if p.formula:
-        out.append(f'<div class="formula">$$ {esc(p.formula)} $$</div>')
+        from papermind.output.markdown import _mathjax
+
+        out.append(f'<div class="formula">$$ {esc(_mathjax(p.formula))} $$</div>')
     if p.analogy:
         out.append(f'<div class="analogy">💡 <b>类比：</b>{esc(p.analogy)}</div>')
     if p.source_section or p.page:
