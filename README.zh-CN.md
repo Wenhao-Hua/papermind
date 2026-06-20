@@ -11,7 +11,7 @@
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 
 <p align="center">
-  <img src="examples/figures/transformer-fig2.svg" alt="PaperMind 为论文技术点生成的论文式教学示意图" width="760">
+  <img src="papermind/assets/hero.zh.svg" alt="PaperMind 为论文技术点生成的论文式教学示意图" width="760">
 </p>
 <p align="center">
   <sub>↑ PaperMind 为论文技术点<b>生成的论文式教学示意图</b>（管线真实产物）·

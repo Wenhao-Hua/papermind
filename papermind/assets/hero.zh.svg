@@ -1,0 +1,48 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 860 360" width="860" height="360" font-family="-apple-system, 'Segoe UI', 'PingFang SC', 'Microsoft YaHei', Roboto, Helvetica, Arial, sans-serif">
+  <defs>
+    <marker id="arw" markerWidth="9" markerHeight="9" refX="7" refY="3" orient="auto">
+      <path d="M0,0 L7,3 L0,6 Z" fill="#2c3a66"/>
+    </marker>
+  </defs>
+  <rect x="0" y="0" width="860" height="360" fill="#ffffff"/>
+  <text x="430" y="38" text-anchor="middle" font-size="23" font-weight="700" fill="#211f1b">缩放点积注意力</text>
+  <text x="430" y="66" text-anchor="middle" font-size="15" fill="#2c3a66">Attention(Q, K, V) = softmax( Q·K^T / √(d_k) ) · V</text>
+
+  <g stroke="#2c3a66" stroke-width="1.6" fill="none">
+    <path d="M102,138 L148,170" marker-end="url(#arw)"/>
+    <path d="M102,210 L148,182" marker-end="url(#arw)"/>
+    <path d="M254,176 L286,176" marker-end="url(#arw)"/>
+    <path d="M408,176 L440,176" marker-end="url(#arw)"/>
+    <path d="M546,176 L578,176" marker-end="url(#arw)"/>
+    <path d="M712,176 L746,176" marker-end="url(#arw)"/>
+    <path d="M102,282 L578,198" marker-end="url(#arw)"/>
+  </g>
+
+  <g fill="#ffffff" stroke="#2c3a66" stroke-width="1.6">
+    <rect x="24" y="118" width="78" height="40" rx="9"/>
+    <rect x="24" y="190" width="78" height="40" rx="9"/>
+    <rect x="24" y="262" width="78" height="40" rx="9"/>
+    <rect x="150" y="154" width="104" height="44" rx="9"/>
+    <rect x="288" y="154" width="120" height="44" rx="9"/>
+    <rect x="442" y="154" width="104" height="44" rx="9"/>
+    <rect x="580" y="154" width="132" height="44" rx="9"/>
+    <rect x="748" y="154" width="88" height="44" rx="9"/>
+  </g>
+  <g fill="#211f1b" text-anchor="middle" dominant-baseline="central" font-size="15">
+    <text x="63" y="138">Q</text>
+    <text x="63" y="210">K</text>
+    <text x="63" y="282">V</text>
+    <text x="202" y="176">Q·K^T</text>
+    <text x="348" y="176" font-size="13.5">缩放 1/√(d_k)</text>
+    <text x="494" y="176">Softmax</text>
+    <text x="646" y="176" font-size="13.5">加权求和 · V</text>
+    <text x="792" y="176">输出</text>
+  </g>
+  <g fill="#5d5a52" text-anchor="middle" dominant-baseline="central" font-size="11">
+    <text x="63" y="104">查询 / 键 / 值</text>
+    <text x="202" y="142">相似度分数</text>
+    <text x="646" y="142">注意力输出</text>
+  </g>
+
+  <text x="430" y="340" text-anchor="middle" font-size="13" fill="#5d5a52">用 √(d_k) 缩放，可避免 d_k 较大时 softmax 梯度消失。</text>
+</svg>

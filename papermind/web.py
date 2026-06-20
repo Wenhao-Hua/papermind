@@ -1009,11 +1009,12 @@ def _load_hero_svg(name: str = "hero.svg") -> str:
 
 
 def _load_zh_hero() -> str:
-    """The Chinese hero figure (a real teaching SVG from the gallery). Falls back to the
-    bundled English hero when the examples aren't present (e.g. a bare pip install)."""
+    """The Chinese hero figure, bundled at ``papermind/assets/hero.zh.svg`` (a Chinese
+    translation of the English hero, so it ships in the wheel). Falls back to the English
+    hero only if the asset is somehow missing."""
     import pathlib
 
-    p = pathlib.Path(__file__).resolve().parent.parent / "examples" / "figures" / "transformer-fig2.svg"
+    p = pathlib.Path(__file__).resolve().parent / "assets" / "hero.zh.svg"
     try:
         return p.read_text(encoding="utf-8")
     except Exception:  # noqa: BLE001
