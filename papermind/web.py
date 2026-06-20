@@ -298,7 +298,9 @@ def create_app(live: bool = False, rate_per_ip: int = 8, rate_global: int = 300,
     # -- analyze -------------------------------------------------------------- #
     @app.get("/", response_class=HTMLResponse)
     def index():
-        return _page("/", _hero() + _analyze_form(live), live)
+        body = (_hero() + _analyze_form(live) + _capabilities()
+                + _workflow() + _gallery() + _trust() + _cta())
+        return _page("/", body, live)
 
     def _analyze_async(request, src, model, refresh):
         """Live analysis -> background job + polling page (avoids the 100s timeout).
@@ -815,6 +817,62 @@ pre{font:.88rem/1.6 var(--mono);background:#0f1117;color:#e7e9ef;padding:16px 18
 .pm-busy-title{margin:0;font-weight:600}.pm-busy-step{margin:8px 0 0;color:var(--accent)}
 .pm-busy-time{margin:6px 0 0;color:var(--faint);font-size:.85rem}
 @media(max-width:600px){.pm-wrap{padding:0 16px 72px}.panel{padding:22px}}
+/* ---------- rich landing sections (index only) ---------- */
+.hero{position:relative}
+.hero::before{content:'';position:absolute;inset:-60px -240px auto -240px;height:520px;z-index:-1;pointer-events:none;
+  background:radial-gradient(620px 280px at 28% 4%,var(--accent-soft),transparent 70%)}
+.lp-sec{padding:56px 0;border-top:1px solid var(--line)}
+.lp-head{max-width:660px;margin:0 0 30px}
+.lp-eyebrow{font-size:.76rem;font-weight:700;letter-spacing:.07em;text-transform:uppercase;color:var(--accent)}
+.lp-title{font-size:1.95rem;font-weight:700;letter-spacing:-.03em;margin:.32em 0 .35em;line-height:1.18}
+.lp-sub{color:var(--soft);font-size:1.02rem;margin:0;max-width:62ch;line-height:1.6}
+.cap-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:14px}
+.cap-card{display:flex;flex-direction:column;background:var(--surface);border:1px solid var(--line);border-radius:var(--r);
+  padding:20px 20px 18px;text-decoration:none;color:inherit;transition:transform .18s,border-color .18s,box-shadow .18s}
+.cap-card:hover{transform:translateY(-3px);border-color:var(--accent);box-shadow:0 12px 30px var(--accent-ring)}
+.cap-ic{width:38px;height:38px;border-radius:10px;display:flex;align-items:center;justify-content:center;
+  background:var(--accent-soft);color:var(--accent);margin-bottom:14px}
+.cap-ic svg{width:20px;height:20px;display:block}
+.cap-card h3{font-size:1.03rem;margin:0 0 6px;letter-spacing:-.01em}
+.cap-card p{color:var(--soft);font-size:.9rem;margin:0;line-height:1.55;flex:1}
+.cap-card .go{color:var(--accent);font-size:.85rem;font-weight:600;margin-top:14px}
+@media(max-width:760px){.cap-grid{grid-template-columns:repeat(2,1fr)}}
+@media(max-width:460px){.cap-grid{grid-template-columns:1fr}}
+.flow{display:grid;grid-template-columns:repeat(3,1fr);gap:18px;counter-reset:s}
+.flow-step{position:relative}
+.flow-n{width:30px;height:30px;border-radius:9px;background:var(--accent);color:#fff;font-weight:700;font-size:.92rem;
+  display:flex;align-items:center;justify-content:center;margin-bottom:12px}
+.flow-step h3{font-size:1rem;margin:0 0 6px;letter-spacing:-.01em}
+.flow-step p{color:var(--soft);font-size:.9rem;margin:0;line-height:1.55}
+@media(max-width:680px){.flow{grid-template-columns:1fr;gap:14px}}
+.gal-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:12px}
+.gal-card{display:flex;align-items:center;gap:13px;background:var(--surface);border:1px solid var(--line);
+  border-radius:var(--r);padding:14px 16px;text-decoration:none;color:inherit;transition:border-color .18s,transform .18s}
+.gal-card:hover{border-color:var(--accent);transform:translateY(-2px)}
+.gal-card .body{min-width:0;flex:1}
+.gal-card .t{font-weight:600;font-size:.95rem;letter-spacing:-.01em}
+.gal-card .d{color:var(--faint);font-size:.82rem;margin-top:1px}
+.gal-tag{font-size:.7rem;font-weight:600;color:var(--accent);background:var(--accent-soft);border-radius:6px;
+  padding:3px 9px;white-space:nowrap}
+@media(max-width:600px){.gal-grid{grid-template-columns:1fr}}
+.trust{display:flex;flex-wrap:wrap;gap:12px}
+.trust div{flex:1 1 210px;background:var(--surface);border:1px solid var(--line);border-radius:var(--r);padding:16px 18px}
+.trust b{display:block;font-size:1.04rem;letter-spacing:-.01em;margin-bottom:3px}
+.trust span{color:var(--soft);font-size:.88rem;line-height:1.5}
+.cta{text-align:center;background:linear-gradient(180deg,var(--accent-soft),var(--surface));
+  border:1px solid var(--line);border-radius:16px;padding:46px 24px;margin:56px 0 0}
+.cta h2{font-size:1.7rem;letter-spacing:-.03em;margin:0 0 .3em}
+.cta p{color:var(--soft);margin:0 0 22px}
+.cta .row{display:flex;gap:12px;justify-content:center;flex-wrap:wrap;align-items:center}
+.cta-btn{background:var(--accent);color:#fff;border-radius:var(--rs);padding:12px 26px;font-weight:600;text-decoration:none}
+.cta-btn:hover{background:var(--accent-press)}
+.cta .ghost{border:1px solid var(--line-strong);border-radius:var(--rs);padding:11px 20px;color:var(--ink);font-weight:600;text-decoration:none}
+.cta .ghost:hover{border-color:var(--accent);color:var(--accent)}
+.cta code{font-size:.88rem}
+@media(prefers-color-scheme:dark){.cta-btn{color:#0c0d10}}
+.js .reveal{opacity:0;transform:translateY(16px)}
+.js .reveal.in{opacity:1;transform:none;transition:opacity .6s ease,transform .6s cubic-bezier(.2,.7,.2,1)}
+@media(prefers-reduced-motion:reduce){.js .reveal{opacity:1;transform:none}}
 @media(prefers-reduced-motion:reduce){*{transition:none!important;animation:none!important}}
 @media(prefers-reduced-motion:no-preference){
   @keyframes pm-rise{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:none}}
@@ -838,6 +896,15 @@ document.addEventListener('click',function(e){
   var a=e.target.closest('.ex a'); if(!a){return;} e.preventDefault();
   var i=document.querySelector("input[name='source']"); if(i){i.value=a.dataset.id; i.focus();}
 });
+(function(){
+  var els=document.querySelectorAll('.reveal');
+  if(!els.length) return;
+  if(!('IntersectionObserver' in window)){els.forEach(function(e){e.classList.add('in');});return;}
+  var io=new IntersectionObserver(function(es){es.forEach(function(en){
+    if(en.isIntersecting){en.target.classList.add('in'); io.unobserve(en.target);}
+  });},{rootMargin:'0px 0px -8% 0px'});
+  els.forEach(function(e){io.observe(e);});
+})();
 """
 
 
@@ -877,7 +944,8 @@ def _page(active: str, body: str, live: bool) -> str:
     return (
         f"<!DOCTYPE html><html lang='{_lang()}'><head><meta charset='utf-8'>"
         "<meta name='viewport' content='width=device-width, initial-scale=1'>"
-        f"<title>PaperMind</title><style>{_CSS}</style></head><body>"
+        f"<title>PaperMind</title><style>{_CSS}</style>"
+        "<script>document.documentElement.classList.add('js')</script></head><body>"
         "<header class='pm-bar-top'><div class='pm-bar-in'>"
         "<a class='pm-brand' href='/'><span class='mk'></span>PaperMind</a>"
         f"<nav class='pm-nav'>{nav}</nav>"
@@ -953,10 +1021,157 @@ def _hero() -> str:
         f"<span class='hero-eyebrow'>{_t('Open-source paper deep-reading', '开源论文深读工具')}</span>"
         f"<h1 class='hero-h'>{_t('Read any paper — from skim to reproduction.', '把任意论文，读懂到能复现。')}</h1>"
         f"<p class='hero-sub'>{_t('Structured analysis · grounded, citation-verified Q&A · a whole-method framework diagram · reproduction from the real code repo. Paste a link, DOI, or title (arXiv, paper page, PDF…), or upload a PDF.', '结构化分析 · 带原文出处并核验的问答 · 整篇方法的框架图 · 接真实代码仓库的复现。粘贴链接、DOI 或标题（arXiv、论文页面、PDF…），也可上传 PDF。')}</p>"
-        f"<div class='hero-feats'><span>{_t('Contributions', '核心贡献')}</span>"
-        f"<span>{_t('Technical detail + teaching figures', '技术细节 + 教学示意图')}</span>"
-        f"<span>{_t('Knowledge connections', '知识关联')}</span><span>{_t('Reproduction guide', '复现指南')}</span></div>"
         f"{fig}</section>"
+    )
+
+
+# --------------------------------------------------------------------------- #
+# Rich landing sections (index page only) — showcase the full capability set.
+# --------------------------------------------------------------------------- #
+def _ic(path: str) -> str:
+    return (f"<svg viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='1.8' "
+            f"stroke-linecap='round' stroke-linejoin='round'>{path}</svg>")
+
+
+# Clean line-icons (no icon-library available in this no-bundler server render).
+_CAPS = [
+    ("<path d='M5 3h9l5 5v13H5z'/><path d='M14 3v5h5'/><path d='M8 13h8M8 17h6'/>",
+     "Analyze", "分析", "/",
+     "Four-module structured read: contributions, method &amp; figures, related work, reproduction.",
+     "四模块结构化解读：核心贡献、方法与图示、关联工作、复现要点。"),
+    ("<path d='M21 12a8 8 0 0 1-11.5 7.2L4 21l1.8-5.5A8 8 0 1 1 21 12z'/>",
+     "Q&amp;A", "问答", "/ask",
+     "Grounded answers, every claim labeled fact / inference / out-of-scope, each with its source.",
+     "基于原文回答，逐句标注 论文事实 / 推理 / 超纲，并附原文依据。"),
+    ("<path d='M13 2 4 14h7l-1 8 9-12h-7z'/>",
+     "Summary", "速读", "/summary",
+     "A one-line TL;DR plus key points in a single fast call.",
+     "一句话 TL;DR + 几条要点，单次调用、更快。"),
+    ("<path d='M6 3h12M6 21h12M9 3v4l3 4 3-4V3M9 21v-4l3-4 3 4v4'/>",
+     "Framework diagram", "框架图", "/framework",
+     "The paper's whole end-to-end method as one figure, downloadable as SVG.",
+     "整篇方法的端到端框架图，一图看懂，可下载 SVG。"),
+    ("<path d='M4 4h7v16H4zM13 4h7v16h-7z'/>",
+     "Compare", "对比", "/compare",
+     "Side-by-side problem · method · results across 2–4 papers.",
+     "2–4 篇论文的问题 · 方法 · 结果横向对照。"),
+    ("<path d='M4 5h16v14H4z'/><path d='M8 10l2.5 2.5L8 15M13 15h4'/>",
+     "Reproduce", "复现", "/reproduce",
+     "A runnable setup.sh built from the paper's real code repo, not model guesses.",
+     "从论文真实代码仓库生成可运行的 setup.sh，非模型臆造。"),
+    ("<path d='M11 19a8 8 0 1 1 0-16 8 8 0 0 1 0 16zM21 21l-4.3-4.3'/>",
+     "Search", "搜索", "/search",
+     "Keyword arXiv search, no model calls — click a result to analyze or ask.",
+     "关键词检索 arXiv，不调用模型，点结果即可分析 / 问答。"),
+]
+
+
+def _capabilities() -> str:
+    cards = ""
+    for icon, en, zh, href, den, dzh in _CAPS:
+        cards += (
+            f"<a class='cap-card' href='{href}'>"
+            f"<span class='cap-ic'>{_ic(icon)}</span>"
+            f"<h3>{_t(en, zh)}</h3><p>{_t(den, dzh)}</p>"
+            f"<span class='go'>{_t('Open →', '打开 →')}</span></a>"
+        )
+    return (
+        "<section class='lp-sec reveal'>"
+        f"<div class='lp-head'><div class='lp-eyebrow'>{_t('Capabilities', '能力')}</div>"
+        f"<h2 class='lp-title'>{_t('Seven ways to read a paper', '七种读论文的方式')}</h2>"
+        f"<p class='lp-sub'>{_t('One tool, the whole workflow — from a first skim to a runnable reproduction. Every feature reuses the same grounded core.', '一个工具覆盖完整流程——从初次速读到可运行的复现。每个能力都共用同一套带原文依据的内核。')}</p></div>"
+        f"<div class='cap-grid'>{cards}</div></section>"
+    )
+
+
+def _workflow() -> str:
+    steps = [
+        ("Paste anything", "粘贴任意来源",
+         "An arXiv link, DOI, paper title, or any academic landing page — or upload a PDF.",
+         "arXiv 链接、DOI、论文标题，或任意学术页面——也可直接上传 PDF。"),
+        ("PaperMind reads it", "PaperMind 读它",
+         "It parses the PDF and runs a four-module analysis, grounded by a trained cross-encoder reranker.",
+         "解析 PDF 并跑四模块分析，由训练过的交叉编码重排器保证依据可靠。"),
+        ("You get the whole picture", "你拿到全貌",
+         "Structured analysis with teaching figures, citation-verified Q&A, a framework diagram, and a reproduction guide.",
+         "结构化分析 + 教学示意图、带依据的问答、框架图，以及复现指南。"),
+    ]
+    items = ""
+    for i, (en, zh, den, dzh) in enumerate(steps, 1):
+        items += (f"<div class='flow-step'><div class='flow-n'>{i}</div>"
+                  f"<h3>{_t(en, zh)}</h3><p>{_t(den, dzh)}</p></div>")
+    return (
+        "<section class='lp-sec reveal'>"
+        f"<div class='lp-head'><div class='lp-eyebrow'>{_t('How it works', '工作流程')}</div>"
+        f"<h2 class='lp-title'>{_t('From a link to understanding, in one step', '从一个链接到读懂，只需一步')}</h2></div>"
+        f"<div class='flow'>{items}</div></section>"
+    )
+
+
+_GALLERY = [
+    ("1706.03762", "Transformer", "Attention / NLP", "注意力 / NLP"),
+    ("2307.08691", "FlashAttention-2", "GPU systems", "GPU 系统"),
+    ("2010.11929", "Vision Transformer (ViT)", "Vision", "视觉"),
+    ("2106.09685", "LoRA", "Fine-tuning", "微调"),
+    ("2112.10752", "Latent Diffusion", "Generative", "生成式"),
+    ("2307.09288", "Llama 2", "LLM", "大模型"),
+    ("1707.06347", "PPO", "Reinforcement learning", "强化学习"),
+]
+
+
+def _gallery() -> str:
+    from urllib.parse import quote
+
+    cards = ""
+    for aid, title, den, dzh in _GALLERY:
+        url = quote(f"https://arxiv.org/abs/{aid}", safe="")
+        cards += (
+            f"<a class='gal-card' href='/analyze?source={url}'>"
+            f"<div class='body'><div class='t'>{_e(title)}</div><div class='d'>{_t(den, dzh)} · arXiv:{aid}</div></div>"
+            f"<span class='gal-tag'>{_t('View report', '看报告')}</span></a>"
+        )
+    return (
+        "<section class='lp-sec reveal'>"
+        f"<div class='lp-head'><div class='lp-eyebrow'>{_t('Real examples', '真实示例')}</div>"
+        f"<h2 class='lp-title'>{_t('See it on landmark papers', '在经典论文上看效果')}</h2>"
+        f"<p class='lp-sub'>{_t('Seven fully-worked reports across domains — generated by PaperMind, figures and all. Open one.', '跨领域七篇完整报告——全部由 PaperMind 生成，含教学图。点开看看。')}</p></div>"
+        f"<div class='gal-grid'>{cards}</div></section>"
+    )
+
+
+def _trust() -> str:
+    cells = [
+        ("Grounded, not guessed", "有据可依，不靠猜",
+         "Every key claim and Q&A answer is tied to a cited source span, and flagged when unverified.",
+         "每个关键判断与回答都挂到带页码的原文出处，未核实会标注。"),
+        ("A trained reranker", "训练过的重排器",
+         "A fine-tuned cross-encoder retrieves the right passages — not just nearest-neighbour embeddings.",
+         "微调的交叉编码器精准召回原文段落，而非仅靠近邻向量。"),
+        ("Reproduction from real code", "复现接真实代码",
+         "Setup steps are read from the paper's actual repository, not invented by the model.",
+         "复现步骤取自论文真实仓库，而非模型编造。"),
+        ("Open-source · runs locally", "开源 · 可本地运行",
+         "MIT-licensed. <code>pip install paper-mind</code> and analyze offline with your own keys.",
+         "MIT 协议。<code>pip install paper-mind</code> 即可用自己的 key 本地分析。"),
+    ]
+    divs = "".join(f"<div><b>{_t(en, zh)}</b><span>{_t(den, dzh)}</span></div>" for en, zh, den, dzh in cells)
+    return (
+        "<section class='lp-sec reveal'>"
+        f"<div class='lp-head'><div class='lp-eyebrow'>{_t('Why trust it', '为何可信')}</div>"
+        f"<h2 class='lp-title'>{_t('Built for evidence, not vibes', '为证据而造，不是凭感觉')}</h2></div>"
+        f"<div class='trust'>{divs}</div></section>"
+    )
+
+
+def _cta() -> str:
+    return (
+        "<section class='cta reveal'>"
+        f"<h2>{_t('Read your first paper in a minute', '一分钟读懂第一篇论文')}</h2>"
+        f"<p>{_t('Paste a link above, or install it and run anywhere.', '在上方粘贴一个链接，或安装后随处运行。')}</p>"
+        "<div class='row'>"
+        f"<a class='cta-btn' href='#top'>{_t('Analyze a paper', '分析一篇论文')}</a>"
+        "<a class='ghost' href='https://github.com/Wenhao-Hua/papermind' target='_blank' rel='noopener'>★ GitHub</a>"
+        "<code>pip install paper-mind</code></div></section>"
     )
 
 
