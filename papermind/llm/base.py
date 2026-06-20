@@ -445,14 +445,31 @@ def _get_local_encoder(model_name: str, cls):
     return _LOCAL_ENCODERS[model_name]
 
 
-def _import_litellm():
-    try:
-        import litellm
+_litellm_import_lock = threading.Lock()
+_litellm_module = None
+_litellm_import_failed = False  # sentinel: avoid retrying a broken import on every call
 
-        litellm.drop_params = True  # silently drop unsupported params per provider
-        return litellm
-    except ImportError as exc:  # pragma: no cover
-        raise LLMError("litellm is required. Install with: pip install litellm") from exc
+
+def _import_litellm():
+    global _litellm_module, _litellm_import_failed
+    if _litellm_module is not None:
+        return _litellm_module
+    if _litellm_import_failed:
+        raise LLMError("litellm is required. Install with: pip install litellm")
+    with _litellm_import_lock:
+        if _litellm_module is None and not _litellm_import_failed:
+            try:
+                import litellm
+
+                litellm.drop_params = True  # silently drop unsupported params per provider
+                _litellm_module = litellm
+            except ImportError as exc:  # pragma: no cover
+                _litellm_import_failed = True
+                raise LLMError("litellm is required. Install with: pip install litellm") from exc
+            except BaseException as exc:  # pyo3/Rust panics from broken native extensions
+                _litellm_import_failed = True
+                raise LLMError(f"litellm failed to initialize: {exc}") from exc
+    return _litellm_module
 
 
 def _supports_json_mode(model: str) -> bool:
