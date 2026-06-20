@@ -327,16 +327,23 @@ class LLMClient:
         return text
 
     def _record_usage(self, model: str, prompt_tokens: int, completion_tokens: int) -> None:
-        cost = 0.0
-        try:
-            litellm = _import_litellm()
-            prompt_cost, completion_cost = litellm.cost_per_token(
-                model=model, prompt_tokens=prompt_tokens, completion_tokens=completion_tokens
-            )
-            cost = float(prompt_cost) + float(completion_cost)
-        except Exception:  # noqa: BLE001 - cost is best-effort; many models lack pricing
-            cost = 0.0
+        # Hold the lock for the entire operation so that (a) usage fields are updated
+        # atomically and (b) litellm's lazy sub-module imports (OCI/cryptography/pyo3)
+        # are serialised — concurrent first-time imports trigger a Rust panic that
+        # inherits from BaseException, not Exception, and would kill the calling thread
+        # before usage.record() could run.
         with self._usage_lock:
+            cost = 0.0
+            try:
+                litellm = _import_litellm()
+                prompt_cost, completion_cost = litellm.cost_per_token(
+                    model=model, prompt_tokens=prompt_tokens, completion_tokens=completion_tokens
+                )
+                cost = float(prompt_cost) + float(completion_cost)
+            except (KeyboardInterrupt, SystemExit):
+                raise
+            except BaseException:  # noqa: BLE001 - cost is best-effort; pyo3 panics don't subclass Exception
+                pass
             self.usage.record(prompt_tokens, completion_tokens, cost)
 
 
