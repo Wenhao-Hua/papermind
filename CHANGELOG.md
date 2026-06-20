@@ -8,8 +8,11 @@ All notable changes to PaperMind are documented here. The format follows
 ### Changed
 - Web UI + report restyled into a warmer, more distinctive "research reading"
   look: an ink-green-teal accent (retiring the generic indigo), warm paper
-  background, serif headings, a citation-spine + source-badge motif, and
-  plainer-language copy throughout.
+  background, serif headings, and plainer-language copy throughout.
+- Reworked the web UI from a marketing landing into a focused **tool**: the home
+  is the analyze function itself, and every function (分析/问答/速读/框架图/对比/
+  复现/搜索) now shares one consistent, viewport-centered focused-tool layout
+  (dropping the hero pitch, capability cards, benchmark section, and gallery).
 
 ## [0.1.2] — 2026-06-20
 

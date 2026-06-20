@@ -299,24 +299,7 @@ def create_app(live: bool = False, rate_per_ip: int = 8, rate_global: int = 300,
     # -- analyze -------------------------------------------------------------- #
     @app.get("/", response_class=HTMLResponse)
     def index():
-        note = "" if live else "<p class='tool-note'>演示模式：仅展示已缓存论文；分析新论文请用 CLI 或以 <code>--live</code> 启动。</p>"
-        tool = (
-            "<section class='pm-tool'>"
-            "<h1 class='tool-h'>分析一篇论文</h1>"
-            "<p class='tool-sub'>粘 arXiv 链接 / DOI / 标题，或直接传 PDF —— "
-            "得到四模块解读、带原文出处的问答、整篇方法的框架图，以及照着能跑的复现步骤。</p>"
-            f"{note}"
-            "<form class='tool-form' method='post' action='/analyze' enctype='multipart/form-data'>"
-            "<div class='tool-in'><input name='source' placeholder='arXiv 链接 / DOI / 论文标题 / PDF…' autofocus>"
-            "<button>开始读</button></div>"
-            "<div class='tool-opts'><span class='upl'>或上传 PDF <input type='file' name='file' accept='application/pdf'></span>"
-            "<label class='chk'><input type='checkbox' name='refresh' value='1'>忽略缓存重分析</label></div>"
-            "</form>"
-            f"{_examples_row()}"
-            "<p class='tool-demo'><a href='/demo'>没装也想看？看一份完整示例报告 →</a></p>"
-            "</section>"
-        )
-        return _page("/", tool, live)
+        return _page("/", _analyze_form(live), live)
 
     def _analyze_async(request, src, model, refresh):
         """Live analysis -> background job + polling page (avoids the 100s timeout).
@@ -763,7 +746,7 @@ main{min-width:0}
 .panel{background:var(--surface);border:1px solid var(--line);border-radius:var(--r);
   padding:26px 28px;margin:18px 0;box-shadow:var(--shadow)}
 h1,h2,h3{font-weight:700;letter-spacing:-.02em;line-height:1.25;color:var(--ink)}
-.panel h2{margin:0 0 .3em;font-size:1.32rem}.panel h3{margin:1.3em 0 .4em;font-size:1.06rem}
+.panel h2{font-family:var(--serif);margin:0 0 .3em;font-size:1.32rem;letter-spacing:-.005em}.panel h3{margin:1.3em 0 .4em;font-size:1.06rem}
 .panel p{margin:.2em 0 .9em}.lead{color:var(--soft);margin:0 0 18px;font-size:.95rem}
 .panel ul{padding-left:1.15em;margin:.4em 0}.panel li{margin:.35em 0}
 label{display:block;font-weight:600;font-size:.88rem;margin:16px 0 7px}
@@ -852,7 +835,7 @@ pre{font:.88rem/1.6 var(--mono);background:#0f1117;color:#e7e9ef;padding:16px 18
 @media(prefers-reduced-motion:reduce){*{transition:none!important;animation:none!important}}
 @media(prefers-reduced-motion:no-preference){
   @keyframes pm-rise{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:none}}
-  .hero{animation:pm-rise .5s cubic-bezier(.2,.7,.2,1) both}
+  .pm-tool{animation:pm-rise .5s cubic-bezier(.2,.7,.2,1) both}
   main>.panel{animation:pm-rise .5s cubic-bezier(.2,.7,.2,1) .07s both}
 }
 """
@@ -984,37 +967,61 @@ _HERO_EN = _load_hero_svg("hero.svg")  # English, bundled in the wheel
 _HERO_ZH = _load_zh_hero()
 
 
-def _analyze_form(live: bool, error: str = "") -> str:
-    note = "" if live else f"<p class='lead'>{_t('Demo mode: only already-cached papers. Analyze a new one via the CLI, or start with <code>--live</code>.', '演示模式：仅展示已缓存论文。分析新论文请用 CLI，或以 <code>--live</code> 启动。')}</p>"
+def _tool_page(title: str, sub: str, inner: str, note: str = "", error: str = "") -> str:
+    """The one focused, viewport-centered layout every function tool shares
+    (分析/问答/速读/框架图/对比/复现/搜索) — same as the home, no marketing chrome."""
     return (
-        f"<section class='panel'><h2>{_t('Analyze a paper', '分析一篇论文')}</h2>"
-        f"<p class='lead'>{_t('Four-module read: contributions · method &amp; figures · related work · reproduction.', '四模块结构化解读：核心贡献 · 方法与图示 · 关联工作 · 复现要点。')}</p>"
-        f"{note}{_err(error)}"
-        "<form method='post' action='/analyze' enctype='multipart/form-data'>"
-        f"<label>{_t('Paper', '论文')} <span class='hint'>{_t('link / DOI / title', '链接 / DOI / 标题')}</span></label>"
-        f"<input name='source' placeholder='{_t('arXiv / paper page / PDF / DOI, or just the paper title', 'arXiv / 论文页面 / PDF / DOI，或直接输入论文标题')}' autofocus>"
-        f"<label>{_t('or upload a PDF', '或上传 PDF')} <span class='hint'>{_t('local paper', '本地论文')}</span></label>"
-        "<input type='file' name='file' accept='application/pdf'>"
-        "<label style='font-weight:400;color:var(--soft)'>"
-        f"<input type='checkbox' name='refresh' value='1' style='width:auto;margin-right:8px'>{_t('Ignore cache, re-analyze', '忽略缓存，重新分析')}</label>"
-        f"<button>{_t('Analyze', '分析')}</button></form>"
-        f"{_examples_row()}</section>"
+        "<section class='pm-tool'>"
+        f"<h1 class='tool-h'>{title}</h1>"
+        f"<p class='tool-sub'>{sub}</p>"
+        f"{note}{_err(error)}{inner}"
+        "</section>"
+    )
+
+
+def _src_form(action: str, placeholder: str, btn: str, examples: bool = False) -> str:
+    """A single-source inline form (input + submit), shared by the source-only tools."""
+    ex = _examples_row() if examples else ""
+    return (
+        f"<form class='tool-form' method='post' action='{action}'>"
+        f"<div class='tool-in'><input name='source' placeholder='{placeholder}' autofocus>"
+        f"<button>{btn}</button></div></form>{ex}"
+    )
+
+
+def _analyze_form(live: bool, error: str = "") -> str:
+    note = "" if live else "<p class='tool-note'>演示模式：仅展示已缓存论文；分析新论文请用 CLI 或以 <code>--live</code> 启动。</p>"
+    inner = (
+        "<form class='tool-form' method='post' action='/analyze' enctype='multipart/form-data'>"
+        "<div class='tool-in'><input name='source' placeholder='arXiv 链接 / DOI / 论文标题 / PDF…' autofocus>"
+        "<button>开始读</button></div>"
+        "<div class='tool-opts'><span class='upl'>或上传 PDF <input type='file' name='file' accept='application/pdf'></span>"
+        "<label class='chk'><input type='checkbox' name='refresh' value='1'>忽略缓存重分析</label></div>"
+        "</form>"
+        f"{_examples_row()}"
+        "<p class='tool-demo'><a href='/demo'>没装也想看？看一份完整示例报告 →</a></p>"
+    )
+    return _tool_page(
+        "分析一篇论文",
+        "粘 arXiv 链接 / DOI / 标题，或直接传 PDF —— 得到四模块解读、带原文出处的问答、整篇方法的框架图，以及照着能跑的复现步骤。",
+        inner, note=note, error=error,
     )
 
 
 def _ask_form(live: bool, error: str = "") -> str:
-    return (
-        f"<section class='panel'><h2>{_t('Q&amp;A', '问答')}</h2>"
-        f"<p class='lead'>{_t('Grounded in the paper, labeled by layer: paper fact · inference from the paper · out of scope — each with its source.', '基于原文回答，分层标注：论文事实 · 基于论文的推理 · 超出论文范围，并附原文依据。')}</p>"
-        f"{_err(error)}"
-        "<form method='post' action='/ask'>"
-        f"<label>{_t('Paper', '论文')} <span class='hint'>{_t('link / DOI / title', '链接 / DOI / 标题')}</span></label><input name='source' placeholder='https://arxiv.org/abs/2307.08691'>"
-        f"<label>{_t('Question', '问题')}</label><input name='question' placeholder='{_t('Why divide by √d_k?', '为什么要除以 √d_k？')}'>"
-        f"<label>{_t('Mode', '模式')} <span class='hint'>{_t('strict = more cautious · explore = more open', 'strict 更保守 · explore 更发散')}</span></label>"
+    inner = (
+        "<form class='tool-form' method='post' action='/ask'>"
+        "<label>论文 <span class='hint'>链接 / DOI / 标题</span></label>"
+        "<input name='source' placeholder='arXiv 链接 / DOI / 论文标题' autofocus>"
+        "<label>你的问题</label>"
+        "<input name='question' placeholder='例：为什么要除以 √d_k？'>"
+        "<label>模式 <span class='hint'>均衡 · 严格更保守 · 发散更开放</span></label>"
         "<select name='mode'><option value='balanced'>均衡</option>"
         "<option value='strict'>严格</option><option value='explore'>发散</option></select>"
-        f"<button>{_t('Ask', '提问')}</button></form></section>"
+        "<button>提问</button></form>"
     )
+    return _tool_page("问答", "基于原文回答——每句都标注是论文事实 / 推理 / 超纲，并附带页码的原文出处。",
+                      inner, error=error)
 
 
 def _build_framework(src: str, model: str, jid: str, no_cache: bool):
@@ -1052,17 +1059,10 @@ def _demo_framework(source: str):
 
 
 def _framework_form(live: bool, error: str = "") -> str:
-    note = "" if live else f"<p class='lead'>{_t('Demo mode: only cached papers&#39; framework diagrams. Start with <code>--live</code>.', '演示模式：仅展示已缓存论文的框架图。请以 <code>--live</code> 启动。')}</p>"
-    return (
-        f"<section class='panel'><h2>{_t('Framework diagram', '论文框架图')}</h2>"
-        f"<p class='lead'>{_t('Generates the paper&#39;s end-to-end method as one diagram (including steps the paper only implies), downloadable as SVG.', '自动生成整篇方法的端到端框架图（含论文未画出的推断步骤），可下载为 SVG。')}</p>"
-        f"{note}{_err(error)}"
-        "<form method='post' action='/framework'>"
-        f"<label>{_t('Paper', '论文')} <span class='hint'>{_t('link / DOI / title', '链接 / DOI / 标题')}</span></label>"
-        f"<input name='source' placeholder='{_t('arXiv / paper page / PDF / DOI / title', 'arXiv / 论文页面 / PDF / DOI / 标题')}' autofocus>"
-        f"<button>{_t('Generate diagram', '生成框架图')}</button></form>"
-        f"{_examples_row()}</section>"
-    )
+    note = "" if live else "<p class='tool-note'>演示模式：仅展示已缓存论文的框架图；请以 <code>--live</code> 启动。</p>"
+    return _tool_page("框架图", "把整篇方法画成一张端到端框架图（含论文未显式画出的推断步骤），可下载 SVG。",
+                      _src_form("/framework", "arXiv 链接 / DOI / 论文标题", "生成框架图", examples=True),
+                      note=note, error=error)
 
 
 def _framework_body(spec) -> str:
@@ -1080,48 +1080,32 @@ def _framework_body(spec) -> str:
 
 
 def _summary_form(live: bool, error: str = "") -> str:
-    return (
-        f"<section class='panel'><h2>{_t('Summary', '速读')}</h2>"
-        f"<p class='lead'>{_t('A one-line TL;DR + a few key points (a single call, faster than the full analysis).', '一句话速览 + 几条要点（单次调用，比完整分析更快）。')}</p>"
-        f"{_err(error)}"
-        "<form method='post' action='/summary'>"
-        f"<label>{_t('Paper', '论文')} <span class='hint'>{_t('link / DOI / title', '链接 / DOI / 标题')}</span></label><input name='source' placeholder='https://arxiv.org/abs/2307.08691'>"
-        f"<button>{_t('Summarize', '速读')}</button></form></section>"
-    )
+    return _tool_page("速读", "一句话先说这篇值不值得读，再给几个要点——单次调用，比完整分析快。",
+                      _src_form("/summary", "arXiv 链接 / DOI / 论文标题", "速读"), error=error)
 
 
 def _compare_form(live: bool, error: str = "") -> str:
-    return (
-        f"<section class='panel'><h2>{_t('Compare papers', '多篇对比')}</h2>"
-        f"<p class='lead'>{_t('Side-by-side problem · method · results across 2–4 papers.', '2–4 篇论文的问题 · 方法 · 结果横向对照。')}</p>"
-        f"{_err(error)}"
-        "<form method='post' action='/compare'>"
-        f"<label>{_t('Papers', '论文')} <span class='hint'>{_t('one per line, 2–4', '每行一个，2–4 篇')}</span></label>"
-        "<textarea name='sources' placeholder='https://arxiv.org/abs/2307.08691&#10;https://arxiv.org/abs/1706.03762'></textarea>"
-        f"<button>{_t('Compare', '对比')}</button></form></section>"
+    inner = (
+        "<form class='tool-form' method='post' action='/compare'>"
+        "<label>论文 <span class='hint'>每行一个，2–4 篇</span></label>"
+        "<textarea name='sources' placeholder='https://arxiv.org/abs/2307.08691&#10;https://arxiv.org/abs/1706.03762' autofocus></textarea>"
+        "<button>对比</button></form>"
     )
+    return _tool_page("多篇对比", "2–4 篇论文摆一起，问题 · 方法 · 结果一表看清谁强谁弱。", inner, error=error)
 
 
 def _reproduce_form(live: bool, error: str = "") -> str:
-    return (
-        f"<section class='panel'><h2>{_t('Reproduction guide', '复现指南')}</h2>"
-        f"<p class='lead'>{_t('Export a one-shot environment + steps script (setup.sh).', '导出可一键运行的环境与步骤脚本（setup.sh）。')}</p>"
-        f"{_err(error)}"
-        "<form method='post' action='/reproduce'>"
-        f"<label>{_t('Paper', '论文')} <span class='hint'>{_t('link / DOI / title', '链接 / DOI / 标题')}</span></label><input name='source' placeholder='https://arxiv.org/abs/2307.08691'>"
-        f"<button>{_t('Export', '导出')}</button></form></section>"
-    )
+    return _tool_page("复现指南", "翻论文真实的代码仓库，导出可一键运行的 setup.sh —— 命令不是模型瞎编的。",
+                      _src_form("/reproduce", "arXiv 链接 / DOI / 论文标题", "导出 setup.sh"), error=error)
 
 
 def _search_form(error: str = "") -> str:
-    return (
-        f"<section class='panel'><h2>{_t('Search arXiv', '搜索 arXiv')}</h2>"
-        f"<p class='lead'>{_t('Keyword search, no model calls. Click an arXiv id in the results to analyze / ask.', '关键词检索，不调用模型。点结果中的 arXiv id 即可分析 / 问答。')}</p>"
-        f"{_err(error)}"
-        "<form method='post' action='/search'>"
-        f"<label>{_t('Keywords', '关键词')}</label><input name='query' placeholder='flash attention' autofocus>"
-        f"<button>{_t('Search', '搜索')}</button></form></section>"
+    inner = (
+        "<form class='tool-form' method='post' action='/search'>"
+        "<div class='tool-in'><input name='query' placeholder='关键词，例：flash attention' autofocus>"
+        "<button>搜索</button></div></form>"
     )
+    return _tool_page("搜索 arXiv", "关键词检索，不调用模型。点结果里的论文即可分析 / 问答。", inner, error=error)
 
 
 def _answer_segments_html(answer) -> str:
