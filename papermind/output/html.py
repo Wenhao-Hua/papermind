@@ -135,6 +135,11 @@ def _render(report: Report) -> List[str]:
         "<!DOCTYPE html>",
         '<html lang="zh"><head><meta charset="utf-8">',
         '<meta name="viewport" content="width=device-width, initial-scale=1">',
+        ("<link rel='icon' href=\"data:image/svg+xml,"
+         "<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'>"
+         "<rect width='32' height='32' rx='7' fill='%234f46e5'/>"
+         "<g stroke='%23fff' stroke-width='2.4' stroke-linecap='round'>"
+         "<path d='M10 11h12'/><path d='M10 16h12'/><path d='M10 21h7'/></g></svg>\">"),
         f"<title>{esc(paper.title)} · PaperMind</title>",
         f"<style>{_CSS}</style>",
         _MERMAID,

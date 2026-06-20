@@ -661,6 +661,14 @@ def _resolve_upload(source: str, file) -> Optional[str]:
 # Design system — minimal academic (system serif display + sans body, warm
 # paper, one ink-navy accent). Light/dark via CSS variables; reduced-motion safe.
 # --------------------------------------------------------------------------- #
+_FAVICON = (
+    "<link rel='icon' href=\"data:image/svg+xml,"
+    "<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'>"
+    "<rect width='32' height='32' rx='7' fill='%234f46e5'/>"
+    "<g stroke='%23fff' stroke-width='2.4' stroke-linecap='round'>"
+    "<path d='M10 11h12'/><path d='M10 16h12'/><path d='M10 21h7'/></g></svg>\">"
+)
+
 _CSS = """
 :root{
   --bg:#f4f5f8;--surface:#ffffff;--ink:#0f1115;--soft:#565d6b;--faint:#8b919d;
@@ -951,6 +959,7 @@ def _page(active: str, body: str, live: bool) -> str:
     return (
         f"<!DOCTYPE html><html lang='{_lang()}'><head><meta charset='utf-8'>"
         "<meta name='viewport' content='width=device-width, initial-scale=1'>"
+        f"{_FAVICON}"
         f"<title>PaperMind</title><style>{_CSS}</style>"
         "<script>document.documentElement.classList.add('js')</script></head><body>"
         "<header class='pm-bar-top'><div class='pm-bar-in'>"
