@@ -35,7 +35,7 @@ def test_web_is_chinese_only():
     # Chinese regardless of Accept-Language; no English UI, no language toggle.
     for al in ("en-US,en", "zh-CN,zh"):
         t = TestClient(app).get("/", headers={"accept-language": al}).text
-        assert "讲明白" in t and "Analyze a paper" not in t and "Read any paper" not in t
+        assert "分析一篇论文" in t and "Analyze a paper" not in t and "Read any paper" not in t
     assert "pm-lang" not in TestClient(app).get("/").text  # language toggle removed
 
 

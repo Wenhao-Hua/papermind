@@ -299,7 +299,24 @@ def create_app(live: bool = False, rate_per_ip: int = 8, rate_global: int = 300,
     # -- analyze -------------------------------------------------------------- #
     @app.get("/", response_class=HTMLResponse)
     def index():
-        return _page("/", _hero(live) + _capabilities() + _proof(), live)
+        note = "" if live else "<p class='tool-note'>演示模式：仅展示已缓存论文；分析新论文请用 CLI 或以 <code>--live</code> 启动。</p>"
+        tool = (
+            "<section class='pm-tool'>"
+            "<h1 class='tool-h'>分析一篇论文</h1>"
+            "<p class='tool-sub'>粘 arXiv 链接 / DOI / 标题，或直接传 PDF —— "
+            "得到四模块解读、带原文出处的问答、整篇方法的框架图，以及照着能跑的复现步骤。</p>"
+            f"{note}"
+            "<form class='tool-form' method='post' action='/analyze' enctype='multipart/form-data'>"
+            "<div class='tool-in'><input name='source' placeholder='arXiv 链接 / DOI / 论文标题 / PDF…' autofocus>"
+            "<button>开始读</button></div>"
+            "<div class='tool-opts'><span class='upl'>或上传 PDF <input type='file' name='file' accept='application/pdf'></span>"
+            "<label class='chk'><input type='checkbox' name='refresh' value='1'>忽略缓存重分析</label></div>"
+            "</form>"
+            f"{_examples_row()}"
+            "<p class='tool-demo'><a href='/demo'>没装也想看？看一份完整示例报告 →</a></p>"
+            "</section>"
+        )
+        return _page("/", tool, live)
 
     def _analyze_async(request, src, model, refresh):
         """Live analysis -> background job + polling page (avoids the 100s timeout).
@@ -717,51 +734,29 @@ main{min-width:0}
   border-radius:8px;padding:6px 11px;font-size:.84rem;font-weight:600;white-space:nowrap;transition:border-color .15s,color .15s}
 .pm-ghs:hover{border-color:var(--accent);color:var(--accent)}
 
-/* hero: the analyze tool on the left, a real teaching figure on the right */
-.hero{display:grid;grid-template-columns:1.04fr .96fr;gap:46px;align-items:center;
-  padding:50px 0 44px;position:relative;isolation:isolate}
-.hero::before{content:'';position:absolute;z-index:-1;inset:-30px -40px auto -40px;height:340px;pointer-events:none;
-  background-image:repeating-linear-gradient(180deg,var(--line) 0,var(--line) .5px,transparent .5px,transparent 30px);opacity:.7;
-  -webkit-mask-image:linear-gradient(180deg,#000,transparent 82%);mask-image:linear-gradient(180deg,#000,transparent 82%)}
-.hero-l{min-width:0}
-.hero-eyebrow{display:inline-flex;align-items:center;gap:7px;font-size:.76rem;font-weight:600;letter-spacing:.01em;
-  color:var(--accent);background:var(--accent-soft);border:1px solid var(--line);border-radius:999px;padding:5px 13px;margin:0 0 18px}
-.hero-eyebrow::before{content:'';width:6px;height:6px;border-radius:50%;background:var(--accent)}
-.hero-h{font-family:var(--serif);font-size:2.7rem;line-height:1.32;font-weight:700;letter-spacing:-.01em;margin:0 0 .42em;text-wrap:balance}
-.hero-h .hl{color:var(--accent);position:relative;white-space:nowrap}
-.hero-h .hl svg{position:absolute;left:-1%;bottom:-.08em;width:102%;height:.3em;overflow:visible;pointer-events:none}
-.hero-h .hl path{fill:none;stroke:var(--warn);stroke-width:3.6;stroke-linecap:round}
-@keyframes pm-draw{from{stroke-dashoffset:240}to{stroke-dashoffset:0}}
-@media(prefers-reduced-motion:no-preference){.hero-h .hl path{stroke-dasharray:240;animation:pm-draw 1.05s cubic-bezier(.6,.1,.3,1) .35s both}}
-.hero-sub{color:var(--soft);font-size:1.02rem;line-height:1.6;margin:0 0 22px}
-.hero-note{font-size:.85rem;color:var(--faint);margin:0 0 14px}
-.hero-form{margin:0}
-.hero-in{display:flex;gap:10px}
-.hero-in input{flex:1;min-width:0;font-size:1rem;padding:13px 15px}
-.hero-in button{margin:0;white-space:nowrap;padding:13px 26px;font-size:1rem}
-.hero-opts{display:flex;flex-wrap:wrap;align-items:center;gap:9px 18px;margin-top:12px;font-size:.85rem;color:var(--soft)}
-.hero-opts .upl input[type=file]{width:auto;font-size:.82rem}
-.hero-opts .chk{display:inline-flex;align-items:center;gap:7px;cursor:pointer;white-space:nowrap}
-.hero-opts .chk input{width:auto;margin:0}
-.hero-r{min-width:0}
-.hero-fig{margin:0;background:var(--surface);border:1px solid var(--line);border-radius:var(--r);
-  padding:18px 20px 14px;box-shadow:var(--shadow)}
-.hero-fig svg{max-width:100%;height:auto;display:block;margin:0 auto}
-.hero-fig figcaption{margin-top:12px;color:var(--faint);font-size:.8rem;text-align:center}
-@media(max-width:880px){
-  .hero{grid-template-columns:1fr;gap:26px;padding:38px 0 30px}
-  .hero-h{font-size:2.5rem}
-}
+/* home: a focused analyze tool (not a marketing page) */
+.pm-tool{max-width:720px;margin:0 auto;min-height:calc(100dvh - 168px);display:flex;flex-direction:column;justify-content:center;padding:20px 0 48px}
+.tool-h{font-family:var(--serif);font-size:2rem;font-weight:700;letter-spacing:-.01em;margin:0 0 .35em}
+.tool-sub{color:var(--soft);font-size:1.02rem;line-height:1.6;margin:0 0 22px;max-width:62ch}
+.tool-note{font-size:.85rem;color:var(--faint);margin:0 0 14px}
+.tool-form{margin:0}
+.tool-in{display:flex;gap:10px}
+.tool-in input{flex:1;min-width:0;font-size:1.05rem;padding:15px 16px}
+.tool-in button{margin:0;white-space:nowrap;padding:15px 30px;font-size:1.02rem}
+.tool-opts{display:flex;flex-wrap:wrap;align-items:center;gap:9px 18px;margin-top:12px;font-size:.85rem;color:var(--soft)}
+.tool-opts .upl input[type=file]{width:auto;font-size:.82rem}
+.tool-opts .chk{display:inline-flex;align-items:center;gap:7px;cursor:pointer;white-space:nowrap}
+.tool-opts .chk input{width:auto;margin:0}
+.tool-demo{margin-top:18px;font-size:.88rem}
 @media(max-width:640px){
   .pm-bar-in{height:auto;flex-wrap:wrap;padding:9px 16px;gap:10px 12px}
   .pm-brand{flex:1}
   .pm-nav{order:3;flex-basis:100%;flex-wrap:nowrap;overflow-x:auto;gap:2px;scrollbar-width:none}
   .pm-nav::-webkit-scrollbar{display:none}
-  .hero{padding:28px 0 22px}
-  .hero-h{font-size:2.05rem;overflow-wrap:break-word}
-  .hero-sub{font-size:.98rem}
-  .hero-in{flex-direction:column}
-  .hero-in button{padding:12px}
+  .pm-tool{min-height:0;padding:28px 0 40px}
+  .tool-h{font-size:1.7rem}
+  .tool-in{flex-direction:column}
+  .tool-in button{padding:13px}
 }
 
 /* panels & type */
@@ -851,59 +846,6 @@ pre{font:.88rem/1.6 var(--mono);background:#0f1117;color:#e7e9ef;padding:16px 18
 .pm-busy-title{margin:0;font-weight:600}.pm-busy-step{margin:8px 0 0;color:var(--accent)}
 .pm-busy-time{margin:6px 0 0;color:var(--faint);font-size:.85rem}
 @media(max-width:600px){.pm-wrap{padding:0 16px 72px}.panel{padding:22px}}
-/* ---------- rich landing sections (index only) ---------- */
-/* landing sections — compact */
-.lp{padding:54px 0 0;margin-top:54px;border-top:1px solid var(--line)}
-.lp-h{margin:0 0 20px}
-.lp-k{font-size:.73rem;font-weight:700;letter-spacing:.09em;text-transform:uppercase;color:var(--accent)}
-.lp-h h2{font-family:var(--serif);font-size:1.62rem;font-weight:700;letter-spacing:-.01em;margin:.32em 0 0;line-height:1.28}
-/* capabilities: compact icon + name + one line */
-.cap-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:12px}
-.cap{display:flex;align-items:center;gap:12px;background:var(--surface);border:1px solid var(--line);border-radius:var(--rs);
-  padding:13px 15px;text-decoration:none;color:inherit;box-shadow:var(--shadow);transition:transform .16s,border-color .16s,box-shadow .16s}
-.cap:hover{transform:translateY(-2px);border-color:var(--accent);box-shadow:var(--shadow-lift)}
-.cap-ic{flex:none;width:34px;height:34px;border-radius:9px;display:flex;align-items:center;justify-content:center;
-  background:var(--accent-soft);color:var(--accent)}
-.cap-ic svg{width:18px;height:18px;display:block}
-.cap-b{display:flex;flex-direction:column;min-width:0}
-.cap-t{font-weight:600;font-size:.95rem;letter-spacing:-.01em}
-.cap-d{color:var(--faint);font-size:.8rem;line-height:1.4}
-@media(max-width:760px){.cap-grid{grid-template-columns:repeat(2,1fr)}}
-@media(max-width:440px){.cap-grid{grid-template-columns:1fr}}
-/* proof: one headline stat + supporting points, then example chips */
-.proof{display:grid;grid-template-columns:300px 1fr;gap:20px;align-items:stretch}
-.stat{background:var(--surface);border:1px solid var(--line);border-radius:var(--r);padding:22px 24px;box-shadow:var(--shadow)}
-.stat-n{font-size:3rem;font-weight:800;letter-spacing:-.03em;color:var(--accent);line-height:1;font-variant-numeric:tabular-nums}
-.stat-n span{font-size:1.1rem;font-weight:700;margin-left:2px}
-.stat-l{font-size:.82rem;font-weight:600;color:var(--soft);margin-top:4px;letter-spacing:.04em;font-variant-numeric:tabular-nums}
-/* mini benchmark bar: 0.519 -> 0.660 */
-.stat-bar{display:flex;align-items:center;gap:8px;margin:14px 0 2px;font:600 .72rem/1 var(--mono);font-variant-numeric:tabular-nums;color:var(--faint)}
-.stat-track{flex:1;height:7px;border-radius:4px;background:var(--accent-soft);overflow:hidden;position:relative}
-.stat-track i{position:absolute;left:0;top:0;bottom:0;border-radius:4px}
-.stat-track i.now{width:66%;background:var(--accent)}
-.stat-track i.base{width:52%;background:var(--line-strong);border-radius:4px 0 0 4px}
-.stat-d{color:var(--soft);font-size:.9rem;line-height:1.6;margin:12px 0 0}
-.stat-d b{color:var(--ink);font-variant-numeric:tabular-nums}
-/* proof points strung on the citation spine */
-.pts{list-style:none;margin:0;padding:0 0 0 26px;display:flex;flex-direction:column;gap:18px;position:relative}
-.pts::before{content:'';position:absolute;left:5px;top:10px;bottom:10px;width:2px;
-  background:linear-gradient(180deg,transparent,var(--accent),transparent);opacity:.6}
-.pts li{position:relative;font-size:.94rem;color:var(--soft);line-height:1.62}
-.pts li::before{content:'';position:absolute;left:-26px;top:7px;width:10px;height:10px;border-radius:50%;
-  background:var(--surface);border:2px solid var(--accent);box-shadow:0 0 0 4px var(--bg)}
-.pts li b{color:var(--ink)}
-/* citation badge — the recurring "traces to source" mark */
-.cite{display:inline-flex;align-items:center;gap:4px;font:600 .72rem/1 var(--mono);font-variant-numeric:tabular-nums;
-  color:var(--accent);background:var(--accent-soft);border:1px solid var(--accent);border-radius:5px;padding:2px 7px;
-  vertical-align:.05em;white-space:nowrap}
-.cite::before{content:'§';opacity:.7;font-weight:700}
-.gal{margin-top:18px}
-.gal-k{font-size:.82rem;color:var(--faint)}
-.gchips{display:flex;flex-wrap:wrap;gap:8px;margin-top:10px}
-.gchip{font-size:.86rem;font-weight:500;color:var(--soft);background:var(--surface);border:1px solid var(--line-strong);
-  border-radius:8px;padding:6px 13px;transition:border-color .15s,color .15s,transform .15s}
-.gchip:hover{border-color:var(--accent);color:var(--accent);transform:translateY(-1px)}
-@media(max-width:680px){.proof{grid-template-columns:1fr;gap:13px}}
 .js .reveal{opacity:0;transform:translateY(16px)}
 .js .reveal.in{opacity:1;transform:none;transition:opacity .6s ease,transform .6s cubic-bezier(.2,.7,.2,1)}
 @media(prefers-reduced-motion:reduce){.js .reveal{opacity:1;transform:none}}
@@ -1040,119 +982,6 @@ def _load_zh_hero() -> str:
 
 _HERO_EN = _load_hero_svg("hero.svg")  # English, bundled in the wheel
 _HERO_ZH = _load_zh_hero()
-
-
-def _hero(live: bool) -> str:
-    """Above the fold: headline + the analyze tool inline (left), a real teaching figure
-    (right). The tool is the hero — paste a link and act, no scrolling required."""
-    note = "" if live else "<p class='hero-note'>演示模式：仅展示已缓存论文；分析新论文请用 CLI 或以 <code>--live</code> 启动。</p>"
-    fig = (f"<figure class='hero-fig'>{_HERO_ZH}"
-           "<figcaption>↑ PaperMind 为论文技术点生成的论文式教学图 · "
-           "<a href='/demo'>看完整示例 →</a></figcaption></figure>") if _HERO_ZH else ""
-    underline = ("<svg viewBox='0 0 120 12' preserveAspectRatio='none' aria-hidden='true'>"
-                 "<path d='M3,8 C26,3 50,10 73,6 C93,3 106,9 117,7'/></svg>")
-    return (
-        "<section class='hero'><div class='hero-l'>"
-        "<span class='hero-eyebrow'>开源 · 论文深读，能装在自己电脑上</span>"
-        f"<h1 class='hero-h'>读不懂的那篇论文，帮你<span class='hl'>讲明白{underline}</span>、"
-        "还查得到出处、还能照着做</h1>"
-        "<p class='hero-sub'>粘一个 arXiv 链接、DOI、标题，或直接传 PDF。它先把论文讲成人话——干了啥、怎么做的、强在哪；"
-        "再把每句结论挂回原文第几页，你能翻回去核对；想动手时，还接着论文真实的代码仓库给你一份能跑的复现步骤。</p>"
-        f"{note}"
-        "<form class='hero-form' method='post' action='/analyze' enctype='multipart/form-data'>"
-        "<div class='hero-in'><input name='source' placeholder='arXiv 链接 / DOI / 论文标题 / PDF…' autofocus>"
-        "<button>粘上链接，开始读</button></div>"
-        "<div class='hero-opts'><span class='upl'>或上传 PDF <input type='file' name='file' accept='application/pdf'></span>"
-        "<label class='chk'><input type='checkbox' name='refresh' value='1'>忽略缓存重分析</label></div>"
-        "</form>"
-        f"{_examples_row()}"
-        f"</div><div class='hero-r'>{fig}</div></section>"
-    )
-
-
-# --------------------------------------------------------------------------- #
-# Rich landing sections (index page only) — showcase the full capability set.
-# --------------------------------------------------------------------------- #
-def _ic(path: str) -> str:
-    return (f"<svg viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='1.8' "
-            f"stroke-linecap='round' stroke-linejoin='round'>{path}</svg>")
-
-
-# Clean line-icons (no icon-library available in this no-bundler server render).
-_CAPS = [
-    ("<path d='M5 3h9l5 5v13H5z'/><path d='M14 3v5h5'/><path d='M8 13h8M8 17h6'/>",
-     "分析", "/", "拆成四块，大白话讲明白"),
-    ("<path d='M21 12a8 8 0 0 1-11.5 7.2L4 21l1.8-5.5A8 8 0 1 1 21 12z'/>",
-     "问答", "/ask", "照原文回答，还标页码"),
-    ("<path d='M13 2 4 14h7l-1 8 9-12h-7z'/>",
-     "速读", "/summary", "一句话 + 几个要点"),
-    ("<path d='M6 3h12M6 21h12M9 3v4l3 4 3-4V3M9 21v-4l3-4 3 4v4'/>",
-     "框架图", "/framework", "整篇方法画成一张图"),
-    ("<path d='M4 4h7v16H4zM13 4h7v16h-7z'/>",
-     "对比", "/compare", "几篇论文一表看高下"),
-    ("<path d='M4 5h16v14H4z'/><path d='M8 10l2.5 2.5L8 15M13 15h4'/>",
-     "复现", "/reproduce", "照真实仓库给你能跑的步骤"),
-    ("<path d='M11 19a8 8 0 1 1 0-16 8 8 0 0 1 0 16zM21 21l-4.3-4.3'/>",
-     "搜索", "/search", "输关键词直接搜 arXiv"),
-]
-
-
-def _capabilities() -> str:
-    cards = "".join(
-        f"<a class='cap' href='{href}'><span class='cap-ic'>{_ic(icon)}</span>"
-        f"<span class='cap-b'><span class='cap-t'>{name}</span>"
-        f"<span class='cap-d'>{desc}</span></span></a>"
-        for icon, name, href, desc in _CAPS
-    )
-    return (
-        "<section class='lp reveal'>"
-        "<div class='lp-h'><span class='lp-k'>能替你做这些</span>"
-        "<h2>读一篇论文要走的每一步，它都替你走过一遍</h2></div>"
-        f"<div class='cap-grid'>{cards}</div></section>"
-    )
-
-
-def _proof() -> str:
-    from urllib.parse import quote
-
-    chips = "".join(
-        f"<a class='gchip' href='/analyze?source={quote('https://arxiv.org/abs/' + aid, safe='')}'>{_e(title)}</a>"
-        for aid, title, _d, _dz in _GALLERY
-    )
-    return (
-        "<section class='lp reveal'>"
-        "<div class='lp-h'><span class='lp-k'>凭什么信它</span>"
-        "<h2>它给的每句话，你都能翻回原文对一遍——不是它编的</h2></div>"
-        "<div class='proof'>"
-        "<div class='stat'><div class='stat-n'>+14<span>pt</span></div>"
-        "<div class='stat-l'>Recall@5 · QASPER</div>"
-        "<div class='stat-bar'><span>0.519</span>"
-        "<div class='stat-track'><i class='now'></i><i class='base'></i></div>"
-        "<span>0.660</span></div>"
-        "<p class='stat-d'>找原文出处这件事，我们专门训了个“找得更准”的小模型——同样的问题，"
-        "以前前 5 条里能命中约 <b>5 成</b>，现在到 <b>6.6 成</b>。说人话：它更会翻书，更少瞎指。</p></div>"
-        "<ul class='pts'>"
-        "<li><b>逐句核验</b>：每个结论和回答都挂着带页码的原文出处 <span class='cite'>p.4</span>，"
-        "点一下就回到原文核对；核不到的，它老实标个 ⚠️ 不糊弄你。</li>"
-        "<li><b>复现接真实代码</b>：安装和运行步骤取自论文自己的 GitHub 仓库，不是凭空编的命令。</li>"
-        "<li><b>开源 · 可本地</b>：MIT 协议，<code>pip install papermind-ai</code>，"
-        "用你自己的 key 在自己电脑上离线跑，论文不外传。</li>"
-        "</ul></div>"
-        "<div class='gal'><span class='gal-k'>真实示例 · 点开看完整报告</span>"
-        f"<div class='gchips'>{chips}</div></div>"
-        "</section>"
-    )
-
-
-_GALLERY = [
-    ("1706.03762", "Transformer", "Attention / NLP", "注意力 / NLP"),
-    ("2307.08691", "FlashAttention-2", "GPU systems", "GPU 系统"),
-    ("2010.11929", "Vision Transformer (ViT)", "Vision", "视觉"),
-    ("2106.09685", "LoRA", "Fine-tuning", "微调"),
-    ("2112.10752", "Latent Diffusion", "Generative", "生成式"),
-    ("2307.09288", "Llama 2", "LLM", "大模型"),
-    ("1707.06347", "PPO", "Reinforcement learning", "强化学习"),
-]
 
 
 def _analyze_form(live: bool, error: str = "") -> str:
