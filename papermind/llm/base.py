@@ -473,6 +473,18 @@ def _try_parse_json(text: str):
             return json.loads(candidate)
         except json.JSONDecodeError:
             continue
+    # Fallback: repair malformed LLM JSON. Math-heavy papers make models emit raw
+    # LaTeX in string values ("\frac", "\zeta", "\mathbb"), where the lone backslash
+    # is an invalid JSON escape that breaks json.loads; json_repair fixes these (plus
+    # trailing commas, unquoted keys, …) while preserving the content.
+    try:
+        import json_repair
+
+        repaired = json_repair.loads(text)
+        if isinstance(repaired, (dict, list)) and repaired:
+            return repaired
+    except Exception:  # noqa: BLE001 - repair is best-effort; never raise here
+        pass
     return None
 
 

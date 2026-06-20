@@ -30,6 +30,12 @@ All notable changes to PaperMind are documented here. The format follows
   rate-limited arXiv search API.
 
 ### Fixed
+- Structured-analysis modules (esp. **technical detail**) no longer intermittently
+  fail on math-heavy papers: models emit raw LaTeX in JSON string values (`\frac`,
+  `\zeta`, `\mathbb`, …) where the lone backslash is an invalid JSON escape that
+  broke `json.loads` even after the repair retry — the whole module (and its
+  figures) was then dropped. JSON parsing now falls back to `json_repair`, which
+  fixes the bad escapes while preserving the formula content.
 - Teaching SVG figures no longer show raw LaTeX (`^{}`, `_{}`, `\frac`, …) or
   mis-rendered sub/superscripts, and multi-line report formulas render under MathJax
   (wrapped in `aligned`); fixed several incorrect formulas in the example gallery.
