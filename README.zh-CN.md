@@ -6,8 +6,8 @@
 > 输入 arXiv 链接 / DOI / 论文标题 / 论文页面或 PDF 直链（也可上传 PDF）：结构化分析、带原文依据并核验的问答、整篇方法的**框架图**（可下载 SVG）、可运行的复现指南。
 
 [![CI](https://github.com/Wenhao-Hua/papermind/actions/workflows/ci.yml/badge.svg)](https://github.com/Wenhao-Hua/papermind/actions/workflows/ci.yml)
-[![PyPI](https://img.shields.io/pypi/v/paper-mind)](https://pypi.org/project/paper-mind/)
-[![Python](https://img.shields.io/pypi/pyversions/paper-mind)](https://pypi.org/project/paper-mind/)
+[![PyPI](https://img.shields.io/pypi/v/papermind-ai)](https://pypi.org/project/papermind-ai/)
+[![Python](https://img.shields.io/pypi/pyversions/papermind-ai)](https://pypi.org/project/papermind-ai/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 
 <p align="center">
@@ -41,8 +41,8 @@
 | | 怎么用 | 适合 |
 | --- | --- | --- |
 | 🌐 **在线用** | 打开 **[papermind.try2026.cn](https://papermind.try2026.cn)**，零安装 | 想立刻试、不装东西 |
-| 🖥️ **图形界面** | `pip install "paper-mind[web]"` → `papermind ui` | 本地全功能、浏览器操作 |
-| ⌨️ **命令行 / API** | `pip install paper-mind` → `papermind analyze https://arxiv.org/abs/2307.08691` | 脚本化、批量、集成 |
+| 🖥️ **图形界面** | `pip install "papermind-ai[web]"` → `papermind ui` | 本地全功能、浏览器操作 |
+| ⌨️ **命令行 / API** | `pip install papermind-ai` → `papermind analyze https://arxiv.org/abs/2307.08691` | 脚本化、批量、集成 |
 
 > 🆓 不想花钱：`papermind demo` 离线看效果（无需 key）；任何命令加 `--local` 走本地 Ollama，全程零成本。
 

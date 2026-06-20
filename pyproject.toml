@@ -4,8 +4,8 @@ build-backend = "hatchling.build"
 
 [project]
 # PyPI distribution name (the import package stays `papermind`); "papermind"
-# was taken on PyPI, so we publish as "paper-mind".
-name = "paper-mind"
+# was taken on PyPI, so we publish as "papermind-ai".
+name = "papermind-ai"
 version = "0.1.0"
 description = "Read arXiv papers for real: structured analysis, grounded RAG Q&A, and reproduction tutoring from the command line."
 readme = "README.md"
@@ -44,7 +44,7 @@ dependencies = [
 [project.optional-dependencies]
 local-embeddings = ["sentence-transformers>=2.2.0"]
 web = ["fastapi>=0.110.0", "uvicorn>=0.27.0", "python-multipart>=0.0.9"]
-ui = ["paper-mind[web]"]  # alias: the web UI ships the same server deps
+ui = ["papermind-ai[web]"]  # alias: the web UI ships the same server deps
 # Research / training extras. torch is intentionally NOT pinned here — install the
 # CUDA build for your machine (on AutoDL/Colab it's usually preinstalled).
 # QASPER is downloaded as raw JSON via httpx (a core dep), so `datasets` isn't needed.

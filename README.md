@@ -6,8 +6,8 @@
 > Paste an arXiv link, DOI, paper title, or any paper page / PDF URL (or upload a PDF): structured analysis, grounded & citation‑verified Q&A, a whole‑method framework diagram (downloadable SVG), and a runnable reproduction guide.
 
 [![CI](https://github.com/Wenhao-Hua/papermind/actions/workflows/ci.yml/badge.svg)](https://github.com/Wenhao-Hua/papermind/actions/workflows/ci.yml)
-[![PyPI](https://img.shields.io/pypi/v/paper-mind)](https://pypi.org/project/paper-mind/)
-[![Python](https://img.shields.io/pypi/pyversions/paper-mind)](https://pypi.org/project/paper-mind/)
+[![PyPI](https://img.shields.io/pypi/v/papermind-ai)](https://pypi.org/project/papermind-ai/)
+[![Python](https://img.shields.io/pypi/pyversions/papermind-ai)](https://pypi.org/project/papermind-ai/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 
 <p align="center">
@@ -41,8 +41,8 @@
 | | How | Best for |
 | --- | --- | --- |
 | 🌐 **Online** | open **[papermind.try2026.cn](https://papermind.try2026.cn)** — zero install | trying it instantly |
-| 🖥️ **GUI** | `pip install "paper-mind[web]"` → `papermind ui` | full features, in your browser |
-| ⌨️ **CLI / API** | `pip install paper-mind` → `papermind analyze https://arxiv.org/abs/2307.08691` | scripting, batch, integration |
+| 🖥️ **GUI** | `pip install "papermind-ai[web]"` → `papermind ui` | full features, in your browser |
+| ⌨️ **CLI / API** | `pip install papermind-ai` → `papermind analyze https://arxiv.org/abs/2307.08691` | scripting, batch, integration |
 
 > 🆓 No spend: `papermind demo` shows the output offline (no key); add `--local` to any command to run fully on local Ollama at zero cost.
 

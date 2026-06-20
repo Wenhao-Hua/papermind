@@ -19,14 +19,14 @@
 ## 生成你自己的报告
 
 ```bash
-pip install paper-mind
+pip install papermind-ai
 
 # 有 OpenAI / Anthropic / DeepSeek key：
 export OPENAI_API_KEY=sk-...
 papermind analyze https://arxiv.org/abs/2307.08691 --format all --output ./report
 
 # 没有 key？用本地 Ollama，完全免费（先在 https://ollama.com 装好并 `ollama pull llama3.1`）：
-pip install "paper-mind[local-embeddings]"
+pip install "papermind-ai[local-embeddings]"
 papermind analyze https://arxiv.org/abs/2307.08691 --model ollama/llama3.1 --format html -o ./report
 ```
 
