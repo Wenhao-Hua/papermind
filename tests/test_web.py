@@ -395,3 +395,54 @@ def test_on_progress_step_reaches_job(monkeypatch):
     jid = re.search(r"/job/([0-9a-f]+)", c.post("/analyze", data={"source": "https://arxiv.org/abs/x"}).text).group(1)
     _await_job(lambda j: c.get(f"/job/{j}").json(), jid)
     assert _get_job(jid)["step"] == "技术细节"  # on_progress -> _set_job -> /job chain works
+
+
+# --------------------------------------------------------------------------- #
+# PDF upload handling (_resolve_upload) — security: size cap, PDF magic, and a
+# content-hash path (never the attacker-controlled filename).
+# --------------------------------------------------------------------------- #
+def _fake_upload(data: bytes, filename: str = "paper.pdf"):
+    import io
+    import types
+
+    return types.SimpleNamespace(filename=filename, file=io.BytesIO(data))
+
+
+def test_resolve_upload_rejects_non_pdf():
+    from papermind.errors import SourceError
+    from papermind.web import _resolve_upload
+
+    with pytest.raises(SourceError):
+        _resolve_upload("", _fake_upload(b"<html>not a pdf</html>"))
+
+
+def test_resolve_upload_rejects_oversize(monkeypatch):
+    import papermind.net as net
+    from papermind.errors import SourceError
+    from papermind.web import _resolve_upload
+
+    monkeypatch.setattr(net, "MAX_DOWNLOAD_BYTES", 10)  # tiny cap -> fast, deterministic
+    with pytest.raises(SourceError):
+        _resolve_upload("", _fake_upload(b"%PDF-" + b"x" * 50))  # well over the cap
+
+
+def test_resolve_upload_uses_content_hash_not_filename(monkeypatch, tmp_path):
+    from pathlib import Path
+
+    from papermind.web import _resolve_upload
+
+    monkeypatch.setenv("PAPERMIND_HOME", str(tmp_path))
+    data = b"%PDF-1.5 a small valid-looking pdf body"
+    path = _resolve_upload("", _fake_upload(data, filename="../../evil.pdf"))  # malicious filename
+    assert path is not None
+    assert "evil" not in path and "../" not in path and "..\\" not in path  # filename never used
+    assert path.endswith("paper.pdf") and Path(path).read_bytes() == data
+    # identical re-upload (different filename) dedupes to the same content-hash path
+    assert _resolve_upload("", _fake_upload(data, filename="other.pdf")) == path
+
+
+def test_resolve_upload_falls_back_to_source_when_no_file():
+    from papermind.web import _resolve_upload
+
+    assert _resolve_upload("  2307.08691  ", None) == "2307.08691"  # trimmed source
+    assert _resolve_upload("", None) is None                          # nothing to resolve
