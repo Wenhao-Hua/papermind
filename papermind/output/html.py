@@ -19,7 +19,7 @@ _DIFFICULTY = {"high": ("high", "#e5484d"), "mid": ("mid", "#f5a623"), "low": ("
 
 _CSS = """
 :root { --fg:#0f1115; --muted:#565d6b; --faint:#8b919d; --accent:#4f46e5; --accent-press:#4338ca;
-  --border:#e9eaee; --border-strong:#dcdee3; --bg:#fbfbfc; --card:#fff; --soft:#f4f5f7; --accent-soft:#eef1fe; }
+  --border:#e9eaee; --border-strong:#dcdee3; --bg:#f4f5f8; --card:#fff; --soft:#f4f5f7; --accent-soft:#eef1fe; }
 @media (prefers-color-scheme: dark) {
   :root { --fg:#e9eaee; --muted:#a0a6b2; --faint:#6f7480; --accent:#8b93f8; --accent-press:#a5abff;
     --border:#23252b; --border-strong:#2f323a; --bg:#0c0d10; --card:#15161b; --soft:#1a1c22; --accent-soft:#1a1c28; }
