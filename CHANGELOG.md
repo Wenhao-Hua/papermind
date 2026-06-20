@@ -5,6 +5,12 @@ All notable changes to PaperMind are documented here. The format follows
 
 ## [Unreleased]
 
+### Changed
+- Web UI + report restyled into a warmer, more distinctive "research reading"
+  look: an ink-green-teal accent (retiring the generic indigo), warm paper
+  background, serif headings, a citation-spine + source-badge motif, and
+  plainer-language copy throughout.
+
 ## [0.1.2] — 2026-06-20
 
 ### Added

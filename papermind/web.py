@@ -670,24 +670,27 @@ _FAVICON = (
 
 _CSS = """
 :root{
-  --bg:#f4f5f8;--surface:#ffffff;--ink:#0f1115;--soft:#565d6b;--faint:#8b919d;
-  --line:#e9eaee;--line-strong:#dcdee3;
-  --accent:#4f46e5;--accent-press:#4338ca;--accent-soft:#eef1fe;--accent-ring:rgba(79,70,229,.16);
-  --green:#0f9d58;--amber:#b7791f;--red:#d64545;
+  --bg:#fbfaf8;--surface:#ffffff;--ink:#1a1a18;--soft:#5c5953;--faint:#8a867e;
+  --line:#e8e5df;--line-strong:#d8d4cc;
+  --accent:#1f5f55;--accent-press:#184a42;--accent-soft:#e7efed;--accent-ring:rgba(31,95,85,.16);
+  --warn:#b8612f;
+  --green:#1f8f5f;--amber:#b7791f;--red:#c4513b;
   --r:11px;--rs:8px;
   --sans:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"Helvetica Neue","PingFang SC","Microsoft YaHei",sans-serif;
+  --serif:Georgia,"Songti SC","Source Han Serif SC","Noto Serif CJK SC","SimSun",serif;
   --mono:"SF Mono","Cascadia Code","JetBrains Mono",ui-monospace,Consolas,monospace;
-  --shadow:0 1px 2px rgba(16,18,27,.05),0 4px 16px -8px rgba(16,18,27,.10);
-  --shadow-lift:0 10px 24px -10px rgba(16,18,27,.16),0 22px 50px -24px rgba(79,70,229,.24);
-  --bar:rgba(244,245,248,.82);
+  --shadow:0 1px 2px rgba(26,26,24,.05),0 4px 16px -8px rgba(26,26,24,.10);
+  --shadow-lift:0 10px 24px -10px rgba(26,26,24,.16),0 22px 48px -24px rgba(31,95,85,.20);
+  --bar:rgba(251,250,248,.82);
 }
 @media(prefers-color-scheme:dark){:root{
-  --bg:#0c0d10;--surface:#15161b;--ink:#e9eaee;--soft:#a0a6b2;--faint:#6f7480;
-  --line:#23252b;--line-strong:#2f323a;
-  --accent:#8b93f8;--accent-press:#a5abff;--accent-soft:#1a1c28;--accent-ring:rgba(139,147,248,.24);
+  --bg:#16161a;--surface:#1c1c20;--ink:#eceae4;--soft:#a6a29a;--faint:#79756d;
+  --line:#2a2925;--line-strong:#38362f;
+  --accent:#3fa896;--accent-press:#5cc0ae;--accent-soft:#15211e;--accent-ring:rgba(63,168,150,.24);
+  --warn:#d98a52;
   --green:#3fcf8e;--amber:#e0b252;--red:#f0726c;
-  --shadow:0 1px 2px rgba(0,0,0,.4),0 4px 16px -8px rgba(0,0,0,.5);
-  --shadow-lift:0 12px 30px -10px rgba(0,0,0,.6),0 22px 50px -24px rgba(139,147,248,.30);--bar:rgba(12,13,16,.82);
+  --shadow:0 1px 2px rgba(0,0,0,.45),0 4px 16px -8px rgba(0,0,0,.55);
+  --shadow-lift:0 12px 30px -10px rgba(0,0,0,.6),0 22px 48px -24px rgba(63,168,150,.26);--bar:rgba(22,22,26,.82);
 }}
 *{box-sizing:border-box}
 html{scroll-behavior:smooth}
@@ -717,16 +720,19 @@ main{min-width:0}
 /* hero: the analyze tool on the left, a real teaching figure on the right */
 .hero{display:grid;grid-template-columns:1.04fr .96fr;gap:46px;align-items:center;
   padding:50px 0 44px;position:relative;isolation:isolate}
-.hero::before{content:'';position:absolute;z-index:-1;inset:-30px -40px auto -40px;height:300px;pointer-events:none;
-  background-image:radial-gradient(var(--line-strong) 1px,transparent 1px);background-size:26px 26px;opacity:.5;
-  -webkit-mask-image:radial-gradient(110% 88% at 20% 0%,#000,transparent 64%);
-  mask-image:radial-gradient(110% 88% at 20% 0%,#000,transparent 64%)}
+.hero::before{content:'';position:absolute;z-index:-1;inset:-30px -40px auto -40px;height:340px;pointer-events:none;
+  background-image:repeating-linear-gradient(180deg,var(--line) 0,var(--line) .5px,transparent .5px,transparent 30px);opacity:.7;
+  -webkit-mask-image:linear-gradient(180deg,#000,transparent 82%);mask-image:linear-gradient(180deg,#000,transparent 82%)}
 .hero-l{min-width:0}
 .hero-eyebrow{display:inline-flex;align-items:center;gap:7px;font-size:.76rem;font-weight:600;letter-spacing:.01em;
   color:var(--accent);background:var(--accent-soft);border:1px solid var(--line);border-radius:999px;padding:5px 13px;margin:0 0 18px}
 .hero-eyebrow::before{content:'';width:6px;height:6px;border-radius:50%;background:var(--accent)}
-.hero-h{font-size:2.9rem;line-height:1.08;font-weight:700;letter-spacing:-.035em;margin:0 0 .32em;text-wrap:balance}
-.hero-h .hl{color:var(--accent)}
+.hero-h{font-family:var(--serif);font-size:2.7rem;line-height:1.32;font-weight:700;letter-spacing:-.01em;margin:0 0 .42em;text-wrap:balance}
+.hero-h .hl{color:var(--accent);position:relative;white-space:nowrap}
+.hero-h .hl svg{position:absolute;left:-1%;bottom:-.08em;width:102%;height:.3em;overflow:visible;pointer-events:none}
+.hero-h .hl path{fill:none;stroke:var(--warn);stroke-width:3.6;stroke-linecap:round}
+@keyframes pm-draw{from{stroke-dashoffset:240}to{stroke-dashoffset:0}}
+@media(prefers-reduced-motion:no-preference){.hero-h .hl path{stroke-dasharray:240;animation:pm-draw 1.05s cubic-bezier(.6,.1,.3,1) .35s both}}
 .hero-sub{color:var(--soft);font-size:1.02rem;line-height:1.6;margin:0 0 22px}
 .hero-note{font-size:.85rem;color:var(--faint);margin:0 0 14px}
 .hero-form{margin:0}
@@ -847,10 +853,10 @@ pre{font:.88rem/1.6 var(--mono);background:#0f1117;color:#e7e9ef;padding:16px 18
 @media(max-width:600px){.pm-wrap{padding:0 16px 72px}.panel{padding:22px}}
 /* ---------- rich landing sections (index only) ---------- */
 /* landing sections — compact */
-.lp{padding:42px 0 0;margin-top:40px;border-top:1px solid var(--line)}
+.lp{padding:54px 0 0;margin-top:54px;border-top:1px solid var(--line)}
 .lp-h{margin:0 0 20px}
 .lp-k{font-size:.73rem;font-weight:700;letter-spacing:.09em;text-transform:uppercase;color:var(--accent)}
-.lp-h h2{font-size:1.55rem;font-weight:700;letter-spacing:-.025em;margin:.3em 0 0;line-height:1.2}
+.lp-h h2{font-family:var(--serif);font-size:1.62rem;font-weight:700;letter-spacing:-.01em;margin:.32em 0 0;line-height:1.28}
 /* capabilities: compact icon + name + one line */
 .cap-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:12px}
 .cap{display:flex;align-items:center;gap:12px;background:var(--surface);border:1px solid var(--line);border-radius:var(--rs);
@@ -867,15 +873,30 @@ pre{font:.88rem/1.6 var(--mono);background:#0f1117;color:#e7e9ef;padding:16px 18
 /* proof: one headline stat + supporting points, then example chips */
 .proof{display:grid;grid-template-columns:300px 1fr;gap:20px;align-items:stretch}
 .stat{background:var(--surface);border:1px solid var(--line);border-radius:var(--r);padding:22px 24px;box-shadow:var(--shadow)}
-.stat-n{font-size:2.9rem;font-weight:800;letter-spacing:-.04em;color:var(--accent);line-height:1}
+.stat-n{font-size:3rem;font-weight:800;letter-spacing:-.03em;color:var(--accent);line-height:1;font-variant-numeric:tabular-nums}
 .stat-n span{font-size:1.1rem;font-weight:700;margin-left:2px}
-.stat-l{font-size:.82rem;font-weight:600;color:var(--soft);margin-top:4px;letter-spacing:.02em}
-.stat-d{color:var(--soft);font-size:.9rem;line-height:1.6;margin:14px 0 0}
-.stat-d b{color:var(--ink)}
-.pts{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:10px}
-.pts li{background:var(--surface);border:1px solid var(--line);border-radius:var(--rs);padding:13px 16px;
-  font-size:.92rem;color:var(--soft);line-height:1.55;box-shadow:var(--shadow)}
+.stat-l{font-size:.82rem;font-weight:600;color:var(--soft);margin-top:4px;letter-spacing:.04em;font-variant-numeric:tabular-nums}
+/* mini benchmark bar: 0.519 -> 0.660 */
+.stat-bar{display:flex;align-items:center;gap:8px;margin:14px 0 2px;font:600 .72rem/1 var(--mono);font-variant-numeric:tabular-nums;color:var(--faint)}
+.stat-track{flex:1;height:7px;border-radius:4px;background:var(--accent-soft);overflow:hidden;position:relative}
+.stat-track i{position:absolute;left:0;top:0;bottom:0;border-radius:4px}
+.stat-track i.now{width:66%;background:var(--accent)}
+.stat-track i.base{width:52%;background:var(--line-strong);border-radius:4px 0 0 4px}
+.stat-d{color:var(--soft);font-size:.9rem;line-height:1.6;margin:12px 0 0}
+.stat-d b{color:var(--ink);font-variant-numeric:tabular-nums}
+/* proof points strung on the citation spine */
+.pts{list-style:none;margin:0;padding:0 0 0 26px;display:flex;flex-direction:column;gap:18px;position:relative}
+.pts::before{content:'';position:absolute;left:5px;top:10px;bottom:10px;width:2px;
+  background:linear-gradient(180deg,transparent,var(--accent),transparent);opacity:.6}
+.pts li{position:relative;font-size:.94rem;color:var(--soft);line-height:1.62}
+.pts li::before{content:'';position:absolute;left:-26px;top:7px;width:10px;height:10px;border-radius:50%;
+  background:var(--surface);border:2px solid var(--accent);box-shadow:0 0 0 4px var(--bg)}
 .pts li b{color:var(--ink)}
+/* citation badge — the recurring "traces to source" mark */
+.cite{display:inline-flex;align-items:center;gap:4px;font:600 .72rem/1 var(--mono);font-variant-numeric:tabular-nums;
+  color:var(--accent);background:var(--accent-soft);border:1px solid var(--accent);border-radius:5px;padding:2px 7px;
+  vertical-align:.05em;white-space:nowrap}
+.cite::before{content:'§';opacity:.7;font-weight:700}
 .gal{margin-top:18px}
 .gal-k{font-size:.82rem;color:var(--faint)}
 .gchips{display:flex;flex-wrap:wrap;gap:8px;margin-top:10px}
@@ -986,7 +1007,7 @@ _EXAMPLES = [("https://arxiv.org/abs/1706.03762", "Transformer"), ("https://arxi
 
 def _examples_row() -> str:
     chips = "".join(f"<a href='#' data-id='{_e(i)}'>{_e(name)}</a>" for i, name in _EXAMPLES)
-    return f"<p class='ex'>{_t('No target? Try', '没有目标？试试')} {chips}</p>"
+    return f"<p class='ex'>{_t('No target? Try', '没链接？点一篇名作先试试')} {chips}</p>"
 
 
 def _load_hero_svg(name: str = "hero.svg") -> str:
@@ -1028,15 +1049,19 @@ def _hero(live: bool) -> str:
     fig = (f"<figure class='hero-fig'>{_HERO_ZH}"
            "<figcaption>↑ PaperMind 为论文技术点生成的论文式教学图 · "
            "<a href='/demo'>看完整示例 →</a></figcaption></figure>") if _HERO_ZH else ""
+    underline = ("<svg viewBox='0 0 120 12' preserveAspectRatio='none' aria-hidden='true'>"
+                 "<path d='M3,8 C26,3 50,10 73,6 C93,3 106,9 117,7'/></svg>")
     return (
         "<section class='hero'><div class='hero-l'>"
-        "<span class='hero-eyebrow'>开源论文深读工具</span>"
-        "<h1 class='hero-h'>把任意论文，读懂到<span class='hl'>能复现</span>。</h1>"
-        "<p class='hero-sub'>结构化分析 · 带原文核验的问答 · 整篇方法框架图 · 接真实代码仓库的复现。</p>"
+        "<span class='hero-eyebrow'>开源 · 论文深读，能装在自己电脑上</span>"
+        f"<h1 class='hero-h'>读不懂的那篇论文，帮你<span class='hl'>讲明白{underline}</span>、"
+        "还查得到出处、还能照着做</h1>"
+        "<p class='hero-sub'>粘一个 arXiv 链接、DOI、标题，或直接传 PDF。它先把论文讲成人话——干了啥、怎么做的、强在哪；"
+        "再把每句结论挂回原文第几页，你能翻回去核对；想动手时，还接着论文真实的代码仓库给你一份能跑的复现步骤。</p>"
         f"{note}"
         "<form class='hero-form' method='post' action='/analyze' enctype='multipart/form-data'>"
         "<div class='hero-in'><input name='source' placeholder='arXiv 链接 / DOI / 论文标题 / PDF…' autofocus>"
-        "<button>分析</button></div>"
+        "<button>粘上链接，开始读</button></div>"
         "<div class='hero-opts'><span class='upl'>或上传 PDF <input type='file' name='file' accept='application/pdf'></span>"
         "<label class='chk'><input type='checkbox' name='refresh' value='1'>忽略缓存重分析</label></div>"
         "</form>"
@@ -1056,19 +1081,19 @@ def _ic(path: str) -> str:
 # Clean line-icons (no icon-library available in this no-bundler server render).
 _CAPS = [
     ("<path d='M5 3h9l5 5v13H5z'/><path d='M14 3v5h5'/><path d='M8 13h8M8 17h6'/>",
-     "分析", "/", "四模块结构化解读"),
+     "分析", "/", "拆成四块，大白话讲明白"),
     ("<path d='M21 12a8 8 0 0 1-11.5 7.2L4 21l1.8-5.5A8 8 0 1 1 21 12z'/>",
-     "问答", "/ask", "逐句核验 + 原文出处"),
+     "问答", "/ask", "照原文回答，还标页码"),
     ("<path d='M13 2 4 14h7l-1 8 9-12h-7z'/>",
-     "速读", "/summary", "一句话速览 + 要点"),
+     "速读", "/summary", "一句话 + 几个要点"),
     ("<path d='M6 3h12M6 21h12M9 3v4l3 4 3-4V3M9 21v-4l3-4 3 4v4'/>",
-     "框架图", "/framework", "端到端方法一图看懂"),
+     "框架图", "/framework", "整篇方法画成一张图"),
     ("<path d='M4 4h7v16H4zM13 4h7v16h-7z'/>",
-     "对比", "/compare", "2–4 篇横向对照"),
+     "对比", "/compare", "几篇论文一表看高下"),
     ("<path d='M4 5h16v14H4z'/><path d='M8 10l2.5 2.5L8 15M13 15h4'/>",
-     "复现", "/reproduce", "接真实仓库的 setup.sh"),
+     "复现", "/reproduce", "照真实仓库给你能跑的步骤"),
     ("<path d='M11 19a8 8 0 1 1 0-16 8 8 0 0 1 0 16zM21 21l-4.3-4.3'/>",
-     "搜索", "/search", "关键词检索 arXiv"),
+     "搜索", "/search", "输关键词直接搜 arXiv"),
 ]
 
 
@@ -1081,8 +1106,8 @@ def _capabilities() -> str:
     )
     return (
         "<section class='lp reveal'>"
-        "<div class='lp-h'><span class='lp-k'>能力</span>"
-        "<h2>一个工具，覆盖读论文全流程</h2></div>"
+        "<div class='lp-h'><span class='lp-k'>能替你做这些</span>"
+        "<h2>读一篇论文要走的每一步，它都替你走过一遍</h2></div>"
         f"<div class='cap-grid'>{cards}</div></section>"
     )
 
@@ -1096,17 +1121,22 @@ def _proof() -> str:
     )
     return (
         "<section class='lp reveal'>"
-        "<div class='lp-h'><span class='lp-k'>为什么可信</span>"
-        "<h2>为证据而造，不是凭感觉</h2></div>"
+        "<div class='lp-h'><span class='lp-k'>凭什么信它</span>"
+        "<h2>它给的每句话，你都能翻回原文对一遍——不是它编的</h2></div>"
         "<div class='proof'>"
         "<div class='stat'><div class='stat-n'>+14<span>pt</span></div>"
-        "<div class='stat-l'>Recall@5</div>"
-        "<p class='stat-d'>自训练 cross-encoder 重排器，QASPER <b>0.519 → 0.660</b>（独立测试集）。"
-        "检索靠实测微调，不是套 API。</p></div>"
+        "<div class='stat-l'>Recall@5 · QASPER</div>"
+        "<div class='stat-bar'><span>0.519</span>"
+        "<div class='stat-track'><i class='now'></i><i class='base'></i></div>"
+        "<span>0.660</span></div>"
+        "<p class='stat-d'>找原文出处这件事，我们专门训了个“找得更准”的小模型——同样的问题，"
+        "以前前 5 条里能命中约 <b>5 成</b>，现在到 <b>6.6 成</b>。说人话：它更会翻书，更少瞎指。</p></div>"
         "<ul class='pts'>"
-        "<li><b>逐句核验</b> · 每个判断与回答都挂到带页码的原文出处，核不到标 ⚠️</li>"
-        "<li><b>复现接真实代码</b> · setup.sh 取自论文真实仓库，非模型臆造</li>"
-        "<li><b>开源 · 可本地</b> · MIT，<code>pip install papermind-ai</code> 用自己的 key 离线跑</li>"
+        "<li><b>逐句核验</b>：每个结论和回答都挂着带页码的原文出处 <span class='cite'>p.4</span>，"
+        "点一下就回到原文核对；核不到的，它老实标个 ⚠️ 不糊弄你。</li>"
+        "<li><b>复现接真实代码</b>：安装和运行步骤取自论文自己的 GitHub 仓库，不是凭空编的命令。</li>"
+        "<li><b>开源 · 可本地</b>：MIT 协议，<code>pip install papermind-ai</code>，"
+        "用你自己的 key 在自己电脑上离线跑，论文不外传。</li>"
         "</ul></div>"
         "<div class='gal'><span class='gal-k'>真实示例 · 点开看完整报告</span>"
         f"<div class='gchips'>{chips}</div></div>"
