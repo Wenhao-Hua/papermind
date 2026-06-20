@@ -2,7 +2,7 @@ name: Release
 
 # Publishes to PyPI when a version tag (vX.Y.Z) is pushed.
 # Uses PyPI Trusted Publishing (OIDC) — configure a publisher for this repo at
-# https://pypi.org/manage/project/paper-mind/settings/publishing/ (no token needed).
+# https://pypi.org/manage/project/papermind-ai/settings/publishing/ (no token needed).
 
 on:
   push:

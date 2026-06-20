@@ -232,7 +232,7 @@ def test_wrap_error_ollama_connection_and_pull():
 
 def test_wrap_error_install_hint_uses_pypi_name():
     msg = str(_wrap_llm_error(Exception("Invalid api key provided"), "gpt-4o"))
-    assert "paper-mind[local-embeddings]" in msg
+    assert "papermind-ai[local-embeddings]" in msg
     assert "papermind[local-embeddings]" not in msg
 
 

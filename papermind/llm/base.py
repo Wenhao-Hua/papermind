@@ -233,7 +233,7 @@ class LLMClient:
         except ImportError as exc:
             raise LLMError(
                 "Local embeddings need sentence-transformers. Install with: "
-                "pip install 'paper-mind[local-embeddings]'"
+                "pip install 'papermind-ai[local-embeddings]'"
             ) from exc
         model_name = self.config.resolved_embedding_model()
         encoder = _get_local_encoder(model_name, SentenceTransformer)
@@ -523,7 +523,7 @@ def _wrap_llm_error(exc: Exception, model: str) -> LLMError:
             f"方式 B —— 用 Ollama 全本地免费运行（无需 key）：\n"
             f"           从 https://ollama.com 安装后：\n"
             f"           papermind analyze <paper> --model {OLLAMA_DEFAULT_MODEL}\n"
-            f"           （本地向量：pip install 'paper-mind[local-embeddings]'）\n"
+            f"           （本地向量：pip install 'papermind-ai[local-embeddings]'）\n"
             f"原始错误：{msg}"
         )
     if "model" in low and ("not found" in low or "does not exist" in low):

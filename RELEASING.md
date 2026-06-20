@@ -1,6 +1,6 @@
 # Releasing PaperMind
 
-Releases are published to [PyPI](https://pypi.org/project/paper-mind/) automatically by
+Releases are published to [PyPI](https://pypi.org/project/papermind-ai/) automatically by
 the [`Release`](.github/workflows/release.yml) workflow when a `vX.Y.Z` tag is pushed.
 
 ## One-time setup
@@ -24,7 +24,7 @@ the [`Release`](.github/workflows/release.yml) workflow when a `vX.Y.Z` tag is p
    ```
 
 4. The `Release` workflow builds the sdist + wheel and publishes to PyPI.
-5. Verify: `pip install paper-mind` in a clean environment.
+5. Verify: `pip install papermind-ai` in a clean environment.
 
 ## Pre-release checklist
 

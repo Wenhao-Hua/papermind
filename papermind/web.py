@@ -1060,7 +1060,7 @@ _CAPS = [
     ("<path d='M21 12a8 8 0 0 1-11.5 7.2L4 21l1.8-5.5A8 8 0 1 1 21 12z'/>",
      "问答", "/ask", "逐句核验 + 原文出处"),
     ("<path d='M13 2 4 14h7l-1 8 9-12h-7z'/>",
-     "速读", "/summary", "一句话 TL;DR + 要点"),
+     "速读", "/summary", "一句话速览 + 要点"),
     ("<path d='M6 3h12M6 21h12M9 3v4l3 4 3-4V3M9 21v-4l3-4 3 4v4'/>",
      "框架图", "/framework", "端到端方法一图看懂"),
     ("<path d='M4 4h7v16H4zM13 4h7v16h-7z'/>",
@@ -1101,7 +1101,7 @@ def _proof() -> str:
         "<div class='proof'>"
         "<div class='stat'><div class='stat-n'>+14<span>pt</span></div>"
         "<div class='stat-l'>Recall@5</div>"
-        "<p class='stat-d'>自训练 cross-encoder 重排器，QASPER <b>0.519 → 0.660</b>（独立 test）。"
+        "<p class='stat-d'>自训练 cross-encoder 重排器，QASPER <b>0.519 → 0.660</b>（独立测试集）。"
         "检索靠实测微调，不是套 API。</p></div>"
         "<ul class='pts'>"
         "<li><b>逐句核验</b> · 每个判断与回答都挂到带页码的原文出处，核不到标 ⚠️</li>"
@@ -1152,8 +1152,8 @@ def _ask_form(live: bool, error: str = "") -> str:
         f"<label>{_t('Paper', '论文')} <span class='hint'>{_t('link / DOI / title', '链接 / DOI / 标题')}</span></label><input name='source' placeholder='https://arxiv.org/abs/2307.08691'>"
         f"<label>{_t('Question', '问题')}</label><input name='question' placeholder='{_t('Why divide by √d_k?', '为什么要除以 √d_k？')}'>"
         f"<label>{_t('Mode', '模式')} <span class='hint'>{_t('strict = more cautious · explore = more open', 'strict 更保守 · explore 更发散')}</span></label>"
-        "<select name='mode'><option value='balanced'>balanced</option>"
-        "<option value='strict'>strict</option><option value='explore'>explore</option></select>"
+        "<select name='mode'><option value='balanced'>均衡</option>"
+        "<option value='strict'>严格</option><option value='explore'>发散</option></select>"
         f"<button>{_t('Ask', '提问')}</button></form></section>"
     )
 
@@ -1223,7 +1223,7 @@ def _framework_body(spec) -> str:
 def _summary_form(live: bool, error: str = "") -> str:
     return (
         f"<section class='panel'><h2>{_t('Summary', '速读')}</h2>"
-        f"<p class='lead'>{_t('A one-line TL;DR + a few key points (a single call, faster than the full analysis).', '一句话 TL;DR + 几条要点（单次调用，比完整分析更快）。')}</p>"
+        f"<p class='lead'>{_t('A one-line TL;DR + a few key points (a single call, faster than the full analysis).', '一句话速览 + 几条要点（单次调用，比完整分析更快）。')}</p>"
         f"{_err(error)}"
         "<form method='post' action='/summary'>"
         f"<label>{_t('Paper', '论文')} <span class='hint'>{_t('link / DOI / title', '链接 / DOI / 标题')}</span></label><input name='source' placeholder='https://arxiv.org/abs/2307.08691'>"
