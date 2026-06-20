@@ -18,68 +18,71 @@ from papermind.output.schema import Connection, Reproduction, Report, Source, Te
 _DIFFICULTY = {"high": ("high", "#e5484d"), "mid": ("mid", "#f5a623"), "low": ("low", "#30a46c")}
 
 _CSS = """
-:root { --fg:#1a1a2e; --muted:#6b7280; --accent:#5b5bd6; --border:#e5e7eb; --bg:#fbfbfd; --card:#fff; --soft:#f3f4f6; }
+:root { --fg:#0f1115; --muted:#565d6b; --faint:#8b919d; --accent:#4f46e5; --accent-press:#4338ca;
+  --border:#e9eaee; --border-strong:#dcdee3; --bg:#fbfbfc; --card:#fff; --soft:#f4f5f7; --accent-soft:#eef1fe; }
 @media (prefers-color-scheme: dark) {
-  :root { --fg:#e6e6f0; --muted:#9aa3b2; --accent:#a5b4fc; --border:#2a2a3c; --bg:#0f0f17; --card:#16161f; --soft:#1e1e2b; }
+  :root { --fg:#e9eaee; --muted:#a0a6b2; --faint:#6f7480; --accent:#8b93f8; --accent-press:#a5abff;
+    --border:#23252b; --border-strong:#2f323a; --bg:#0c0d10; --card:#15161b; --soft:#1a1c22; --accent-soft:#1a1c28; }
 }
 html { scroll-behavior:smooth; }
 * { box-sizing:border-box; }
-body { margin:0; background:var(--bg); color:var(--fg); font:16px/1.65 -apple-system,Segoe UI,Roboto,Helvetica,Arial,"PingFang SC","Microsoft YaHei",sans-serif; }
-.wrap { max-width:860px; margin:0 auto; padding:48px 24px 96px; }
-h1 { font-size:2rem; line-height:1.25; margin:0 0 .4em; }
-h2 { font-size:1.4rem; margin:2.4em 0 .8em; padding-bottom:.3em; border-bottom:2px solid var(--border); }
-h3 { font-size:1.12rem; margin:1.6em 0 .5em; }
+body { margin:0; background:var(--bg); color:var(--fg); -webkit-font-smoothing:antialiased;
+  font:16px/1.7 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"Helvetica Neue","PingFang SC","Microsoft YaHei",sans-serif; }
+.wrap { max-width:820px; margin:0 auto; padding:56px 24px 110px; }
+h1 { font-size:2.1rem; line-height:1.18; letter-spacing:-.03em; font-weight:700; margin:0 0 .35em; }
+h2 { font-size:1.4rem; letter-spacing:-.02em; font-weight:700; margin:2.6em 0 .9em; padding-bottom:.4em; border-bottom:1px solid var(--border); }
+h3 { font-size:1.1rem; letter-spacing:-.01em; font-weight:600; margin:1.7em 0 .5em; }
 a { color:var(--accent); text-decoration:none; } a:hover { text-decoration:underline; }
-.meta { color:var(--muted); font-size:.92rem; margin-bottom:1em; }
+.meta { color:var(--muted); font-size:.92rem; margin-bottom:1.2em; }
 .meta a { color:var(--muted); }
-.toc { display:flex; flex-wrap:wrap; gap:8px; margin:18px 0 8px; padding-bottom:18px; border-bottom:1px solid var(--border); }
-.toc a { font-size:.86rem; background:var(--soft); border:1px solid var(--border); border-radius:999px; padding:5px 14px; color:var(--fg); }
+.toc { display:flex; flex-wrap:wrap; gap:8px; margin:20px 0 8px; padding-bottom:20px; border-bottom:1px solid var(--border); }
+.toc a { font-size:.85rem; background:var(--card); border:1px solid var(--border-strong); border-radius:8px; padding:6px 13px; color:var(--muted); font-weight:500; }
 .toc a:hover { border-color:var(--accent); color:var(--accent); text-decoration:none; }
-.card { background:var(--card); border:1px solid var(--border); border-radius:12px; padding:18px 22px; margin:14px 0; }
-.pill { display:inline-block; font-size:.72rem; font-weight:700; color:#fff; padding:2px 9px; border-radius:999px; vertical-align:middle; margin-left:8px; }
-.analogy { background:var(--soft); border-left:4px solid var(--accent); padding:10px 16px; border-radius:0 8px 8px 0; margin:12px 0; }
-.formula { overflow-x:auto; padding:6px 0; margin:10px 0; }
-.src { color:var(--muted); font-size:.86rem; }
-blockquote { margin:12px 0; padding:8px 16px; border-left:3px solid var(--border); color:var(--muted); }
-table { border-collapse:collapse; width:100%; margin:12px 0; font-size:.95rem; }
-th,td { border:1px solid var(--border); padding:8px 12px; text-align:left; vertical-align:top; }
-th { background:var(--soft); }
-code { background:var(--soft); padding:1px 6px; border-radius:6px; font-size:.88em; }
-pre { background:#1e1e2e; color:#e6e6f0; padding:14px 16px; border-radius:10px; overflow-x:auto; }
+.card { background:var(--card); border:1px solid var(--border); border-radius:12px; padding:20px 24px; margin:14px 0; }
+.pill { display:inline-block; font-size:.7rem; font-weight:700; letter-spacing:.02em; color:#fff; padding:2px 9px; border-radius:999px; vertical-align:middle; margin-left:10px; }
+.analogy { background:var(--accent-soft); border-left:3px solid var(--accent); padding:11px 16px; border-radius:0 8px 8px 0; margin:14px 0; }
+.formula { overflow-x:auto; padding:6px 0; margin:12px 0; }
+.src { color:var(--faint); font-size:.85rem; }
+blockquote { margin:14px 0; padding:10px 18px; border-left:3px solid var(--border-strong); color:var(--muted); background:var(--soft); border-radius:0 8px 8px 0; }
+table { border-collapse:collapse; width:100%; margin:14px 0; font-size:.93rem; }
+th,td { border:1px solid var(--border); padding:9px 13px; text-align:left; vertical-align:top; }
+th { background:var(--soft); font-weight:600; }
+code { background:var(--accent-soft); color:var(--accent-press); padding:1px 6px; border-radius:5px; font-size:.86em; }
+pre { background:#0f1117; color:#e7e9ef; padding:15px 17px; border-radius:9px; overflow-x:auto; }
 pre code { background:none; color:inherit; padding:0; }
-pre.mermaid { background:#fafaff; border:1px solid var(--border); border-radius:10px; text-align:center; padding:18px; }
+pre.mermaid { background:var(--card); border:1px solid var(--border); border-radius:10px; text-align:center; padding:18px; color:var(--fg); }
 pre.mermaid svg { max-width:100%; height:auto; }
-img.figure { max-width:100%; border:1px solid var(--border); border-radius:8px; display:block; margin:8px 0; }
-figure.svgfig { margin:8px 0; }
+img.figure { max-width:100%; border:1px solid var(--border); border-radius:10px; display:block; margin:10px 0; }
+figure.svgfig { margin:10px 0; }
 figure.svgfig svg { max-width:100%; height:auto; display:block; margin:0 auto;
-  border:1px solid var(--border); border-radius:8px; background:#fff; }
-figcaption { color:var(--muted); font-size:.85rem; margin-bottom:1em; }
+  border:1px solid var(--border); border-radius:10px; background:#fff; }
+figcaption { color:var(--faint); font-size:.84rem; margin-bottom:1em; }
 .ai-tag { color:var(--accent); }
-.readfig { background:var(--soft); border:1px solid var(--border); border-left:4px solid var(--accent);
-  border-radius:0 10px 10px 0; padding:12px 16px; margin:4px 0 1.4em; font-size:.92rem; line-height:1.6; }
+.readfig { background:var(--soft); border:1px solid var(--border); border-left:3px solid var(--accent);
+  border-radius:0 10px 10px 0; padding:13px 17px; margin:6px 0 1.5em; font-size:.92rem; line-height:1.65; }
 .readfig .rf-gist { margin:0 0 8px; font-weight:600; color:var(--fg); }
-.readfig .rf-gist span, .readfig .rf-take span { display:inline-block; font-size:.72rem; font-weight:600;
-  color:#fff; background:var(--accent); border-radius:5px; padding:1px 7px; margin-right:8px; }
-.readfig .rf-parts { margin:0 0 8px; padding-left:1.25em; color:var(--fg); }
+.readfig .rf-gist span, .readfig .rf-take span { display:inline-block; font-size:.7rem; font-weight:600;
+  color:#fff; background:var(--accent); border-radius:5px; padding:1px 8px; margin-right:8px; }
+.readfig .rf-parts { margin:0 0 8px; padding-left:1.3em; color:var(--fg); }
 .readfig .rf-parts li { margin:3px 0; }
 .readfig .rf-take { margin:0; color:var(--fg); }
-.copy-btn { font:inherit; font-size:.86rem; cursor:pointer; background:var(--soft); color:var(--fg);
-  border:1px solid var(--border); border-radius:8px; padding:5px 12px; margin:4px 0 10px; }
-.copy-btn:hover { border-color:var(--accent); color:var(--accent); }
+.copy-btn { font:inherit; font-size:.85rem; font-weight:600; cursor:pointer; background:var(--card); color:var(--accent);
+  border:1px solid var(--border-strong); border-radius:8px; padding:6px 13px; margin:4px 0 12px; }
+.copy-btn:hover { border-color:var(--accent); }
 .codeblock { position:relative; }
-.codeblock .copy-code { position:absolute; top:8px; right:8px; font:inherit; font-size:.78rem; cursor:pointer;
-  background:rgba(255,255,255,.1); color:#e6e6f0; border:1px solid #44485a; border-radius:6px; padding:2px 9px; opacity:.7; }
+.codeblock .copy-code { position:absolute; top:8px; right:8px; font:inherit; font-size:.76rem; cursor:pointer;
+  background:rgba(255,255,255,.08); color:#e7e9ef; border:1px solid #333842; border-radius:6px; padding:3px 9px; opacity:.75; }
 .codeblock .copy-code:hover { opacity:1; border-color:var(--accent); }
-#pm-progress { position:fixed; top:0; left:0; height:3px; width:0; background:var(--accent); z-index:100; transition:width .1s; }
+#pm-progress { position:fixed; top:0; left:0; height:2px; width:0; background:var(--accent); z-index:100; transition:width .1s; }
 #pm-top { position:fixed; bottom:24px; right:24px; display:none; cursor:pointer; z-index:100; width:42px; height:42px;
-  border-radius:50%; border:1px solid var(--border); background:var(--card); color:var(--accent); font-size:1.2rem; box-shadow:0 2px 10px rgba(0,0,0,.15); }
-details.tech { background:var(--card); border:1px solid var(--border); border-radius:12px; padding:6px 22px; margin:14px 0; }
-details.tech > summary { cursor:pointer; list-style:none; font-size:1.12rem; font-weight:600; padding:12px 0; }
+  border-radius:50%; border:1px solid var(--border-strong); background:var(--card); color:var(--accent); font-size:1.2rem; box-shadow:0 4px 14px rgba(15,17,21,.1); }
+details.tech { background:var(--card); border:1px solid var(--border); border-radius:12px; padding:4px 24px; margin:14px 0; }
+details.tech > summary { cursor:pointer; list-style:none; font-size:1.1rem; font-weight:600; letter-spacing:-.01em; padding:14px 0; }
 details.tech > summary::-webkit-details-marker { display:none; }
-details.tech > summary::before { content:'▸'; color:var(--muted); margin-right:8px; font-size:.8em; }
+details.tech > summary::before { content:'▸'; color:var(--faint); margin-right:9px; font-size:.8em; }
 details.tech[open] > summary::before { content:'▾'; }
-details.tech[open] > summary { border-bottom:1px solid var(--border); margin-bottom:10px; }
-footer { color:var(--muted); font-size:.85rem; margin-top:48px; text-align:center; }
+details.tech[open] > summary { border-bottom:1px solid var(--border); margin-bottom:12px; }
+footer { color:var(--faint); font-size:.84rem; margin-top:54px; padding-top:22px; border-top:1px solid var(--border); text-align:center; }
 """
 
 _MERMAID = (
@@ -87,7 +90,7 @@ _MERMAID = (
     "import mermaid from 'https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.esm.min.mjs';"
     "mermaid.initialize({startOnLoad:true, theme:'base', themeVariables:{"
     "fontFamily:'-apple-system,Segoe UI,Microsoft YaHei,sans-serif', fontSize:'15px',"
-    "primaryColor:'#eef2ff', primaryBorderColor:'#5b5bd6', primaryTextColor:'#1e1b4b',"
+    "primaryColor:'#eef1fe', primaryBorderColor:'#4f46e5', primaryTextColor:'#312e81',"
     "lineColor:'#94a3b8'}});"
     "</script>"
 )
@@ -144,7 +147,7 @@ def _render(report: Report) -> List[str]:
     if report.contributions:
         parts += _contributions(report)
     if report.technical.details:
-        parts.append('<h2 id="technical">🔬 技术细节解释</h2>')
+        parts.append('<h2 id="technical">技术细节解释</h2>')
         for i, p in enumerate(report.technical.details, 1):
             parts += _technical_point(report, i, p)
     if report.connections.related_works:
@@ -174,7 +177,7 @@ def _cmd_block(command: str) -> str:
 def _bibtex_block(report: Report) -> str:
     bib = esc(to_bibtex(report.paper))
     return (
-        '<button class="copy-btn" onclick="pmCopyBib(this)">📋 复制 BibTeX</button>'
+        '<button class="copy-btn" onclick="pmCopyBib(this)">复制 BibTeX</button>'
         f'<pre id="pm-bibtex" hidden>{bib}</pre>'
     )
 
@@ -182,13 +185,13 @@ def _bibtex_block(report: Report) -> str:
 def _toc(report: Report) -> str:
     items = []
     if report.contributions:
-        items.append(("contributions", "🎯 贡献"))
+        items.append(("contributions", "贡献"))
     if report.technical.details:
-        items.append(("technical", "🔬 技术细节"))
+        items.append(("technical", "技术细节"))
     if report.connections.related_works:
-        items.append(("connections", "🔗 知识关联"))
+        items.append(("connections", "知识关联"))
     if report.reproduction:
-        items.append(("reproduction", "🛠️ 复现指南"))
+        items.append(("reproduction", "复现指南"))
     if len(items) < 2:
         return ""
     links = "".join(f'<a href="#{anchor}">{label}</a>' for anchor, label in items)
@@ -224,7 +227,7 @@ def _src_link(report: Report, section: Optional[str], page: Optional[int]) -> st
 def _sources(report: Report, sources: List[Source]) -> str:
     if not sources:
         return ""
-    unverified = "<span style='color:#b45309'>⚠ 未核实</span> · "
+    unverified = "<span style='color:var(--amber,#b7791f)'>未核实</span> · "
     items = "".join(
         f"<li>{_src_link(report, s.section, s.page)}: "
         f"{'' if s.verified else unverified}{esc(s.text)}</li>"
@@ -236,7 +239,7 @@ def _sources(report: Report, sources: List[Source]) -> str:
 def _contributions(report: Report) -> List[str]:
     c = report.contributions
     return [
-        '<h2 id="contributions">🎯 贡献与创新点</h2>',
+        '<h2 id="contributions">贡献与创新点</h2>',
         '<div class="card">',
         f"<p><b>核心贡献：</b>{esc(c.main_contribution)}</p>",
         f"<p><b>新颖之处：</b>{esc(c.novelty)}</p>",
@@ -258,9 +261,9 @@ def _technical_point(report: Report, idx: int, p: TechnicalPoint) -> List[str]:
 
         out.append(f'<div class="formula">$$ {esc(_mathjax(p.formula))} $$</div>')
     if p.analogy:
-        out.append(f'<div class="analogy">💡 <b>类比：</b>{esc(p.analogy)}</div>')
+        out.append(f'<div class="analogy"><b>类比：</b>{esc(p.analogy)}</div>')
     if p.source_section or p.page:
-        out.append(f'<p class="src">📍 出处：{_src_link(report, p.source_section, p.page)}</p>')
+        out.append(f'<p class="src">出处：{_src_link(report, p.source_section, p.page)}</p>')
     if p.figure:
         out += _figure(p)
     out.append("</details>")
@@ -305,7 +308,7 @@ def _connections(works: List[Connection]) -> List[str]:
         paper = f'<a href="{esc(w.arxiv_link)}">{esc(w.paper)}</a>' if w.arxiv_link else esc(w.paper)
         rows.append(f"<tr><td>{esc(w.concept)}</td><td>{paper}</td><td>{esc(w.relationship)}</td></tr>")
     return [
-        '<h2 id="connections">🔗 知识关联</h2>',
+        '<h2 id="connections">知识关联</h2>',
         "<table><thead><tr><th>概念</th><th>相关论文</th><th>关系</th></tr></thead><tbody>",
         *rows,
         "</tbody></table>",
@@ -313,7 +316,7 @@ def _connections(works: List[Connection]) -> List[str]:
 
 
 def _reproduction(r: Reproduction) -> List[str]:
-    out = ['<h2 id="reproduction">🛠️ 复现指南</h2>', '<div class="card"><ul>']
+    out = ['<h2 id="reproduction">复现指南</h2>', '<div class="card"><ul>']
     if r.code_repo is not None:
         cr = r.code_repo
         badge = " · ✓官方实现" if cr.is_official else ""
@@ -377,7 +380,7 @@ def _reproduction(r: Reproduction) -> List[str]:
         out.append("</ul>")
 
     if r.gotchas:
-        out.append("<h3>⚠️ 坑点提示</h3><ul>")
+        out.append("<h3>坑点提示</h3><ul>")
         out += [f"<li>{esc(g)}</li>" for g in r.gotchas]
         out.append("</ul>")
     return out

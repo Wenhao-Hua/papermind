@@ -30,6 +30,25 @@ from papermind.output.schema import (
 )
 from papermind.output.terminal import render_report
 
+
+def _load_demo_svg() -> str:
+    """A real teaching SVG for the demo's first point (Scaled Dot-Product Attention).
+    Prefer the gallery figure; fall back to the wheel-bundled hero so ``papermind demo``
+    shows a faithful figure even from a bare pip install. Absent -> no figure (not a
+    broken diagram)."""
+    import pathlib
+
+    here = pathlib.Path(__file__).resolve().parent
+    for p in (here.parent / "examples" / "figures" / "transformer-fig1.svg", here / "assets" / "hero.svg"):
+        try:
+            return p.read_text(encoding="utf-8")
+        except Exception:  # noqa: BLE001
+            continue
+    return ""
+
+
+_DEMO_SVG = _load_demo_svg()
+
 _KIND = {
     "fact": ("论文事实", "green"),
     "inference": ("基于论文的推理", "yellow"),
@@ -62,7 +81,8 @@ def build_demo_report() -> Report:
                     source_section="Section 3.2.1",
                     page=4,
                     difficulty="high",
-                    figure=Figure(type="ai_generated", mermaid="flowchart LR\n Q-->S[Q·Kᵀ]\n K-->S\n S-->SC[/√d_k]\n SC-->SM[softmax]\n V-->W\n SM-->W-->O", caption="AI 生成示意图：缩放点积注意力"),
+                    figure=(Figure(type="ai_generated", svg=_DEMO_SVG, caption="缩放点积注意力（教学示意图）")
+                            if _DEMO_SVG else None),
                 ),
                 TechnicalPoint(
                     name="多头注意力 (Multi-Head Attention)",
