@@ -107,38 +107,48 @@ def analyze(
         # quoted source we can't find, and snap each to its true section/page.
         _verify_citations(report, parsed)
 
-        if with_figures and "technical" in modules and report.technical.details:
-            from papermind.figures.extract import match_original_figures
-            from papermind.figures.generate import generate_diagrams, generate_image_diagrams, generate_svg_diagrams
+        if with_figures and "technical" in modules:
+            # Whole-method framework diagram: one cheap main-model call on the context,
+            # stored on the report so it ships in the analysis (no separate tab).
+            from papermind.figures.framework import generate_framework
 
-            match_original_figures(report.technical.details, parsed, client)
-            if use_image:
-                generate_image_diagrams(
-                    report.technical.details, client, parsed.cache_dir, config.image_model, on_notice=notice
-                )
-            elif svg_figures:
-                # Architecture-faithful teaching SVGs, conditioned on the paper context.
-                # No Mermaid fallback here: with SVGs on we'd rather show no figure than
-                # a generic candy-colored flowchart. A separate (typically fast, non-thinking)
-                # figure model can be configured to speed this up, at some cost to layout polish.
-                if config.figure_model:
-                    # A configured (typically fast, non-thinking) figure model: no reasoning, modest budget.
-                    fig_client = LLMClient(model=config.figure_model, config=config, on_notice=notice)
-                    generate_svg_diagrams(
-                        report.technical.details, fig_client, context, on_notice=notice,
-                        reasoning_effort=None, max_tokens=18000,
+            fw = generate_framework(context, client, on_notice=notice)
+            if fw is not None:
+                fw.title = fw.title or (parsed.meta.title or "")
+                report.framework = fw
+
+            if report.technical.details:
+                from papermind.figures.extract import match_original_figures
+                from papermind.figures.generate import generate_diagrams, generate_image_diagrams, generate_svg_diagrams
+
+                match_original_figures(report.technical.details, parsed, client)
+                if use_image:
+                    generate_image_diagrams(
+                        report.technical.details, client, parsed.cache_dir, config.image_model, on_notice=notice
                     )
+                elif svg_figures:
+                    # Architecture-faithful teaching SVGs, conditioned on the paper context.
+                    # No Mermaid fallback here: with SVGs on we'd rather show no figure than
+                    # a generic candy-colored flowchart. A separate (typically fast, non-thinking)
+                    # figure model can be configured to speed this up, at some cost to layout polish.
+                    if config.figure_model:
+                        # A configured (typically fast, non-thinking) figure model: no reasoning, modest budget.
+                        fig_client = LLMClient(model=config.figure_model, config=config, on_notice=notice)
+                        generate_svg_diagrams(
+                            report.technical.details, fig_client, context, on_notice=notice,
+                            reasoning_effort=None, max_tokens=18000,
+                        )
+                    else:
+                        # Default = the main model, usually a thinking model: keep reasoning minimal (else it
+                        # spends the whole budget deliberating over the layout rules and starves the SVG) and
+                        # give it ample headroom for reasoning + the SVG body.
+                        generate_svg_diagrams(
+                            report.technical.details, client, context, on_notice=notice,
+                            reasoning_effort="minimal", max_tokens=32000,
+                        )
                 else:
-                    # Default = the main model, usually a thinking model: keep reasoning minimal (else it
-                    # spends the whole budget deliberating over the layout rules and starves the SVG) and
-                    # give it ample headroom for reasoning + the SVG body.
-                    generate_svg_diagrams(
-                        report.technical.details, client, context, on_notice=notice,
-                        reasoning_effort="minimal", max_tokens=32000,
-                    )
-            else:
-                # Legacy path (only when SVGs aren't requested): Mermaid fills any gap.
-                generate_diagrams(report.technical.details, client)
+                    # Legacy path (only when SVGs aren't requested): Mermaid fills any gap.
+                    generate_diagrams(report.technical.details, client)
             advance("figures")
 
     report.usage = client.usage

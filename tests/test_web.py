@@ -41,39 +41,17 @@ def test_web_is_chinese_only():
     assert "pm-lang" not in TestClient(app).get("/").text  # language toggle removed
 
 
-def test_framework_tab_and_form():
-    client = TestClient(create_app(live=False))
-    r = client.get("/framework")
-    assert r.status_code == 200 and "生成框架图" in r.text
-    assert "/framework" in client.get("/").text  # nav tab present
-
-
-def test_framework_body_is_view_only_with_download():
+def test_report_html_embeds_framework_section():
+    # The framework diagram is no longer a standalone tab — it ships inside the analysis report.
     from papermind.figures.framework import FNode, FrameworkSpec, _auto_layout
-    from papermind.web import _framework_body
+    from papermind.output.schema import PaperMeta, Report
 
-    spec = _auto_layout(FrameworkSpec(title="T", nodes=[FNode(id="a", label="输入"), FNode(id="b", label="阶段")]))
-    html = _framework_body(spec)
-    assert "<svg" in html and "输入" in html                    # the diagram is rendered
-    assert "data-fw='download'" in html and "下载 SVG" in html   # the only action: download the SVG
-    assert "/framework/edit" not in html and "fw-save" not in html  # no editing affordances
-
-
-def test_framework_demo_route_renders_cached_spec(monkeypatch, tmp_path):
-    monkeypatch.setenv("PAPERMIND_HOME", str(tmp_path))
-    from papermind.config import load_config
-    from papermind.figures.framework import FNode, FrameworkSpec, _auto_layout, save_framework_spec
-
-    cache_dir = load_config().paper_cache("1706.03762")  # cache key for the arXiv URL below
-    save_framework_spec(cache_dir, _auto_layout(FrameworkSpec(title="Attn", nodes=[FNode(id="a", label="输入序列")])))
-    r = TestClient(create_app(live=False)).post("/framework", data={"source": "https://arxiv.org/abs/1706.03762"})
-    assert r.status_code == 200 and "<svg" in r.text and "输入序列" in r.text and "data-fw='download'" in r.text
-
-
-def test_framework_demo_route_uncached_shows_note(monkeypatch, tmp_path):
-    monkeypatch.setenv("PAPERMIND_HOME", str(tmp_path))
-    r = TestClient(create_app(live=False)).post("/framework", data={"source": "https://arxiv.org/abs/2401.00001"})
-    assert r.status_code == 200 and "演示模式" in r.text  # no cached spec -> the demo note, not a crash
+    spec = _auto_layout(FrameworkSpec(title="T", nodes=[FNode(id="a", label="输入序列"), FNode(id="b", label="编码器")]))
+    report = Report(paper=PaperMeta(title="P"), framework=spec)
+    html = report.to_html()
+    assert 'id="framework"' in html and "方法框架" in html  # framework section rendered in the report
+    assert "<svg" in html and "输入序列" in html             # the diagram is inlined
+    assert Report.from_dict(report.to_dict()).framework is not None  # survives the cache JSON round-trip
 
 
 def test_demo_route_renders_offline_report():
@@ -86,13 +64,13 @@ def test_demo_route_renders_offline_report():
 def test_nav_trimmed_and_redundant_routes_removed():
     c = TestClient(create_app())
     html = c.get("/").text
-    # Nav keeps only 分析(/) + 框架图 + 搜索; Q&A folded into 分析, 速读/对比/复现 dropped.
-    for href in ("/framework", "/search"):
-        assert f"href='{href}'" in html
-    for gone in ("href='/ask'", "href='/summary'", "href='/compare'", "href='/reproduce'"):
+    # Nav keeps only 分析(/) + 搜索; Q&A and the framework diagram fold into 分析,
+    # 速读/对比/复现 dropped.
+    assert "href='/search'" in html
+    for gone in ("href='/ask'", "href='/summary'", "href='/compare'", "href='/reproduce'", "href='/framework'"):
         assert gone not in html
     # The redundant web routes are truly gone (not merely unlinked).
-    for route in ("/summary", "/compare", "/reproduce"):
+    for route in ("/summary", "/compare", "/reproduce", "/framework"):
         assert c.get(route).status_code == 404
         assert c.post(route, data={"source": "x"}).status_code == 404
 

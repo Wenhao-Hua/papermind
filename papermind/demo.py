@@ -31,6 +31,33 @@ from papermind.output.schema import (
 from papermind.output.terminal import render_report
 
 
+def _demo_framework():
+    """A hand-built whole-method framework for the demo paper (Transformer), so the
+    offline report showcases the embedded framework diagram with no model call."""
+    from papermind.figures.framework import FEdge, FLegend, FNode, FrameworkSpec, _auto_layout
+
+    return _auto_layout(FrameworkSpec(
+        title="Transformer 端到端框架",
+        nodes=[
+            FNode(id="emb", kind="io", label="输入嵌入 + 位置编码"),
+            FNode(id="enc", kind="box", label="编码器 ×N", lines=["多头自注意力", "前馈网络 FFN", "残差 + LayerNorm"]),
+            FNode(id="dec", kind="box", label="解码器 ×N", lines=["掩码自注意力", "编码器-解码器交叉注意力", "前馈网络 FFN"]),
+            FNode(id="head", kind="box", label="线性投影 + Softmax"),
+            FNode(id="out", kind="io", label="输出词概率"),
+            FNode(id="mha", kind="group", col=1, inferred=True, label="多头注意力（机制）",
+                  lines=["softmax(Q·Kᵀ / √d_k)·V", "h 个子空间并行"]),
+        ],
+        edges=[
+            FEdge(src="emb", dst="enc"),
+            FEdge(src="enc", dst="dec", style="emph"),
+            FEdge(src="dec", dst="head"),
+            FEdge(src="head", dst="out"),
+            FEdge(src="enc", dst="mha", style="dashed"),
+        ],
+        legend=[FLegend(style="solid", text="数据流"), FLegend(style="dashed", text="论文未显式画出的推断")],
+    ))
+
+
 def _load_demo_svg() -> str:
     """A real teaching SVG for the demo's first point (Scaled Dot-Product Attention).
     Prefer the gallery figure; fall back to the wheel-bundled hero so ``papermind demo``
@@ -120,6 +147,7 @@ def build_demo_report() -> Report:
             ],
             gotchas=["warmup 学习率与 √d_k 缩放是最常被忽略的两个关键点；注意区分 encoder/decoder 自注意力与 cross-attention 的掩码。"],
         ),
+        framework=_demo_framework(),
     )
 
 

@@ -12,8 +12,11 @@ All notable changes to PaperMind are documented here. The format follows
   analyze function itself, sharing one consistent focused-tool layout — dropping
   the hero pitch, capability cards, benchmark section, and gallery.
 - **Q&A folded into 分析.** The analyze page now carries a dedicated "问 AI" block
-  that reuses the paper you already entered — no second paper selection. The web
-  nav is trimmed to 分析 · 框架图 · 搜索.
+  that reuses the paper you already entered — no second paper selection.
+- **The framework diagram now ships inside the analysis report** (a 方法框架 section
+  with the whole-method end-to-end diagram), generated alongside the figures — so
+  it's part of every `papermind analyze` (CLI + web), not a separate tab. The web
+  nav is trimmed to 分析 · 搜索.
 - **Removed the redundant web tools** 速读 / 对比 / 复现 (their output is already
   part of a full analysis). The CLI commands are unchanged.
 - **Restyled into a warmer "research reading" look**, applied across every surface

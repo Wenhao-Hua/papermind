@@ -13,6 +13,8 @@ from typing import List, Literal, Optional
 
 from pydantic import BaseModel, Field
 
+from papermind.figures.framework import FrameworkSpec
+
 
 def _write_text(path: str, text: str) -> None:
     p = Path(path)
@@ -226,6 +228,8 @@ class Report(BaseModel):
     technical: TechnicalSection = Field(default_factory=TechnicalSection)
     connections: ConnectionsSection = Field(default_factory=ConnectionsSection)
     reproduction: Optional[Reproduction] = None
+    # Whole-method end-to-end framework diagram (generated alongside the figures).
+    framework: Optional[FrameworkSpec] = None
     # Runtime token usage for this analysis; not part of the exported JSON artifact.
     usage: Optional["Usage"] = None
 
@@ -239,6 +243,8 @@ class Report(BaseModel):
         out["connections"] = [c.model_dump() for c in self.connections.related_works]
         if self.reproduction is not None:
             out["reproduction"] = self.reproduction.model_dump()
+        if self.framework is not None:
+            out["framework"] = self.framework.model_dump()
         return out
 
     @classmethod
@@ -254,6 +260,7 @@ class Report(BaseModel):
                 related_works=[Connection(**c) for c in data.get("connections", [])]
             ),
             reproduction=Reproduction(**data["reproduction"]) if data.get("reproduction") else None,
+            framework=FrameworkSpec.model_validate(data["framework"]) if data.get("framework") else None,
         )
 
     def to_json(self, path: Optional[str] = None) -> str:

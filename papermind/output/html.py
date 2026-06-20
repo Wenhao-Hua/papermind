@@ -155,6 +155,8 @@ def _render(report: Report) -> List[str]:
     ]
     if report.contributions:
         parts += _contributions(report)
+    if report.framework is not None:
+        parts += _framework_section(report.framework)
     if report.technical.details:
         parts.append('<h2 id="technical">技术细节解释</h2>')
         for i, p in enumerate(report.technical.details, 1):
@@ -195,6 +197,8 @@ def _toc(report: Report) -> str:
     items = []
     if report.contributions:
         items.append(("contributions", "贡献"))
+    if report.framework is not None:
+        items.append(("framework", "框架"))
     if report.technical.details:
         items.append(("technical", "技术细节"))
     if report.connections.related_works:
@@ -255,6 +259,16 @@ def _contributions(report: Report) -> List[str]:
         f"<p><b>解决的问题：</b>{esc(c.problem_solved)}</p>",
         _sources(report, c.sources),
         "</div>",
+    ]
+
+
+def _framework_section(spec) -> List[str]:
+    from papermind.figures.framework import render_framework_svg
+
+    return [
+        '<h2 id="framework">方法框架</h2>',
+        f'<figure class="svgfig">{render_framework_svg(spec)}</figure>',
+        '<figcaption class="ai-tag">整篇方法的端到端框架图（虚线＝论文未显式画出的推断步骤）。</figcaption>',
     ]
 
 

@@ -67,7 +67,6 @@ _ASK_MAX_SESSIONS = 32
 
 _TABS = [
     ("/", "Analyze", "分析"),
-    ("/framework", "Framework", "框架图"),
     ("/search", "Search", "搜索"),
 ]
 
@@ -407,30 +406,6 @@ def create_app(live: bool = False, rate_per_ip: int = 8, rate_global: int = 300,
         jid = _start_job(work, kind="ask", on_fail=lambda: limiter.release(ip))
         return _with_session(HTMLResponse(_job_page(jid, live, "/")), sid)
 
-    # -- framework diagram ---------------------------------------------------- #
-    @app.get("/framework", response_class=HTMLResponse)
-    def framework_form():
-        return _page("/framework", _framework_form(live), live)
-
-    @app.post("/framework", response_class=HTMLResponse)
-    def framework_route(request: Request, source: str = Form(...), model: str = Form("")):
-        if not live:
-            spec = _demo_framework(source)
-            if spec is not None:
-                return _page("/framework", _framework_body(spec) + _framework_form(live), live)
-            return _page("/framework", _framework_form(live, _t("Demo mode shows framework diagrams only for cached papers. Start with --live.", "演示模式仅展示已缓存论文的框架图。请以 --live 启动。")), live)
-        blocked = gate(request)
-        if blocked:
-            return _page("/framework", _framework_form(live, blocked), live)
-        ip = _client_ip(request)
-        src = source.strip()
-
-        def work(jid):
-            spec = _build_framework(src, model, jid, no_cache)
-            return _page("/framework", _framework_body(spec) + _framework_form(live), live)
-
-        return _job_page(_start_job(work, on_fail=lambda: limiter.release(ip)), live, "/framework")
-
     # -- search (no model calls -> always available) ------------------------- #
     @app.get("/search", response_class=HTMLResponse)
     def search_form():
@@ -680,13 +655,6 @@ button:active{transform:translateY(1px)}
   background:var(--surface);transition:background .15s,border-color .15s}
 .ex a:hover{background:var(--accent-soft);border-color:var(--accent)}
 
-/* framework canvas */
-.fw-canvas{overflow:auto;background:var(--surface);border:1px solid var(--line);border-radius:var(--rs);padding:10px}
-.fw-canvas svg{max-width:100%;height:auto;display:block;margin:0 auto;user-select:none}
-.fw-tools{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin-bottom:12px}
-.fw-tools button{background:var(--surface);color:var(--accent);border:1px solid var(--line-strong);padding:7px 14px;box-shadow:none;font-size:.88rem;margin:0}
-.fw-tools button:hover{background:var(--accent-soft);border-color:var(--accent)}
-
 /* Q&A chat + evidence segments */
 .chat .turn{padding:20px 0;border-top:1px solid var(--line)}
 .chat .turn:first-child{padding-top:0;border-top:0}
@@ -767,23 +735,6 @@ document.addEventListener('click',function(e){
     if(en.isIntersecting){en.target.classList.add('in'); io.unobserve(en.target);}
   });},{rootMargin:'0px 0px -8% 0px'});
   els.forEach(function(e){io.observe(e);});
-})();
-"""
-
-
-# Framework page: the diagram is view-only; this is just the "download SVG" action.
-_FRAMEWORK_JS = """
-(function(){
-  var canvas=document.getElementById('fw-canvas');
-  document.addEventListener('click',function(ev){
-    var b=ev.target.closest('[data-fw="download"]'); if(!b||!canvas) return;
-    var svg=canvas.querySelector('svg'); if(!svg) return;
-    var src='<?xml version="1.0" encoding="UTF-8"?>\\n'+svg.outerHTML;
-    var blob=new Blob([src],{type:'image/svg+xml;charset=utf-8'});
-    var a=document.createElement('a'); a.href=URL.createObjectURL(blob);
-    a.download='papermind-framework.svg'; document.body.appendChild(a); a.click();
-    setTimeout(function(){URL.revokeObjectURL(a.href); a.remove();},1000);
-  });
 })();
 """
 
@@ -875,16 +826,6 @@ def _tool_page(title: str, sub: str, inner: str, note: str = "", error: str = ""
     )
 
 
-def _src_form(action: str, placeholder: str, btn: str, examples: bool = False) -> str:
-    """A single-source inline form (input + submit), shared by the source-only tools."""
-    ex = _examples_row() if examples else ""
-    return (
-        f"<form class='tool-form' method='post' action='{action}'>"
-        f"<div class='tool-in'><input name='source' placeholder='{placeholder}' autofocus>"
-        f"<button>{btn}</button></div></form>{ex}"
-    )
-
-
 def _analyze_form(live: bool, error: str = "") -> str:
     note = "" if live else "<p class='tool-note'>演示模式：仅展示已缓存论文；分析新论文请用 CLI 或以 <code>--live</code> 启动。</p>"
     inner = (
@@ -934,61 +875,6 @@ def _ask_form(live: bool, error: str = "", source: str = "") -> str:
     return _tool_page("继续问这篇" if source else "问答",
                       "基于原文回答——每句都标注是论文事实 / 推理 / 超纲，并附带页码的原文出处。",
                       inner, error=error)
-
-
-def _build_framework(src: str, model: str, jid: str, no_cache: bool):
-    """Resolve a paper and return its framework spec, generating + caching it on first
-    request (cheap: one model call on top of parse). Reused by the /framework job."""
-    from papermind.analyze import _build_context
-    from papermind.config import load_config
-    from papermind.errors import PaperMindError
-    from papermind.figures.framework import generate_framework, load_framework_spec, save_framework_spec
-    from papermind.llm.base import LLMClient
-    from papermind.parser.arxiv import resolve
-    from papermind.parser.pdf import parse_pdf
-
-    resolved = resolve(src, load_config())
-    spec = None if no_cache else load_framework_spec(resolved.cache_dir)
-    if spec is None:
-        _set_job(jid, step="解析论文…")
-        parsed = parse_pdf(resolved.pdf_path, resolved.meta, resolved.cache_dir, extract_figures=False)
-        _set_job(jid, step="生成框架图…")
-        spec = generate_framework(_build_context(parsed), LLMClient(model=(model or None)))
-        if spec is None:
-            raise PaperMindError("框架图生成失败，请重试或换一篇论文。")
-        spec.title = spec.title or (parsed.meta.title or "")
-        save_framework_spec(resolved.cache_dir, spec)
-    return spec
-
-
-def _demo_framework(source: str):
-    """A cached framework spec WITHOUT any network (demo mode)."""
-    from papermind.figures.framework import load_framework_spec
-    from papermind.parser.arxiv import cache_dir_for
-
-    cache_dir = cache_dir_for(source)
-    return load_framework_spec(cache_dir) if cache_dir else None
-
-
-def _framework_form(live: bool, error: str = "") -> str:
-    note = "" if live else "<p class='tool-note'>演示模式：仅展示已缓存论文的框架图；请以 <code>--live</code> 启动。</p>"
-    return _tool_page("框架图", "把整篇方法画成一张端到端框架图（含论文未显式画出的推断步骤），可下载 SVG。",
-                      _src_form("/framework", "arXiv 链接 / DOI / 论文标题", "生成框架图", examples=True),
-                      note=note, error=error)
-
-
-def _framework_body(spec) -> str:
-    from papermind.figures.framework import render_framework_svg
-
-    svg = render_framework_svg(spec)
-    return (
-        f"<section class='panel'><h2>{_t('Framework diagram', '框架图')}</h2>"
-        f"<p class='lead'>{_t('Paper-style end-to-end diagram (dashed = steps the paper only implies).', '论文式端到端框架图（虚线＝论文未显式画出的推断步骤）。')}</p>"
-        f"<div class='fw-tools'><button type='button' data-fw='download'>{_t('⬇ Download SVG', '⬇ 下载 SVG')}</button></div>"
-        f"<div class='fw-canvas' id='fw-canvas'>{svg}</div>"
-        f"<script>{_FRAMEWORK_JS}</script>"
-        "</section>"
-    )
 
 
 def _search_form(error: str = "") -> str:
