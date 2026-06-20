@@ -680,10 +680,11 @@ _CSS = """
 }}
 *{box-sizing:border-box}
 html{scroll-behavior:smooth}
-body{margin:0;color:var(--ink);background:var(--bg);font:15px/1.65 var(--sans);
+body{margin:0;color:var(--ink);background:var(--bg);font:15px/1.65 var(--sans);overflow-x:hidden;
   -webkit-font-smoothing:antialiased;text-rendering:optimizeLegibility}
 a{color:var(--accent);text-decoration:none}
-.pm-wrap{max-width:940px;margin:0 auto;padding:0 24px 112px}
+.pm-wrap{max-width:940px;margin:0 auto;padding:0 24px 112px;overflow-x:clip}
+main{min-width:0}
 
 /* sticky top bar: brand · nav · GitHub · language */
 .pm-bar-top{position:sticky;top:0;z-index:30;border-bottom:1px solid var(--line);
@@ -717,7 +718,15 @@ a{color:var(--accent);text-decoration:none}
   padding:20px 22px 16px;box-shadow:var(--shadow)}
 .hero-fig svg{max-width:100%;height:auto;display:block;margin:0 auto}
 .hero-fig figcaption{margin-top:14px;color:var(--faint);font-size:.82rem;text-align:center}
-@media(max-width:640px){.hero{padding:40px 0 22px}.hero-h{font-size:2.25rem}}
+@media(max-width:640px){
+  .pm-bar-in{height:auto;flex-wrap:wrap;padding:9px 16px;gap:10px 12px}
+  .pm-brand{flex:1}
+  .pm-nav{order:3;flex-basis:100%;flex-wrap:nowrap;overflow-x:auto;gap:2px;scrollbar-width:none}
+  .pm-nav::-webkit-scrollbar{display:none}
+  .hero{padding:34px 0 16px}
+  .hero-h{font-size:2.05rem;max-width:none;overflow-wrap:break-word}
+  .hero-sub{font-size:1rem}
+}
 
 /* panels & type */
 .panel{background:var(--surface);border:1px solid var(--line);border-radius:var(--r);
@@ -805,7 +814,7 @@ pre{font:.88rem/1.6 var(--mono);background:#0f1117;color:#e7e9ef;padding:16px 18
 .pm-bar span{display:block;height:100%;width:5%;border-radius:6px;background:var(--accent);transition:width .5s ease}
 .pm-busy-title{margin:0;font-weight:600}.pm-busy-step{margin:8px 0 0;color:var(--accent)}
 .pm-busy-time{margin:6px 0 0;color:var(--faint);font-size:.85rem}
-@media(max-width:600px){.pm-wrap{padding:0 16px 64px}.panel{padding:22px}.pm-bar-in{padding:0 16px;gap:12px}}
+@media(max-width:600px){.pm-wrap{padding:0 16px 72px}.panel{padding:22px}}
 @media(prefers-reduced-motion:reduce){*{transition:none!important;animation:none!important}}
 @media(prefers-reduced-motion:no-preference){
   @keyframes pm-rise{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:none}}
