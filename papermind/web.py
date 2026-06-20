@@ -709,11 +709,16 @@ main{min-width:0}
 .pm-ghs:hover,.pm-lang:hover{border-color:var(--accent);color:var(--accent)}
 
 /* hero */
-.hero{padding:58px 0 18px}
+.hero{padding:64px 0 18px;position:relative;isolation:isolate}
+.hero::before{content:'';position:absolute;z-index:-1;inset:-28px 0 auto 0;height:360px;pointer-events:none;
+  background-image:radial-gradient(var(--line-strong) 1px,transparent 1px);background-size:26px 26px;opacity:.55;
+  -webkit-mask-image:radial-gradient(120% 92% at 28% 0%,#000,transparent 68%);
+  mask-image:radial-gradient(120% 92% at 28% 0%,#000,transparent 68%)}
 .hero-eyebrow{display:inline-flex;align-items:center;gap:7px;font-size:.78rem;font-weight:600;letter-spacing:.01em;
   color:var(--accent);background:var(--accent-soft);border:1px solid var(--line);border-radius:999px;padding:5px 13px;margin:0 0 22px}
 .hero-eyebrow::before{content:'';width:6px;height:6px;border-radius:50%;background:var(--accent)}
-.hero-h{font-size:3.1rem;line-height:1.06;font-weight:700;letter-spacing:-.035em;margin:0 0 .34em;text-wrap:balance;max-width:24ch}
+.hero-h{font-size:3.45rem;line-height:1.04;font-weight:700;letter-spacing:-.04em;margin:0 0 .36em;text-wrap:balance;max-width:21ch}
+.hero-h .hl{color:var(--accent)}
 .hero-sub{color:var(--soft);font-size:1.1rem;line-height:1.6;max-width:60ch;margin:0 0 24px}
 .hero-feats{display:flex;flex-wrap:wrap;gap:8px;margin:0 0 4px}
 .hero-feats span{font-size:.83rem;color:var(--soft);background:var(--surface);border:1px solid var(--line);
@@ -728,7 +733,7 @@ main{min-width:0}
   .pm-nav{order:3;flex-basis:100%;flex-wrap:nowrap;overflow-x:auto;gap:2px;scrollbar-width:none}
   .pm-nav::-webkit-scrollbar{display:none}
   .hero{padding:34px 0 16px}
-  .hero-h{font-size:2.05rem;max-width:none;overflow-wrap:break-word}
+  .hero-h{font-size:2.3rem;max-width:none;overflow-wrap:break-word}
   .hero-sub{font-size:1rem}
 }
 
@@ -1018,10 +1023,12 @@ def _hero() -> str:
         f"<figure class='hero-fig'>{svg}<figcaption>{cap}"
         f"<a href='/demo'>{_t('see a full sample report →', '看一份完整示例报告 →')}</a></figcaption></figure>"
     ) if svg else ""
+    head = _t('Read any paper — from skim to <span class="hl">reproduction</span>.',
+              '把任意论文，读懂到<span class="hl">能复现</span>。')
     return (
         "<section class='hero'>"
         f"<span class='hero-eyebrow'>{_t('Open-source paper deep-reading', '开源论文深读工具')}</span>"
-        f"<h1 class='hero-h'>{_t('Read any paper — from skim to reproduction.', '把任意论文，读懂到能复现。')}</h1>"
+        f"<h1 class='hero-h'>{head}</h1>"
         f"<p class='hero-sub'>{_t('Structured analysis · grounded, citation-verified Q&A · a whole-method framework diagram · reproduction from the real code repo. Paste a link, DOI, or title (arXiv, paper page, PDF…), or upload a PDF.', '结构化分析 · 带原文出处并核验的问答 · 整篇方法的框架图 · 接真实代码仓库的复现。粘贴链接、DOI 或标题（arXiv、论文页面、PDF…），也可上传 PDF。')}</p>"
         f"{fig}</section>"
     )
