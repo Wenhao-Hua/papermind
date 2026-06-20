@@ -58,12 +58,12 @@ class FrameworkSpec(BaseModel):
 
 
 # --------------------------------------------------------------------------- #
-# Palette (matches the site: ink-green-teal accent + warm neutrals)
+# Palette (matches the site: cool neutrals + a single blue accent)
 # --------------------------------------------------------------------------- #
-_FILL = {"io": "#f3f1ec", "box": "#e7efed", "group": "#fbfaf8"}
-_STROKE = {"io": "#5c5953", "box": "#1f5f55", "group": "#b3aea4"}
-_EDGE = {"solid": ("#5c5953", 2.0, ""), "emph": ("#1f5f55", 2.6, ""), "dashed": ("#b3aea4", 1.8, "6,5")}
-_INK, _SUB = "#1a1a18", "#5c5953"
+_FILL = {"io": "#f1f5f9", "box": "#eff5ff", "group": "#f8fafc"}
+_STROKE = {"io": "#64748b", "box": "#2563eb", "group": "#cbd5e1"}
+_EDGE = {"solid": ("#64748b", 2.0, ""), "emph": ("#2563eb", 2.6, ""), "dashed": ("#cbd5e1", 1.8, "6,5")}
+_INK, _SUB = "#0f172a", "#475569"
 _PAD, _LABEL_FS, _LINE_FS, _LH = 12.0, 15.0, 12.5, 1.5
 _FONT = "'Segoe UI','PingFang SC','Microsoft YaHei',sans-serif"
 

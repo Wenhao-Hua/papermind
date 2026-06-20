@@ -534,34 +534,33 @@ def _resolve_upload(source: str, file) -> Optional[str]:
 _FAVICON = (
     "<link rel='icon' href=\"data:image/svg+xml,"
     "<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'>"
-    "<rect width='32' height='32' rx='7' fill='%234f46e5'/>"
+    "<rect width='32' height='32' rx='7' fill='%232563eb'/>"
     "<g stroke='%23fff' stroke-width='2.4' stroke-linecap='round'>"
     "<path d='M10 11h12'/><path d='M10 16h12'/><path d='M10 21h7'/></g></svg>\">"
 )
 
 _CSS = """
 :root{
-  --bg:#fbfaf8;--surface:#ffffff;--ink:#1a1a18;--soft:#5c5953;--faint:#8a867e;
-  --line:#e8e5df;--line-strong:#d8d4cc;
-  --accent:#1f5f55;--accent-press:#184a42;--accent-soft:#e7efed;--accent-ring:rgba(31,95,85,.16);
-  --warn:#b8612f;
-  --green:#1f8f5f;--amber:#b7791f;--red:#c4513b;
-  --r:11px;--rs:8px;
-  --sans:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"Helvetica Neue","PingFang SC","Microsoft YaHei",sans-serif;
-  --serif:Georgia,"Songti SC","Source Han Serif SC","Noto Serif CJK SC","SimSun",serif;
+  --bg:#f5f7fa;--surface:#ffffff;--ink:#0f172a;--soft:#475569;--faint:#94a3b8;
+  --line:#e8edf3;--line-strong:#d4dbe4;
+  --accent:#2563eb;--accent-press:#1d4ed8;--accent-soft:#eff5ff;--accent-ring:rgba(37,99,235,.18);
+  --warn:#c2620e;
+  --green:#15803d;--amber:#b45309;--red:#dc2626;
+  --r:12px;--rs:9px;
+  --sans:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"Helvetica Neue","PingFang SC","Microsoft YaHei","Source Han Sans SC",sans-serif;
   --mono:"SF Mono","Cascadia Code","JetBrains Mono",ui-monospace,Consolas,monospace;
-  --shadow:0 1px 2px rgba(26,26,24,.05),0 4px 16px -8px rgba(26,26,24,.10);
-  --shadow-lift:0 10px 24px -10px rgba(26,26,24,.16),0 22px 48px -24px rgba(31,95,85,.20);
-  --bar:rgba(251,250,248,.82);
+  --shadow:0 1px 2px rgba(15,23,42,.04),0 6px 18px -8px rgba(15,23,42,.10);
+  --shadow-lift:0 14px 32px -14px rgba(15,23,42,.22);
+  --bar:rgba(255,255,255,.85);
 }
 @media(prefers-color-scheme:dark){:root{
-  --bg:#16161a;--surface:#1c1c20;--ink:#eceae4;--soft:#a6a29a;--faint:#79756d;
-  --line:#2a2925;--line-strong:#38362f;
-  --accent:#3fa896;--accent-press:#5cc0ae;--accent-soft:#15211e;--accent-ring:rgba(63,168,150,.24);
-  --warn:#d98a52;
-  --green:#3fcf8e;--amber:#e0b252;--red:#f0726c;
-  --shadow:0 1px 2px rgba(0,0,0,.45),0 4px 16px -8px rgba(0,0,0,.55);
-  --shadow-lift:0 12px 30px -10px rgba(0,0,0,.6),0 22px 48px -24px rgba(63,168,150,.26);--bar:rgba(22,22,26,.82);
+  --bg:#0b0d12;--surface:#13161d;--ink:#e8ecf3;--soft:#9aa6b7;--faint:#606b7c;
+  --line:#212733;--line-strong:#2f3744;
+  --accent:#5b8cff;--accent-press:#7aa2ff;--accent-soft:#16203a;--accent-ring:rgba(91,140,255,.28);
+  --warn:#e0934a;
+  --green:#34d399;--amber:#e0b252;--red:#f0726c;
+  --shadow:0 1px 2px rgba(0,0,0,.5),0 6px 18px -8px rgba(0,0,0,.6);
+  --shadow-lift:0 16px 36px -14px rgba(0,0,0,.65);--bar:rgba(11,13,18,.85);
 }}
 *{box-sizing:border-box}
 html{scroll-behavior:smooth}
@@ -588,11 +587,12 @@ main{min-width:0}
   border-radius:8px;padding:6px 11px;font-size:.84rem;font-weight:600;white-space:nowrap;transition:border-color .15s,color .15s}
 .pm-ghs:hover{border-color:var(--accent);color:var(--accent)}
 
-/* home: a focused analyze tool (not a marketing page) */
-.pm-tool{max-width:720px;margin:0 auto;padding:34px 0 52px}
-main>.pm-tool:only-child{min-height:calc(100dvh - 168px);display:flex;flex-direction:column;justify-content:center;padding:24px 0 48px}
-.tool-h{font-family:var(--serif);font-size:2rem;font-weight:700;letter-spacing:-.01em;margin:0 0 .35em}
-.tool-sub{color:var(--soft);font-size:1.02rem;line-height:1.6;margin:0 0 22px;max-width:62ch}
+/* home: a focused analyze tool, grounded in one card on a soft canvas */
+.pm-tool{max-width:640px;margin:0 auto;padding:40px 0 56px}
+main>.pm-tool:only-child{min-height:calc(100dvh - 150px);display:flex;flex-direction:column;justify-content:center;padding:28px 0 48px}
+.tool-card{background:var(--surface);border:1px solid var(--line);border-radius:16px;padding:30px 32px;box-shadow:var(--shadow)}
+.tool-h{font-size:1.55rem;font-weight:700;letter-spacing:-.022em;margin:0 0 .3em}
+.tool-sub{color:var(--soft);font-size:.96rem;line-height:1.6;margin:0 0 22px}
 .tool-note{font-size:.85rem;color:var(--faint);margin:0 0 14px}
 .tool-form{margin:0}
 .tool-in{display:flex;gap:10px}
@@ -625,7 +625,7 @@ button.btn-2:hover{background:var(--accent-soft);color:var(--accent-press);box-s
 .panel{background:var(--surface);border:1px solid var(--line);border-radius:var(--r);
   padding:26px 28px;margin:18px 0;box-shadow:var(--shadow)}
 h1,h2,h3{font-weight:700;letter-spacing:-.02em;line-height:1.25;color:var(--ink)}
-.panel h2{font-family:var(--serif);margin:0 0 .3em;font-size:1.32rem;letter-spacing:-.005em}.panel h3{margin:1.3em 0 .4em;font-size:1.06rem}
+.panel h2{margin:0 0 .3em;font-size:1.22rem;letter-spacing:-.015em}.panel h3{margin:1.3em 0 .4em;font-size:1.04rem}
 .panel p{margin:.2em 0 .9em}.lead{color:var(--soft);margin:0 0 18px;font-size:.95rem}
 .panel ul{padding-left:1.15em;margin:.4em 0}.panel li{margin:.35em 0}
 label{display:block;font-weight:600;font-size:.88rem;margin:16px 0 7px}
@@ -818,11 +818,11 @@ def _tool_page(title: str, sub: str, inner: str, note: str = "", error: str = ""
     """The one focused, viewport-centered layout every function tool shares
     (分析/问答/速读/框架图/对比/复现/搜索) — same as the home, no marketing chrome."""
     return (
-        "<section class='pm-tool'>"
+        "<section class='pm-tool'><div class='tool-card'>"
         f"<h1 class='tool-h'>{title}</h1>"
         f"<p class='tool-sub'>{sub}</p>"
         f"{note}{_err(error)}{inner}"
-        "</section>"
+        "</div></section>"
     )
 
 

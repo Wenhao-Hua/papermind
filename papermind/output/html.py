@@ -18,22 +18,21 @@ from papermind.output.schema import Connection, Reproduction, Report, Source, Te
 _DIFFICULTY = {"high": ("high", "#e5484d"), "mid": ("mid", "#f5a623"), "low": ("low", "#30a46c")}
 
 _CSS = """
-:root { --fg:#1a1a18; --muted:#5c5953; --faint:#8a867e; --accent:#1f5f55; --accent-press:#184a42;
-  --border:#e8e5df; --border-strong:#d8d4cc; --bg:#fbfaf8; --card:#fff; --soft:#f3f1ec; --accent-soft:#e7efed;
-  --serif:Georgia,"Songti SC","Source Han Serif SC","Noto Serif CJK SC","SimSun",serif;
-  --shadow:0 1px 2px rgba(26,26,24,.05),0 4px 16px -8px rgba(26,26,24,.10); }
+:root { --fg:#0f172a; --muted:#475569; --faint:#94a3b8; --accent:#2563eb; --accent-press:#1d4ed8;
+  --border:#e8edf3; --border-strong:#d4dbe4; --bg:#f5f7fa; --card:#ffffff; --soft:#f1f5f9; --accent-soft:#eff5ff;
+  --shadow:0 1px 2px rgba(15,23,42,.04),0 6px 18px -8px rgba(15,23,42,.10); }
 @media (prefers-color-scheme: dark) {
-  :root { --fg:#eceae4; --muted:#a6a29a; --faint:#79756d; --accent:#3fa896; --accent-press:#5cc0ae;
-    --border:#2a2925; --border-strong:#38362f; --bg:#16161a; --card:#1c1c20; --soft:#201f1b; --accent-soft:#15211e;
-    --shadow:0 1px 2px rgba(0,0,0,.45),0 4px 16px -8px rgba(0,0,0,.55); }
+  :root { --fg:#e8ecf3; --muted:#9aa6b7; --faint:#606b7c; --accent:#5b8cff; --accent-press:#7aa2ff;
+    --border:#212733; --border-strong:#2f3744; --bg:#0b0d12; --card:#13161d; --soft:#171b24; --accent-soft:#16203a;
+    --shadow:0 1px 2px rgba(0,0,0,.5),0 6px 18px -8px rgba(0,0,0,.6); }
 }
 html { scroll-behavior:smooth; }
 * { box-sizing:border-box; }
 body { margin:0; background:var(--bg); color:var(--fg); -webkit-font-smoothing:antialiased;
   font:16px/1.7 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"Helvetica Neue","PingFang SC","Microsoft YaHei",sans-serif; }
 .wrap { max-width:820px; margin:0 auto; padding:56px 24px 110px; }
-h1 { font-family:var(--serif); font-size:2.1rem; line-height:1.25; letter-spacing:-.01em; font-weight:700; margin:0 0 .35em; }
-h2 { font-family:var(--serif); font-size:1.42rem; letter-spacing:-.005em; font-weight:700; margin:2.6em 0 .9em; padding-bottom:.4em; border-bottom:1px solid var(--border); }
+h1 { font-size:2rem; line-height:1.22; letter-spacing:-.025em; font-weight:700; margin:0 0 .35em; }
+h2 { font-size:1.34rem; letter-spacing:-.02em; font-weight:700; margin:2.6em 0 .9em; padding-bottom:.4em; border-bottom:1px solid var(--border); }
 h2::before { content:''; display:inline-block; width:4px; height:.82em; background:var(--accent); border-radius:2px; margin-right:12px; vertical-align:-1px; }
 h3 { font-size:1.1rem; letter-spacing:-.01em; font-weight:600; margin:1.7em 0 .5em; }
 a { color:var(--accent); text-decoration:none; } a:hover { text-decoration:underline; }
@@ -94,7 +93,7 @@ _MERMAID = (
     "import mermaid from 'https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.esm.min.mjs';"
     "mermaid.initialize({startOnLoad:true, theme:'base', themeVariables:{"
     "fontFamily:'-apple-system,Segoe UI,Microsoft YaHei,sans-serif', fontSize:'15px',"
-    "primaryColor:'#e7efed', primaryBorderColor:'#1f5f55', primaryTextColor:'#143a34',"
+    "primaryColor:'#eff5ff', primaryBorderColor:'#2563eb', primaryTextColor:'#0f172a',"
     "lineColor:'#94a3b8'}});"
     "</script>"
 )
@@ -138,7 +137,7 @@ def _render(report: Report) -> List[str]:
         '<meta name="viewport" content="width=device-width, initial-scale=1">',
         ("<link rel='icon' href=\"data:image/svg+xml,"
          "<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'>"
-         "<rect width='32' height='32' rx='7' fill='%234f46e5'/>"
+         "<rect width='32' height='32' rx='7' fill='%232563eb'/>"
          "<g stroke='%23fff' stroke-width='2.4' stroke-linecap='round'>"
          "<path d='M10 11h12'/><path d='M10 16h12'/><path d='M10 21h7'/></g></svg>\">"),
         f"<title>{esc(paper.title)} · PaperMind</title>",

@@ -19,10 +19,10 @@ All notable changes to PaperMind are documented here. The format follows
   nav is trimmed to 分析 · 搜索.
 - **Removed the redundant web tools** 速读 / 对比 / 复现 (their output is already
   part of a full analysis). The CLI commands are unchanged.
-- **Restyled into a warmer "research reading" look**, applied across every surface
-  (home, all tools, result/state pages, and the report): an ink-green-teal accent
-  (retiring the generic indigo), warm paper background, serif headings, the
-  framework diagram recolored to match, and plainer-language copy throughout.
+- **Restyled into a clean, modern light-product look** across every surface (home,
+  tools, result/state pages, and the report): cool-neutral palette on a soft canvas,
+  a single blue accent, system sans throughout (no serif), the home grounded in one
+  focused card, and the framework diagram recolored to match.
 - Dropped the footer model badge.
 
 ## [0.1.2] — 2026-06-20
