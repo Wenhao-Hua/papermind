@@ -34,12 +34,13 @@ _LANG: "contextvars.ContextVar[str]" = contextvars.ContextVar("pm_lang", default
 
 
 def _lang() -> str:
-    return _LANG.get()
+    return "zh"  # Chinese-only site
 
 
 def _t(en: str, zh: str) -> str:
-    """Pick the English or Chinese string for the current request's language."""
-    return zh if _LANG.get() == "zh" else en
+    """Chinese-only site: always return the Chinese string. (The English argument is
+    kept at call sites so the strings remain available if bilingual is restored.)"""
+    return zh
 
 
 def _resolve_lang(cookie: Optional[str], accept_language: Optional[str]) -> str:
@@ -139,12 +140,12 @@ def _client_ip(request) -> str:
 def _quota_msg(scope: str, limiter: "RateLimiter") -> str:
     if scope == "global":
         return _t(
-            f"The service's daily quota is used up ({limiter.global_max}/day). Try tomorrow, or run locally: pip install paper-mind.",
-            f"本服务今日总额度已用完（{limiter.global_max} 次/天）。请明天再来，或本地运行：pip install paper-mind。",
+            f"The service's daily quota is used up ({limiter.global_max}/day). Try tomorrow, or run locally: pip install papermind-ai.",
+            f"本服务今日总额度已用完（{limiter.global_max} 次/天）。请明天再来，或本地运行：pip install papermind-ai。",
         )
     return _t(
-        f"Your daily quota is used up ({limiter.per_ip}/day per person). Try tomorrow, or run locally for free: pip install paper-mind then papermind analyze.",
-        f"今日额度已用完（每人 {limiter.per_ip} 次/天）。请明天再来，或本地零成本运行：pip install paper-mind 后 papermind analyze。",
+        f"Your daily quota is used up ({limiter.per_ip}/day per person). Try tomorrow, or run locally for free: pip install papermind-ai then papermind analyze.",
+        f"今日额度已用完（每人 {limiter.per_ip} 次/天）。请明天再来，或本地零成本运行：pip install papermind-ai 后 papermind analyze。",
     )
 
 
@@ -170,7 +171,7 @@ def _new_job() -> str:
                 if age > _JOBS_TTL:  # result expired -> reclaim
                     _JOBS.pop(k, None)
             elif age > _JOBS_RUNNING_MAX:  # stuck running far too long -> mark timed out (now evictable)
-                v.update(status="error", error="分析超时，请稍后重试，或本地运行（pip install paper-mind）。", ts=now)
+                v.update(status="error", error="分析超时，请稍后重试，或本地运行（pip install papermind-ai）。", ts=now)
         _JOBS[jid] = {"status": "running", "step": "开始", "html": "", "error": "", "kind": "analyze", "ts": now}
         # over capacity: drop the oldest finished job; only if there are none (sustained overload)
         # fall back to dropping the oldest running job, so _JOBS can never grow without bound.
@@ -217,7 +218,7 @@ def _start_job(work, kind: str = "analyze", on_fail=None) -> str:
             if on_fail:
                 on_fail()
             print(f"[papermind] job {jid} ({kind}) failed: {exc!r}", file=sys.stderr)
-            _set_job(jid, status="error", error="分析失败，请稍后重试，或本地运行（pip install paper-mind）。")
+            _set_job(jid, status="error", error="分析失败，请稍后重试，或本地运行（pip install papermind-ai）。")
 
     threading.Thread(target=run, daemon=True).start()
     return jid
@@ -264,7 +265,7 @@ def create_app(live: bool = False, rate_per_ip: int = 8, rate_global: int = 300,
         from fastapi import Cookie, FastAPI, File, Form, Request, UploadFile  # noqa: F401 - Request/UploadFile used in runtime-evaluated route annotations
         from fastapi.responses import HTMLResponse
     except ImportError as exc:  # pragma: no cover
-        raise PaperMindError("Web demo 需要 FastAPI。安装：pip install 'paper-mind[web]'") from exc
+        raise PaperMindError("Web demo 需要 FastAPI。安装：pip install 'papermind-ai[web]'") from exc
 
     app = FastAPI(title="PaperMind", docs_url=None, redoc_url=None)
     limiter = RateLimiter(rate_per_ip, rate_global)
@@ -298,9 +299,7 @@ def create_app(live: bool = False, rate_per_ip: int = 8, rate_global: int = 300,
     # -- analyze -------------------------------------------------------------- #
     @app.get("/", response_class=HTMLResponse)
     def index():
-        body = (_hero() + _analyze_form(live) + _capabilities()
-                + _workflow() + _gallery() + _trust() + _cta())
-        return _page("/", body, live)
+        return _page("/", _hero(live) + _capabilities() + _proof(), live)
 
     def _analyze_async(request, src, model, refresh):
         """Live analysis -> background job + polling page (avoids the 100s timeout).
@@ -564,7 +563,7 @@ def serve(host: str = "0.0.0.0", port: int = 8080, live: bool = False,
     try:
         import uvicorn
     except ImportError as exc:  # pragma: no cover
-        raise PaperMindError("Web demo 需要 uvicorn。安装：pip install 'paper-mind[web]'") from exc
+        raise PaperMindError("Web demo 需要 uvicorn。安装：pip install 'papermind-ai[web]'") from exc
     app = create_app(
         live=live, rate_per_ip=rate_per_ip, rate_global=rate_global,
         with_figures=with_figures, svg_figures=svg_figures, no_cache=no_cache,
@@ -695,13 +694,13 @@ html{scroll-behavior:smooth}
 body{margin:0;color:var(--ink);background:var(--bg);font:15px/1.65 var(--sans);overflow-x:hidden;
   -webkit-font-smoothing:antialiased;text-rendering:optimizeLegibility}
 a{color:var(--accent);text-decoration:none}
-.pm-wrap{max-width:940px;margin:0 auto;padding:0 24px 112px;overflow-x:clip}
+.pm-wrap{max-width:1060px;margin:0 auto;padding:0 24px 96px;overflow-x:clip}
 main{min-width:0}
 
 /* sticky top bar: brand · nav · GitHub · language */
 .pm-bar-top{position:sticky;top:0;z-index:30;border-bottom:1px solid var(--line);
   background:var(--bar);backdrop-filter:saturate(1.6) blur(10px);-webkit-backdrop-filter:saturate(1.6) blur(10px)}
-.pm-bar-in{max-width:940px;margin:0 auto;padding:0 24px;height:58px;display:flex;align-items:center;gap:18px}
+.pm-bar-in{max-width:1060px;margin:0 auto;padding:0 24px;height:56px;display:flex;align-items:center;gap:18px}
 .pm-brand{display:flex;align-items:center;gap:9px;color:var(--ink);font-weight:700;font-size:1.04rem;letter-spacing:-.015em}
 .pm-brand:hover{color:var(--ink)}
 .pm-brand .mk{width:19px;height:19px;border-radius:6px;display:inline-block;
@@ -711,38 +710,52 @@ main{min-width:0}
   transition:color .15s,background .15s;white-space:nowrap}
 .pm-nav a:hover{color:var(--ink);background:var(--accent-soft)}
 .pm-nav a.on{color:var(--accent);background:var(--accent-soft);font-weight:600}
-.pm-ghs,.pm-lang{display:inline-flex;align-items:center;gap:6px;border:1px solid var(--line-strong);
+.pm-ghs{display:inline-flex;align-items:center;gap:6px;border:1px solid var(--line-strong);color:var(--ink);
   border-radius:8px;padding:6px 11px;font-size:.84rem;font-weight:600;white-space:nowrap;transition:border-color .15s,color .15s}
-.pm-ghs{color:var(--ink)}.pm-lang{color:var(--soft);font-weight:500}
-.pm-ghs:hover,.pm-lang:hover{border-color:var(--accent);color:var(--accent)}
+.pm-ghs:hover{border-color:var(--accent);color:var(--accent)}
 
-/* hero */
-.hero{padding:64px 0 18px;position:relative;isolation:isolate}
-.hero::before{content:'';position:absolute;z-index:-1;inset:-28px 0 auto 0;height:360px;pointer-events:none;
-  background-image:radial-gradient(var(--line-strong) 1px,transparent 1px);background-size:26px 26px;opacity:.55;
-  -webkit-mask-image:radial-gradient(120% 92% at 28% 0%,#000,transparent 68%);
-  mask-image:radial-gradient(120% 92% at 28% 0%,#000,transparent 68%)}
-.hero-eyebrow{display:inline-flex;align-items:center;gap:7px;font-size:.78rem;font-weight:600;letter-spacing:.01em;
-  color:var(--accent);background:var(--accent-soft);border:1px solid var(--line);border-radius:999px;padding:5px 13px;margin:0 0 22px}
+/* hero: the analyze tool on the left, a real teaching figure on the right */
+.hero{display:grid;grid-template-columns:1.04fr .96fr;gap:46px;align-items:center;
+  padding:50px 0 44px;position:relative;isolation:isolate}
+.hero::before{content:'';position:absolute;z-index:-1;inset:-30px -40px auto -40px;height:300px;pointer-events:none;
+  background-image:radial-gradient(var(--line-strong) 1px,transparent 1px);background-size:26px 26px;opacity:.5;
+  -webkit-mask-image:radial-gradient(110% 88% at 20% 0%,#000,transparent 64%);
+  mask-image:radial-gradient(110% 88% at 20% 0%,#000,transparent 64%)}
+.hero-l{min-width:0}
+.hero-eyebrow{display:inline-flex;align-items:center;gap:7px;font-size:.76rem;font-weight:600;letter-spacing:.01em;
+  color:var(--accent);background:var(--accent-soft);border:1px solid var(--line);border-radius:999px;padding:5px 13px;margin:0 0 18px}
 .hero-eyebrow::before{content:'';width:6px;height:6px;border-radius:50%;background:var(--accent)}
-.hero-h{font-size:3.45rem;line-height:1.04;font-weight:700;letter-spacing:-.04em;margin:0 0 .36em;text-wrap:balance;max-width:21ch}
+.hero-h{font-size:2.9rem;line-height:1.08;font-weight:700;letter-spacing:-.035em;margin:0 0 .32em;text-wrap:balance}
 .hero-h .hl{color:var(--accent)}
-.hero-sub{color:var(--soft);font-size:1.1rem;line-height:1.6;max-width:60ch;margin:0 0 24px}
-.hero-feats{display:flex;flex-wrap:wrap;gap:8px;margin:0 0 4px}
-.hero-feats span{font-size:.83rem;color:var(--soft);background:var(--surface);border:1px solid var(--line);
-  border-radius:8px;padding:7px 13px}
-.hero-fig{margin:34px 0 0;background:var(--surface);border:1px solid var(--line);border-radius:var(--r);
-  padding:20px 22px 16px;box-shadow:var(--shadow)}
+.hero-sub{color:var(--soft);font-size:1.02rem;line-height:1.6;margin:0 0 22px}
+.hero-note{font-size:.85rem;color:var(--faint);margin:0 0 14px}
+.hero-form{margin:0}
+.hero-in{display:flex;gap:10px}
+.hero-in input{flex:1;min-width:0;font-size:1rem;padding:13px 15px}
+.hero-in button{margin:0;white-space:nowrap;padding:13px 26px;font-size:1rem}
+.hero-opts{display:flex;flex-wrap:wrap;align-items:center;gap:9px 18px;margin-top:12px;font-size:.85rem;color:var(--soft)}
+.hero-opts .upl input[type=file]{width:auto;font-size:.82rem}
+.hero-opts .chk{display:inline-flex;align-items:center;gap:7px;cursor:pointer;white-space:nowrap}
+.hero-opts .chk input{width:auto;margin:0}
+.hero-r{min-width:0}
+.hero-fig{margin:0;background:var(--surface);border:1px solid var(--line);border-radius:var(--r);
+  padding:18px 20px 14px;box-shadow:var(--shadow)}
 .hero-fig svg{max-width:100%;height:auto;display:block;margin:0 auto}
-.hero-fig figcaption{margin-top:14px;color:var(--faint);font-size:.82rem;text-align:center}
+.hero-fig figcaption{margin-top:12px;color:var(--faint);font-size:.8rem;text-align:center}
+@media(max-width:880px){
+  .hero{grid-template-columns:1fr;gap:26px;padding:38px 0 30px}
+  .hero-h{font-size:2.5rem}
+}
 @media(max-width:640px){
   .pm-bar-in{height:auto;flex-wrap:wrap;padding:9px 16px;gap:10px 12px}
   .pm-brand{flex:1}
   .pm-nav{order:3;flex-basis:100%;flex-wrap:nowrap;overflow-x:auto;gap:2px;scrollbar-width:none}
   .pm-nav::-webkit-scrollbar{display:none}
-  .hero{padding:34px 0 16px}
-  .hero-h{font-size:2.3rem;max-width:none;overflow-wrap:break-word}
-  .hero-sub{font-size:1rem}
+  .hero{padding:28px 0 22px}
+  .hero-h{font-size:2.05rem;overflow-wrap:break-word}
+  .hero-sub{font-size:.98rem}
+  .hero-in{flex-direction:column}
+  .hero-in button{padding:12px}
 }
 
 /* panels & type */
@@ -833,58 +846,43 @@ pre{font:.88rem/1.6 var(--mono);background:#0f1117;color:#e7e9ef;padding:16px 18
 .pm-busy-time{margin:6px 0 0;color:var(--faint);font-size:.85rem}
 @media(max-width:600px){.pm-wrap{padding:0 16px 72px}.panel{padding:22px}}
 /* ---------- rich landing sections (index only) ---------- */
-.hero{position:relative}
-.hero::before{content:'';position:absolute;inset:-60px -240px auto -240px;height:520px;z-index:-1;pointer-events:none;
-  background:radial-gradient(620px 280px at 28% 4%,var(--accent-soft),transparent 70%)}
-.lp-sec{padding:56px 0;border-top:1px solid var(--line)}
-.lp-head{max-width:660px;margin:0 0 30px}
-.lp-eyebrow{font-size:.76rem;font-weight:700;letter-spacing:.07em;text-transform:uppercase;color:var(--accent)}
-.lp-title{font-size:1.95rem;font-weight:700;letter-spacing:-.03em;margin:.32em 0 .35em;line-height:1.18}
-.lp-sub{color:var(--soft);font-size:1.02rem;margin:0;max-width:62ch;line-height:1.6}
-.cap-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:14px}
-.cap-card{display:flex;flex-direction:column;background:var(--surface);border:1px solid var(--line);border-radius:var(--r);
-  padding:20px 20px 18px;text-decoration:none;color:inherit;box-shadow:var(--shadow);transition:transform .18s,border-color .18s,box-shadow .18s}
-.cap-card:hover{transform:translateY(-3px);border-color:var(--accent);box-shadow:var(--shadow-lift)}
-.cap-ic{width:38px;height:38px;border-radius:10px;display:flex;align-items:center;justify-content:center;
-  background:var(--accent-soft);color:var(--accent);margin-bottom:14px}
-.cap-ic svg{width:20px;height:20px;display:block}
-.cap-card h3{font-size:1.03rem;margin:0 0 6px;letter-spacing:-.01em}
-.cap-card p{color:var(--soft);font-size:.9rem;margin:0;line-height:1.55;flex:1}
-.cap-card .go{color:var(--accent);font-size:.85rem;font-weight:600;margin-top:14px}
+/* landing sections — compact */
+.lp{padding:42px 0 0;margin-top:40px;border-top:1px solid var(--line)}
+.lp-h{margin:0 0 20px}
+.lp-k{font-size:.73rem;font-weight:700;letter-spacing:.09em;text-transform:uppercase;color:var(--accent)}
+.lp-h h2{font-size:1.55rem;font-weight:700;letter-spacing:-.025em;margin:.3em 0 0;line-height:1.2}
+/* capabilities: compact icon + name + one line */
+.cap-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:12px}
+.cap{display:flex;align-items:center;gap:12px;background:var(--surface);border:1px solid var(--line);border-radius:var(--rs);
+  padding:13px 15px;text-decoration:none;color:inherit;box-shadow:var(--shadow);transition:transform .16s,border-color .16s,box-shadow .16s}
+.cap:hover{transform:translateY(-2px);border-color:var(--accent);box-shadow:var(--shadow-lift)}
+.cap-ic{flex:none;width:34px;height:34px;border-radius:9px;display:flex;align-items:center;justify-content:center;
+  background:var(--accent-soft);color:var(--accent)}
+.cap-ic svg{width:18px;height:18px;display:block}
+.cap-b{display:flex;flex-direction:column;min-width:0}
+.cap-t{font-weight:600;font-size:.95rem;letter-spacing:-.01em}
+.cap-d{color:var(--faint);font-size:.8rem;line-height:1.4}
 @media(max-width:760px){.cap-grid{grid-template-columns:repeat(2,1fr)}}
-@media(max-width:460px){.cap-grid{grid-template-columns:1fr}}
-.flow{display:grid;grid-template-columns:repeat(3,1fr);gap:18px;counter-reset:s}
-.flow-step{position:relative}
-.flow-n{width:30px;height:30px;border-radius:9px;background:var(--accent);color:#fff;font-weight:700;font-size:.92rem;
-  display:flex;align-items:center;justify-content:center;margin-bottom:12px}
-.flow-step h3{font-size:1rem;margin:0 0 6px;letter-spacing:-.01em}
-.flow-step p{color:var(--soft);font-size:.9rem;margin:0;line-height:1.55}
-@media(max-width:680px){.flow{grid-template-columns:1fr;gap:14px}}
-.gal-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:12px}
-.gal-card{display:flex;align-items:center;gap:13px;background:var(--surface);border:1px solid var(--line);
-  border-radius:var(--r);padding:14px 16px;text-decoration:none;color:inherit;box-shadow:var(--shadow);transition:border-color .18s,transform .18s,box-shadow .18s}
-.gal-card:hover{border-color:var(--accent);transform:translateY(-2px);box-shadow:var(--shadow-lift)}
-.gal-card .body{min-width:0;flex:1}
-.gal-card .t{font-weight:600;font-size:.95rem;letter-spacing:-.01em}
-.gal-card .d{color:var(--faint);font-size:.82rem;margin-top:1px}
-.gal-tag{font-size:.7rem;font-weight:600;color:var(--accent);background:var(--accent-soft);border-radius:6px;
-  padding:3px 9px;white-space:nowrap}
-@media(max-width:600px){.gal-grid{grid-template-columns:1fr}}
-.trust{display:flex;flex-wrap:wrap;gap:12px}
-.trust div{flex:1 1 210px;background:var(--surface);border:1px solid var(--line);border-radius:var(--r);padding:16px 18px;box-shadow:var(--shadow)}
-.trust b{display:block;font-size:1.04rem;letter-spacing:-.01em;margin-bottom:3px}
-.trust span{color:var(--soft);font-size:.88rem;line-height:1.5}
-.cta{text-align:center;background:linear-gradient(180deg,var(--accent-soft),var(--surface));
-  border:1px solid var(--line);border-radius:16px;padding:46px 24px;margin:56px 0 0}
-.cta h2{font-size:1.7rem;letter-spacing:-.03em;margin:0 0 .3em}
-.cta p{color:var(--soft);margin:0 0 22px}
-.cta .row{display:flex;gap:12px;justify-content:center;flex-wrap:wrap;align-items:center}
-.cta-btn{background:var(--accent);color:#fff;border-radius:var(--rs);padding:12px 26px;font-weight:600;text-decoration:none}
-.cta-btn:hover{background:var(--accent-press)}
-.cta .ghost{border:1px solid var(--line-strong);border-radius:var(--rs);padding:11px 20px;color:var(--ink);font-weight:600;text-decoration:none}
-.cta .ghost:hover{border-color:var(--accent);color:var(--accent)}
-.cta code{font-size:.88rem}
-@media(prefers-color-scheme:dark){.cta-btn{color:#0c0d10}}
+@media(max-width:440px){.cap-grid{grid-template-columns:1fr}}
+/* proof: one headline stat + supporting points, then example chips */
+.proof{display:grid;grid-template-columns:300px 1fr;gap:20px;align-items:stretch}
+.stat{background:var(--surface);border:1px solid var(--line);border-radius:var(--r);padding:22px 24px;box-shadow:var(--shadow)}
+.stat-n{font-size:2.9rem;font-weight:800;letter-spacing:-.04em;color:var(--accent);line-height:1}
+.stat-n span{font-size:1.1rem;font-weight:700;margin-left:2px}
+.stat-l{font-size:.82rem;font-weight:600;color:var(--soft);margin-top:4px;letter-spacing:.02em}
+.stat-d{color:var(--soft);font-size:.9rem;line-height:1.6;margin:14px 0 0}
+.stat-d b{color:var(--ink)}
+.pts{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:10px}
+.pts li{background:var(--surface);border:1px solid var(--line);border-radius:var(--rs);padding:13px 16px;
+  font-size:.92rem;color:var(--soft);line-height:1.55;box-shadow:var(--shadow)}
+.pts li b{color:var(--ink)}
+.gal{margin-top:18px}
+.gal-k{font-size:.82rem;color:var(--faint)}
+.gchips{display:flex;flex-wrap:wrap;gap:8px;margin-top:10px}
+.gchip{font-size:.86rem;font-weight:500;color:var(--soft);background:var(--surface);border:1px solid var(--line-strong);
+  border-radius:8px;padding:6px 13px;transition:border-color .15s,color .15s,transform .15s}
+.gchip:hover{border-color:var(--accent);color:var(--accent);transform:translateY(-1px)}
+@media(max-width:680px){.proof{grid-template-columns:1fr;gap:13px}}
 .js .reveal{opacity:0;transform:translateY(16px)}
 .js .reveal.in{opacity:1;transform:none;transition:opacity .6s ease,transform .6s cubic-bezier(.2,.7,.2,1)}
 @media(prefers-reduced-motion:reduce){.js .reveal{opacity:1;transform:none}}
@@ -952,8 +950,6 @@ def _page(active: str, body: str, live: bool) -> str:
         f"<a href='{href}' class='{'on' if href == active else ''}'>{_t(en, zh)}</a>"
         for href, en, zh in _TABS
     )
-    toggle = ("<a class='pm-lang' href='?lang=en'>English</a>" if _lang() == "zh"
-              else "<a class='pm-lang' href='?lang=zh'>中文</a>")
     mode = _t("Live · uses the server key (billed)", "实时分析 · 用本机 key（有成本）") if live \
         else _t("Demo · cached papers only", "演示模式 · 仅已缓存论文")
     return (
@@ -966,7 +962,7 @@ def _page(active: str, body: str, live: bool) -> str:
         "<a class='pm-brand' href='/'><span class='mk'></span>PaperMind</a>"
         f"<nav class='pm-nav'>{nav}</nav>"
         "<a class='pm-ghs' href='https://github.com/Wenhao-Hua/papermind' target='_blank' rel='noopener'>★ GitHub</a>"
-        f"{toggle}</div></header>"
+        "</div></header>"
         f"<div class='pm-wrap'><main>{body}</main>"
         "<footer class='pm-foot'>"
         f"<span>{_t('Model', '当前模型')} <span class='m'>{_e(_active_model_label())}</span></span>"
@@ -1025,22 +1021,27 @@ _HERO_EN = _load_hero_svg("hero.svg")  # English, bundled in the wheel
 _HERO_ZH = _load_zh_hero()
 
 
-def _hero() -> str:
-    svg = _HERO_ZH if _lang() == "zh" else _HERO_EN
-    cap = _t("↑ A paper-style teaching diagram PaperMind generates · ",
-             "↑ PaperMind 为论文技术点生成的论文式教学示意图 · ")
-    fig = (
-        f"<figure class='hero-fig'>{svg}<figcaption>{cap}"
-        f"<a href='/demo'>{_t('see a full sample report →', '看一份完整示例报告 →')}</a></figcaption></figure>"
-    ) if svg else ""
-    head = _t('Read any paper — from skim to <span class="hl">reproduction</span>.',
-              '把任意论文，读懂到<span class="hl">能复现</span>。')
+def _hero(live: bool) -> str:
+    """Above the fold: headline + the analyze tool inline (left), a real teaching figure
+    (right). The tool is the hero — paste a link and act, no scrolling required."""
+    note = "" if live else "<p class='hero-note'>演示模式：仅展示已缓存论文；分析新论文请用 CLI 或以 <code>--live</code> 启动。</p>"
+    fig = (f"<figure class='hero-fig'>{_HERO_ZH}"
+           "<figcaption>↑ PaperMind 为论文技术点生成的论文式教学图 · "
+           "<a href='/demo'>看完整示例 →</a></figcaption></figure>") if _HERO_ZH else ""
     return (
-        "<section class='hero'>"
-        f"<span class='hero-eyebrow'>{_t('Open-source paper deep-reading', '开源论文深读工具')}</span>"
-        f"<h1 class='hero-h'>{head}</h1>"
-        f"<p class='hero-sub'>{_t('Structured analysis · grounded, citation-verified Q&A · a whole-method framework diagram · reproduction from the real code repo. Paste a link, DOI, or title (arXiv, paper page, PDF…), or upload a PDF.', '结构化分析 · 带原文出处并核验的问答 · 整篇方法的框架图 · 接真实代码仓库的复现。粘贴链接、DOI 或标题（arXiv、论文页面、PDF…），也可上传 PDF。')}</p>"
-        f"{fig}</section>"
+        "<section class='hero'><div class='hero-l'>"
+        "<span class='hero-eyebrow'>开源论文深读工具</span>"
+        "<h1 class='hero-h'>把任意论文，读懂到<span class='hl'>能复现</span>。</h1>"
+        "<p class='hero-sub'>结构化分析 · 带原文核验的问答 · 整篇方法框架图 · 接真实代码仓库的复现。</p>"
+        f"{note}"
+        "<form class='hero-form' method='post' action='/analyze' enctype='multipart/form-data'>"
+        "<div class='hero-in'><input name='source' placeholder='arXiv 链接 / DOI / 论文标题 / PDF…' autofocus>"
+        "<button>分析</button></div>"
+        "<div class='hero-opts'><span class='upl'>或上传 PDF <input type='file' name='file' accept='application/pdf'></span>"
+        "<label class='chk'><input type='checkbox' name='refresh' value='1'>忽略缓存重分析</label></div>"
+        "</form>"
+        f"{_examples_row()}"
+        f"</div><div class='hero-r'>{fig}</div></section>"
     )
 
 
@@ -1055,75 +1056,61 @@ def _ic(path: str) -> str:
 # Clean line-icons (no icon-library available in this no-bundler server render).
 _CAPS = [
     ("<path d='M5 3h9l5 5v13H5z'/><path d='M14 3v5h5'/><path d='M8 13h8M8 17h6'/>",
-     "Analyze", "分析", "/",
-     "Four-module structured read: contributions, method &amp; figures, related work, reproduction.",
-     "四模块结构化解读：核心贡献、方法与图示、关联工作、复现要点。"),
+     "分析", "/", "四模块结构化解读"),
     ("<path d='M21 12a8 8 0 0 1-11.5 7.2L4 21l1.8-5.5A8 8 0 1 1 21 12z'/>",
-     "Q&amp;A", "问答", "/ask",
-     "Grounded answers, every claim labeled fact / inference / out-of-scope, each with its source.",
-     "基于原文回答，逐句标注 论文事实 / 推理 / 超纲，并附原文依据。"),
+     "问答", "/ask", "逐句核验 + 原文出处"),
     ("<path d='M13 2 4 14h7l-1 8 9-12h-7z'/>",
-     "Summary", "速读", "/summary",
-     "A one-line TL;DR plus key points in a single fast call.",
-     "一句话 TL;DR + 几条要点，单次调用、更快。"),
+     "速读", "/summary", "一句话 TL;DR + 要点"),
     ("<path d='M6 3h12M6 21h12M9 3v4l3 4 3-4V3M9 21v-4l3-4 3 4v4'/>",
-     "Framework diagram", "框架图", "/framework",
-     "The paper's whole end-to-end method as one figure, downloadable as SVG.",
-     "整篇方法的端到端框架图，一图看懂，可下载 SVG。"),
+     "框架图", "/framework", "端到端方法一图看懂"),
     ("<path d='M4 4h7v16H4zM13 4h7v16h-7z'/>",
-     "Compare", "对比", "/compare",
-     "Side-by-side problem · method · results across 2–4 papers.",
-     "2–4 篇论文的问题 · 方法 · 结果横向对照。"),
+     "对比", "/compare", "2–4 篇横向对照"),
     ("<path d='M4 5h16v14H4z'/><path d='M8 10l2.5 2.5L8 15M13 15h4'/>",
-     "Reproduce", "复现", "/reproduce",
-     "A runnable setup.sh built from the paper's real code repo, not model guesses.",
-     "从论文真实代码仓库生成可运行的 setup.sh，非模型臆造。"),
+     "复现", "/reproduce", "接真实仓库的 setup.sh"),
     ("<path d='M11 19a8 8 0 1 1 0-16 8 8 0 0 1 0 16zM21 21l-4.3-4.3'/>",
-     "Search", "搜索", "/search",
-     "Keyword arXiv search, no model calls — click a result to analyze or ask.",
-     "关键词检索 arXiv，不调用模型，点结果即可分析 / 问答。"),
+     "搜索", "/search", "关键词检索 arXiv"),
 ]
 
 
 def _capabilities() -> str:
-    cards = ""
-    for icon, en, zh, href, den, dzh in _CAPS:
-        cards += (
-            f"<a class='cap-card' href='{href}'>"
-            f"<span class='cap-ic'>{_ic(icon)}</span>"
-            f"<h3>{_t(en, zh)}</h3><p>{_t(den, dzh)}</p>"
-            f"<span class='go'>{_t('Open →', '打开 →')}</span></a>"
-        )
+    cards = "".join(
+        f"<a class='cap' href='{href}'><span class='cap-ic'>{_ic(icon)}</span>"
+        f"<span class='cap-b'><span class='cap-t'>{name}</span>"
+        f"<span class='cap-d'>{desc}</span></span></a>"
+        for icon, name, href, desc in _CAPS
+    )
     return (
-        "<section class='lp-sec reveal'>"
-        f"<div class='lp-head'><div class='lp-eyebrow'>{_t('Capabilities', '能力')}</div>"
-        f"<h2 class='lp-title'>{_t('Seven ways to read a paper', '七种读论文的方式')}</h2>"
-        f"<p class='lp-sub'>{_t('One tool, the whole workflow — from a first skim to a runnable reproduction. Every feature reuses the same grounded core.', '一个工具覆盖完整流程——从初次速读到可运行的复现。每个能力都共用同一套带原文依据的内核。')}</p></div>"
+        "<section class='lp reveal'>"
+        "<div class='lp-h'><span class='lp-k'>能力</span>"
+        "<h2>一个工具，覆盖读论文全流程</h2></div>"
         f"<div class='cap-grid'>{cards}</div></section>"
     )
 
 
-def _workflow() -> str:
-    steps = [
-        ("Paste anything", "粘贴任意来源",
-         "An arXiv link, DOI, paper title, or any academic landing page — or upload a PDF.",
-         "arXiv 链接、DOI、论文标题，或任意学术页面——也可直接上传 PDF。"),
-        ("PaperMind reads it", "PaperMind 读它",
-         "It parses the PDF and runs a four-module analysis, grounded by a trained cross-encoder reranker.",
-         "解析 PDF 并跑四模块分析，由训练过的交叉编码重排器保证依据可靠。"),
-        ("You get the whole picture", "你拿到全貌",
-         "Structured analysis with teaching figures, citation-verified Q&A, a framework diagram, and a reproduction guide.",
-         "结构化分析 + 教学示意图、带依据的问答、框架图，以及复现指南。"),
-    ]
-    items = ""
-    for i, (en, zh, den, dzh) in enumerate(steps, 1):
-        items += (f"<div class='flow-step'><div class='flow-n'>{i}</div>"
-                  f"<h3>{_t(en, zh)}</h3><p>{_t(den, dzh)}</p></div>")
+def _proof() -> str:
+    from urllib.parse import quote
+
+    chips = "".join(
+        f"<a class='gchip' href='/analyze?source={quote('https://arxiv.org/abs/' + aid, safe='')}'>{_e(title)}</a>"
+        for aid, title, _d, _dz in _GALLERY
+    )
     return (
-        "<section class='lp-sec reveal'>"
-        f"<div class='lp-head'><div class='lp-eyebrow'>{_t('How it works', '工作流程')}</div>"
-        f"<h2 class='lp-title'>{_t('From a link to understanding, in one step', '从一个链接到读懂，只需一步')}</h2></div>"
-        f"<div class='flow'>{items}</div></section>"
+        "<section class='lp reveal'>"
+        "<div class='lp-h'><span class='lp-k'>为什么可信</span>"
+        "<h2>为证据而造，不是凭感觉</h2></div>"
+        "<div class='proof'>"
+        "<div class='stat'><div class='stat-n'>+14<span>pt</span></div>"
+        "<div class='stat-l'>Recall@5</div>"
+        "<p class='stat-d'>自训练 cross-encoder 重排器，QASPER <b>0.519 → 0.660</b>（独立 test）。"
+        "检索靠实测微调，不是套 API。</p></div>"
+        "<ul class='pts'>"
+        "<li><b>逐句核验</b> · 每个判断与回答都挂到带页码的原文出处，核不到标 ⚠️</li>"
+        "<li><b>复现接真实代码</b> · setup.sh 取自论文真实仓库，非模型臆造</li>"
+        "<li><b>开源 · 可本地</b> · MIT，<code>pip install papermind-ai</code> 用自己的 key 离线跑</li>"
+        "</ul></div>"
+        "<div class='gal'><span class='gal-k'>真实示例 · 点开看完整报告</span>"
+        f"<div class='gchips'>{chips}</div></div>"
+        "</section>"
     )
 
 
@@ -1136,62 +1123,6 @@ _GALLERY = [
     ("2307.09288", "Llama 2", "LLM", "大模型"),
     ("1707.06347", "PPO", "Reinforcement learning", "强化学习"),
 ]
-
-
-def _gallery() -> str:
-    from urllib.parse import quote
-
-    cards = ""
-    for aid, title, den, dzh in _GALLERY:
-        url = quote(f"https://arxiv.org/abs/{aid}", safe="")
-        cards += (
-            f"<a class='gal-card' href='/analyze?source={url}'>"
-            f"<div class='body'><div class='t'>{_e(title)}</div><div class='d'>{_t(den, dzh)} · arXiv:{aid}</div></div>"
-            f"<span class='gal-tag'>{_t('View report', '看报告')}</span></a>"
-        )
-    return (
-        "<section class='lp-sec reveal'>"
-        f"<div class='lp-head'><div class='lp-eyebrow'>{_t('Real examples', '真实示例')}</div>"
-        f"<h2 class='lp-title'>{_t('See it on landmark papers', '在经典论文上看效果')}</h2>"
-        f"<p class='lp-sub'>{_t('Seven fully-worked reports across domains — generated by PaperMind, figures and all. Open one.', '跨领域七篇完整报告——全部由 PaperMind 生成，含教学图。点开看看。')}</p></div>"
-        f"<div class='gal-grid'>{cards}</div></section>"
-    )
-
-
-def _trust() -> str:
-    cells = [
-        ("Grounded, not guessed", "有据可依，不靠猜",
-         "Every key claim and Q&A answer is tied to a cited source span, and flagged when unverified.",
-         "每个关键判断与回答都挂到带页码的原文出处，未核实会标注。"),
-        ("A trained reranker", "训练过的重排器",
-         "A fine-tuned cross-encoder retrieves the right passages — not just nearest-neighbour embeddings.",
-         "微调的交叉编码器精准召回原文段落，而非仅靠近邻向量。"),
-        ("Reproduction from real code", "复现接真实代码",
-         "Setup steps are read from the paper's actual repository, not invented by the model.",
-         "复现步骤取自论文真实仓库，而非模型编造。"),
-        ("Open-source · runs locally", "开源 · 可本地运行",
-         "MIT-licensed. <code>pip install paper-mind</code> and analyze offline with your own keys.",
-         "MIT 协议。<code>pip install paper-mind</code> 即可用自己的 key 本地分析。"),
-    ]
-    divs = "".join(f"<div><b>{_t(en, zh)}</b><span>{_t(den, dzh)}</span></div>" for en, zh, den, dzh in cells)
-    return (
-        "<section class='lp-sec reveal'>"
-        f"<div class='lp-head'><div class='lp-eyebrow'>{_t('Why trust it', '为何可信')}</div>"
-        f"<h2 class='lp-title'>{_t('Built for evidence, not vibes', '为证据而造，不是凭感觉')}</h2></div>"
-        f"<div class='trust'>{divs}</div></section>"
-    )
-
-
-def _cta() -> str:
-    return (
-        "<section class='cta reveal'>"
-        f"<h2>{_t('Read your first paper in a minute', '一分钟读懂第一篇论文')}</h2>"
-        f"<p>{_t('Paste a link above, or install it and run anywhere.', '在上方粘贴一个链接，或安装后随处运行。')}</p>"
-        "<div class='row'>"
-        f"<a class='cta-btn' href='#top'>{_t('Analyze a paper', '分析一篇论文')}</a>"
-        "<a class='ghost' href='https://github.com/Wenhao-Hua/papermind' target='_blank' rel='noopener'>★ GitHub</a>"
-        "<code>pip install paper-mind</code></div></section>"
-    )
 
 
 def _analyze_form(live: bool, error: str = "") -> str:
