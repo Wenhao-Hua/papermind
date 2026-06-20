@@ -5,14 +5,22 @@ All notable changes to PaperMind are documented here. The format follows
 
 ## [Unreleased]
 
+## [0.1.3] — 2026-06-20
+
 ### Changed
-- Web UI + report restyled into a warmer, more distinctive "research reading"
-  look: an ink-green-teal accent (retiring the generic indigo), warm paper
-  background, serif headings, and plainer-language copy throughout.
-- Reworked the web UI from a marketing landing into a focused **tool**: the home
-  is the analyze function itself, and every function (分析/问答/速读/框架图/对比/
-  复现/搜索) now shares one consistent, viewport-centered focused-tool layout
-  (dropping the hero pitch, capability cards, benchmark section, and gallery).
+- **Web UI rebuilt as a focused tool, not a marketing page.** The home is the
+  analyze function itself, sharing one consistent focused-tool layout — dropping
+  the hero pitch, capability cards, benchmark section, and gallery.
+- **Q&A folded into 分析.** The analyze page now carries a dedicated "问 AI" block
+  that reuses the paper you already entered — no second paper selection. The web
+  nav is trimmed to 分析 · 框架图 · 搜索.
+- **Removed the redundant web tools** 速读 / 对比 / 复现 (their output is already
+  part of a full analysis). The CLI commands are unchanged.
+- **Restyled into a warmer "research reading" look**, applied across every surface
+  (home, all tools, result/state pages, and the report): an ink-green-teal accent
+  (retiring the generic indigo), warm paper background, serif headings, the
+  framework diagram recolored to match, and plainer-language copy throughout.
+- Dropped the footer model badge.
 
 ## [0.1.2] — 2026-06-20
 

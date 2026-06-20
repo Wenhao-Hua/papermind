@@ -20,14 +20,16 @@ def test_healthz_reports_mode():
     assert TestClient(create_app(live=True)).get("/healthz").json()["live"] is True
 
 
-def test_index_has_form_and_active_model():
+def test_index_is_analyze_tool_with_inline_qa():
     client = TestClient(create_app())
     r = client.get("/")
     assert r.status_code == 200
     assert "PaperMind" in r.text and "<form" in r.text
-    # No model picker — the active model is shown subtly in the footer instead.
-    assert "<select name='model'" not in r.text
-    assert "当前模型" in r.text  # active model shown in the footer
+    assert "<select name='model'" not in r.text  # no model picker
+    assert "当前模型" not in r.text               # the model footer entry was removed
+    # Q&A is merged INTO 分析: one paper input + a 问 AI block that reuses that same paper.
+    assert "问 AI" in r.text and "formaction='/ask'" in r.text
+    assert "name='source'" in r.text and "name='question'" in r.text
 
 
 def test_web_is_chinese_only():
@@ -81,10 +83,18 @@ def test_demo_route_renders_offline_report():
     assert "MathJax" in r.text                      # full report rendering
 
 
-def test_all_feature_tabs_present():
-    html = TestClient(create_app()).get("/").text
-    for href in ("/ask", "/summary", "/compare", "/reproduce", "/search"):
+def test_nav_trimmed_and_redundant_routes_removed():
+    c = TestClient(create_app())
+    html = c.get("/").text
+    # Nav keeps only 分析(/) + 框架图 + 搜索; Q&A folded into 分析, 速读/对比/复现 dropped.
+    for href in ("/framework", "/search"):
         assert f"href='{href}'" in html
+    for gone in ("href='/ask'", "href='/summary'", "href='/compare'", "href='/reproduce'"):
+        assert gone not in html
+    # The redundant web routes are truly gone (not merely unlinked).
+    for route in ("/summary", "/compare", "/reproduce"):
+        assert c.get(route).status_code == 404
+        assert c.post(route, data={"source": "x"}).status_code == 404
 
 
 def test_ask_blocked_in_demo_mode():
@@ -363,7 +373,7 @@ def test_ask_live_runs_async_and_polls(monkeypatch):
     res = c.get(f"/result/{jid}")
     assert res.status_code == 200
     assert "why scale by sqrt d_k?" in res.text  # the chat log (with our question) rendered
-    assert "action='/ask'" in res.text           # within the 问答 tab, ready for the next turn
+    assert "action='/ask'" in res.text           # the follow-up Q&A form (still posts to /ask) for the next turn
 
 
 def test_async_analyze_gated_over_quota(monkeypatch):

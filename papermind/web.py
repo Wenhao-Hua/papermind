@@ -65,23 +65,9 @@ _ASK_SESSIONS: dict = {}
 _ASK_LOCK = threading.Lock()
 _ASK_MAX_SESSIONS = 32
 
-_MODEL_LABELS = {
-    "deepseek/deepseek-v4-pro": "DeepSeek-V4 Pro",
-    "deepseek/deepseek-v4-flash": "DeepSeek-V4 Flash",
-    "deepseek/deepseek-reasoner": "DeepSeek Reasoner",
-    "deepseek/deepseek-chat": "DeepSeek Chat",
-    "gpt-4o-mini": "OpenAI GPT-4o mini",
-    "gpt-4o": "OpenAI GPT-4o",
-    "claude-3-5-sonnet-20241022": "Claude 3.5 Sonnet",
-}
-
 _TABS = [
     ("/", "Analyze", "分析"),
-    ("/ask", "Q&A", "问答"),
-    ("/summary", "Summary", "速读"),
     ("/framework", "Framework", "框架图"),
-    ("/compare", "Compare", "对比"),
-    ("/reproduce", "Reproduce", "复现"),
     ("/search", "Search", "搜索"),
 ]
 
@@ -357,7 +343,7 @@ def create_app(live: bool = False, rate_per_ip: int = 8, rate_global: int = 300,
     def job_result(job_id: str):
         job = _get_job(job_id)
         kind = (job or {}).get("kind", "analyze")
-        tab = "/ask" if kind == "ask" else "/"
+        tab = "/"  # Q&A now lives inside 分析, so every result keeps the 分析 tab active
         form = _ask_form if kind == "ask" else _analyze_form
         if job is None:
             # job lost (server restarted / expired) -> give back a usable retry form
@@ -373,7 +359,7 @@ def create_app(live: bool = False, rate_per_ip: int = 8, rate_global: int = 300,
     def ask_form(pm_sid: Optional[str] = Cookie(None)):
         sess = _session_for(pm_sid)
         log = _chat_log_html(sess["log"]) if sess and sess.get("log") else ""
-        return _page("/ask", log + _ask_form(live), live)
+        return _page("/", log + _ask_form(live), live)
 
     @app.post("/ask", response_class=HTMLResponse)
     def ask_route(
@@ -385,16 +371,16 @@ def create_app(live: bool = False, rate_per_ip: int = 8, rate_global: int = 300,
         pm_sid: Optional[str] = Cookie(None),
     ):
         if not live:
-            return _page("/ask", _ask_form(live, _t("Q&A needs a model, so it's off in demo mode. Start with --live.", "演示模式不支持问答（需调用模型）。请以 --live 启动。")), live)
+            return _page("/", _ask_form(live, _t("Q&A needs a model, so it's off in demo mode. Start with --live.", "演示模式不支持问答（需调用模型）。请以 --live 启动。")), live)
 
         sess = _session_for(pm_sid)
         prior = _chat_log_html(sess["log"]) if sess and sess.get("log") else ""
         if not source.strip() or not question.strip():
-            return _page("/ask", prior + _ask_form(live, _t("Please fill in both the paper and the question.", "请填写论文和问题。")), live)
+            return _page("/", prior + _ask_form(live, _t("Please fill in both the paper and the question.", "请填写论文和问题。"), source=source), live)
 
         blocked = gate(request)
         if blocked:
-            return _page("/ask", prior + _ask_form(live, blocked), live)
+            return _page("/", prior + _ask_form(live, blocked, source=source), live)
 
         # Building the chat (download + parse + index) and answering can take tens of
         # seconds on a fresh paper, which would blow Cloudflare's 100s origin timeout
@@ -416,90 +402,10 @@ def create_app(live: bool = False, rate_per_ip: int = 8, rate_global: int = 300,
             answer = sess2["chat"].ask(q)
             sess2["log"].append((q, answer))
             _store_session(sid, sess2)
-            return _page("/ask", _chat_log_html(sess2["log"]) + _ask_form(live), live)
+            return _page("/", _chat_log_html(sess2["log"]) + _ask_form(live, source=paper), live)
 
         jid = _start_job(work, kind="ask", on_fail=lambda: limiter.release(ip))
-        return _with_session(HTMLResponse(_job_page(jid, live, "/ask")), sid)
-
-    # -- summary -------------------------------------------------------------- #
-    @app.get("/summary", response_class=HTMLResponse)
-    def summary_form():
-        return _page("/summary", _summary_form(live), live)
-
-    @app.post("/summary", response_class=HTMLResponse)
-    def summary_route(request: Request, source: str = Form(...), model: str = Form("")):
-        if not live:
-            return _page("/summary", _summary_form(live, _t("Summary needs a model, so it's off in demo mode. Start with --live.", "演示模式不支持速读（需调用模型）。请以 --live 启动。")), live)
-        blocked = gate(request)
-        if blocked:
-            return _page("/summary", _summary_form(live, blocked), live)
-        ip = _client_ip(request)
-        src = source.strip()
-
-        def work(jid):
-            from papermind.summarize import summarize
-
-            result, _usage = summarize(src, model=(model or None))
-            points = "".join(f"<li>{_e(p)}</li>" for p in result.key_points)
-            body = f"<section class='panel'><h2>{_e(result.title)}</h2><p>{_e(result.tldr)}</p><ul>{points}</ul></section>"
-            return _page("/summary", body + _summary_form(live), live)
-
-        return _job_page(_start_job(work, on_fail=lambda: limiter.release(ip)), live, "/summary")
-
-    # -- compare -------------------------------------------------------------- #
-    @app.get("/compare", response_class=HTMLResponse)
-    def compare_form():
-        return _page("/compare", _compare_form(live), live)
-
-    @app.post("/compare", response_class=HTMLResponse)
-    def compare_route(request: Request, sources: str = Form(...), model: str = Form("")):
-        items = [s.strip() for s in sources.splitlines() if s.strip()][:4]
-        if len(items) < 2:
-            return _page("/compare", _compare_form(live, _t("One source per line, at least 2.", "请每行一个来源，至少 2 篇。")), live)
-        if not live:
-            return _page("/compare", _compare_form(live, _t("Compare needs a model, so it's off in demo mode. Start with --live.", "演示模式不支持对比（需调用模型）。请以 --live 启动。")), live)
-        blocked = gate(request)
-        if blocked:
-            return _page("/compare", _compare_form(live, blocked), live)
-        ip = _client_ip(request)
-
-        def work(jid):
-            from papermind.compare import compare as run_compare
-
-            return run_compare(items, model=(model or None), synthesize=True).to_html()
-
-        return _job_page(_start_job(work, on_fail=lambda: limiter.release(ip)), live, "/compare")
-
-    # -- reproduce ------------------------------------------------------------ #
-    @app.get("/reproduce", response_class=HTMLResponse)
-    def reproduce_form():
-        return _page("/reproduce", _reproduce_form(live), live)
-
-    @app.post("/reproduce", response_class=HTMLResponse)
-    def reproduce_route(request: Request, source: str = Form(...), model: str = Form("")):
-        if not live:  # demo: only already-cached reports
-            report = _demo_cached(source)
-            if report is not None and report.reproduction is not None:
-                return _page("/reproduce", _repro_body(report) + _reproduce_form(live), live)
-            return _page("/reproduce", _reproduce_form(live, _t("Demo mode shows reproduction only for cached papers. Start with --live.", "演示模式仅展示已缓存论文的复现。请以 --live 启动。")), live)
-        blocked = gate(request)
-        if blocked:
-            return _page("/reproduce", _reproduce_form(live, blocked), live)
-        ip = _client_ip(request)
-        src = source.strip()
-
-        def work(jid):
-            from papermind.analyze import analyze as run_analyze
-            from papermind.config import load_config
-
-            report = run_analyze(src, model=(model or None), config=load_config(),
-                                 with_figures=False, refresh=no_cache,
-                                 on_progress=lambda step: _set_job(jid, step=step))
-            if report.reproduction is None:
-                raise PaperMindError("这篇论文没有可导出的复现信息。")
-            return _page("/reproduce", _repro_body(report) + _reproduce_form(live), live)
-
-        return _job_page(_start_job(work, on_fail=lambda: limiter.release(ip)), live, "/reproduce")
+        return _with_session(HTMLResponse(_job_page(jid, live, "/")), sid)
 
     # -- framework diagram ---------------------------------------------------- #
     @app.get("/framework", response_class=HTMLResponse)
@@ -591,16 +497,6 @@ def _demo_cached(source: str):
         return None
     path = latest_report_path(cache_dir)
     return load_cached_report(path) if path else None
-
-
-def _repro_body(report) -> str:
-    script = report.to_setup_script()
-    return (
-        "<section class='panel'><h2>setup.sh</h2>"
-        "<button class='copy-btn' onclick=\"navigator.clipboard.writeText("
-        "document.getElementById('sh').textContent)\">复制</button>"
-        f"<pre id='sh'>{_e(script)}</pre></section>"
-    )
 
 
 # --------------------------------------------------------------------------- #
@@ -731,6 +627,13 @@ main>.pm-tool:only-child{min-height:calc(100dvh - 168px);display:flex;flex-direc
 .tool-opts .upl input[type=file]{width:auto;font-size:.82rem}
 .tool-opts .chk{display:inline-flex;align-items:center;gap:7px;cursor:pointer;white-space:nowrap}
 .tool-opts .chk input{width:auto;margin:0}
+.ask-inline{margin-top:26px;padding-top:22px;border-top:1px dashed var(--line-strong)}
+.ask-h{font-weight:600;font-size:.96rem;color:var(--ink);margin:0 0 11px}
+.ask-h .hint{font-weight:400}
+.chk2{display:inline-flex;align-items:center;gap:9px;margin-top:12px;font-size:.85rem;font-weight:500;color:var(--soft)}
+.chk2 select{width:auto;padding:7px 11px;font-size:.85rem}
+button.btn-2{background:var(--surface);color:var(--accent);border:1px solid var(--accent)}
+button.btn-2:hover{background:var(--accent-soft);color:var(--accent-press);box-shadow:none}
 .tool-demo{margin-top:18px;font-size:.88rem}
 @media(max-width:640px){
   .pm-bar-in{height:auto;flex-wrap:wrap;padding:9px 16px;gap:10px 12px}
@@ -845,7 +748,7 @@ pre{font:.88rem/1.6 var(--mono);background:#0f1117;color:#e7e9ef;padding:16px 18
 # On submit of a heavy op, show the busy overlay immediately; the real,
 # step-driven progress bar then takes over on the job page (see _poll_js).
 _BUSY_JS = """
-var PM_HEAVY={'/analyze':1,'/summary':1,'/compare':1,'/reproduce':1,'/ask':1};
+var PM_HEAVY={'/analyze':1,'/ask':1};
 document.addEventListener('submit',function(e){
   var f=e.target, b=f.querySelector('button'); if(b){b.disabled=true;}
   if(!PM_HEAVY[f.getAttribute('action')||'']){return;}
@@ -885,13 +788,6 @@ _FRAMEWORK_JS = """
 """
 
 
-def _active_model_label() -> str:
-    from papermind.config import load_config
-
-    m = load_config().default_model
-    return _MODEL_LABELS.get(m, m)
-
-
 def _page(active: str, body: str, live: bool) -> str:
     nav = "".join(
         f"<a href='{href}' class='{'on' if href == active else ''}'>{_t(en, zh)}</a>"
@@ -912,7 +808,6 @@ def _page(active: str, body: str, live: bool) -> str:
         "</div></header>"
         f"<div class='pm-wrap'><main>{body}</main>"
         "<footer class='pm-foot'>"
-        f"<span>{_t('Model', '当前模型')} <span class='m'>{_e(_active_model_label())}</span></span>"
         f"<span>{mode}</span><a href='/demo'>{_t('Offline demo', '离线示例')}</a></footer>"
         "<div id='pm-busy' class='pm-busy'><div class='pm-busy-card'>"
         "<div class='pm-bar'><span id='pm-fill'></span></div>"
@@ -994,34 +889,50 @@ def _analyze_form(live: bool, error: str = "") -> str:
     note = "" if live else "<p class='tool-note'>演示模式：仅展示已缓存论文；分析新论文请用 CLI 或以 <code>--live</code> 启动。</p>"
     inner = (
         "<form class='tool-form' method='post' action='/analyze' enctype='multipart/form-data'>"
+        "<label>论文 <span class='hint'>arXiv 链接 / DOI / 标题 / PDF</span></label>"
         "<div class='tool-in'><input name='source' placeholder='arXiv 链接 / DOI / 论文标题 / PDF…' autofocus>"
-        "<button>开始读</button></div>"
+        "<button formaction='/analyze'>开始读</button></div>"
         "<div class='tool-opts'><span class='upl'>或上传 PDF <input type='file' name='file' accept='application/pdf'></span>"
         "<label class='chk'><input type='checkbox' name='refresh' value='1'>忽略缓存重分析</label></div>"
+        # 问答就在分析里：复用上面那篇论文，不必再选一次
+        "<div class='ask-inline'>"
+        "<div class='ask-h'>或，直接问上面这篇论文 <span class='hint'>不必再选，就用上面填的那篇</span></div>"
+        "<div class='tool-in'><input name='question' id='q-inline' placeholder='例：为什么要除以 √d_k？'>"
+        "<button class='btn-2' formaction='/ask'>问 AI</button></div>"
+        "<label class='chk2'>回答风格"
+        "<select name='mode'><option value='balanced'>均衡</option>"
+        "<option value='strict'>严格 · 更保守</option><option value='explore'>发散 · 更开放</option></select></label>"
+        "</div>"
         "</form>"
         f"{_examples_row()}"
         "<p class='tool-demo'><a href='/demo'>没装也想看？看一份完整示例报告 →</a></p>"
+        # Enter in the question box should ask (the form's default submit is 分析).
+        "<script>(function(){var q=document.getElementById('q-inline');if(!q)return;"
+        "q.addEventListener('keydown',function(e){if(e.key==='Enter'){e.preventDefault();"
+        "var b=document.querySelector(\"button[formaction='/ask']\");if(b)b.click();}});})();</script>"
     )
     return _tool_page(
         "分析一篇论文",
-        "粘 arXiv 链接 / DOI / 标题，或直接传 PDF —— 得到四模块解读、带原文出处的问答、整篇方法的框架图，以及照着能跑的复现步骤。",
+        "粘 arXiv 链接 / DOI / 标题，或直接传 PDF —— 得到四模块解读和整篇方法的框架图。也可以就这篇论文直接问 AI。",
         inner, note=note, error=error,
     )
 
 
-def _ask_form(live: bool, error: str = "") -> str:
+def _ask_form(live: bool, error: str = "", source: str = "") -> str:
+    af_src, af_q = ("", " autofocus") if source else (" autofocus", "")
     inner = (
         "<form class='tool-form' method='post' action='/ask'>"
         "<label>论文 <span class='hint'>链接 / DOI / 标题</span></label>"
-        "<input name='source' placeholder='arXiv 链接 / DOI / 论文标题' autofocus>"
+        f"<input name='source' value='{_e(source)}' placeholder='arXiv 链接 / DOI / 论文标题'{af_src}>"
         "<label>你的问题</label>"
-        "<input name='question' placeholder='例：为什么要除以 √d_k？'>"
-        "<label>模式 <span class='hint'>均衡 · 严格更保守 · 发散更开放</span></label>"
+        f"<input name='question' placeholder='例：为什么要除以 √d_k？'{af_q}>"
+        "<label>回答风格 <span class='hint'>均衡 · 严格更保守 · 发散更开放</span></label>"
         "<select name='mode'><option value='balanced'>均衡</option>"
         "<option value='strict'>严格</option><option value='explore'>发散</option></select>"
         "<button>提问</button></form>"
     )
-    return _tool_page("问答", "基于原文回答——每句都标注是论文事实 / 推理 / 超纲，并附带页码的原文出处。",
+    return _tool_page("继续问这篇" if source else "问答",
+                      "基于原文回答——每句都标注是论文事实 / 推理 / 超纲，并附带页码的原文出处。",
                       inner, error=error)
 
 
@@ -1078,26 +989,6 @@ def _framework_body(spec) -> str:
         f"<script>{_FRAMEWORK_JS}</script>"
         "</section>"
     )
-
-
-def _summary_form(live: bool, error: str = "") -> str:
-    return _tool_page("速读", "一句话先说这篇值不值得读，再给几个要点——单次调用，比完整分析快。",
-                      _src_form("/summary", "arXiv 链接 / DOI / 论文标题", "速读"), error=error)
-
-
-def _compare_form(live: bool, error: str = "") -> str:
-    inner = (
-        "<form class='tool-form' method='post' action='/compare'>"
-        "<label>论文 <span class='hint'>每行一个，2–4 篇</span></label>"
-        "<textarea name='sources' placeholder='https://arxiv.org/abs/2307.08691&#10;https://arxiv.org/abs/1706.03762' autofocus></textarea>"
-        "<button>对比</button></form>"
-    )
-    return _tool_page("多篇对比", "2–4 篇论文摆一起，问题 · 方法 · 结果一表看清谁强谁弱。", inner, error=error)
-
-
-def _reproduce_form(live: bool, error: str = "") -> str:
-    return _tool_page("复现指南", "翻论文真实的代码仓库，导出可一键运行的 setup.sh —— 命令不是模型瞎编的。",
-                      _src_form("/reproduce", "arXiv 链接 / DOI / 论文标题", "导出 setup.sh"), error=error)
 
 
 def _search_form(error: str = "") -> str:
