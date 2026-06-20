@@ -32,6 +32,9 @@ _CLI_KEY_ALIASES: Dict[str, str] = {
     "deepseek_key": "deepseek_key",
     "gemini-key": "gemini_key",
     "gemini_key": "gemini_key",
+    "qwen-key": "dashscope_key",
+    "dashscope-key": "dashscope_key",
+    "dashscope_key": "dashscope_key",
     "model": "default_model",
     "default-model": "default_model",
     "embedding-provider": "embedding_provider",
@@ -51,6 +54,7 @@ _ENV_OVERRIDES: Dict[str, str] = {
     "anthropic_key": "ANTHROPIC_API_KEY",
     "deepseek_key": "DEEPSEEK_API_KEY",
     "gemini_key": "GEMINI_API_KEY",
+    "dashscope_key": "DASHSCOPE_API_KEY",
     "default_model": "PAPERMIND_MODEL",
     "embedding_provider": "PAPERMIND_EMBEDDING_PROVIDER",
     "embedding_model": "PAPERMIND_EMBEDDING_MODEL",
@@ -58,7 +62,7 @@ _ENV_OVERRIDES: Dict[str, str] = {
     "figure_model": "PAPERMIND_FIGURE_MODEL",
 }
 
-_SENSITIVE = {"openai_key", "anthropic_key", "deepseek_key", "gemini_key"}
+_SENSITIVE = {"openai_key", "anthropic_key", "deepseek_key", "gemini_key", "dashscope_key"}
 
 
 def home_dir() -> Path:
@@ -76,6 +80,7 @@ class Config:
     anthropic_key: Optional[str] = None
     deepseek_key: Optional[str] = None
     gemini_key: Optional[str] = None
+    dashscope_key: Optional[str] = None  # Aliyun Bailian / DashScope (Qwen models)
     default_model: str = DEFAULT_MODEL
     embedding_provider: str = "openai"  # "openai" | "local"
     embedding_model: Optional[str] = None
@@ -113,6 +118,8 @@ class Config:
             os.environ["DEEPSEEK_API_KEY"] = self.deepseek_key
         if self.gemini_key and not os.environ.get("GEMINI_API_KEY"):
             os.environ["GEMINI_API_KEY"] = self.gemini_key
+        if self.dashscope_key and not os.environ.get("DASHSCOPE_API_KEY"):
+            os.environ["DASHSCOPE_API_KEY"] = self.dashscope_key
 
 
 def _read_file() -> Dict[str, object]:
@@ -133,6 +140,7 @@ def load_config() -> Config:
         anthropic_key=data.get("anthropic_key"),
         deepseek_key=data.get("deepseek_key"),
         gemini_key=data.get("gemini_key"),
+        dashscope_key=data.get("dashscope_key"),
         default_model=data.get("default_model", DEFAULT_MODEL),
         embedding_provider=data.get("embedding_provider", "openai"),
         embedding_model=data.get("embedding_model"),

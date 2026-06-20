@@ -371,6 +371,8 @@ def _has_key_for(model: str, config: Config) -> bool:
         return bool(config.deepseek_key or os.environ.get("DEEPSEEK_API_KEY"))
     if "gemini" in m:  # litellm routes the gemini/ prefix via GEMINI_API_KEY
         return bool(config.gemini_key or os.environ.get("GEMINI_API_KEY"))
+    if "qwen" in m or m.startswith("dashscope/"):  # Aliyun Bailian / DashScope
+        return bool(config.dashscope_key or os.environ.get("DASHSCOPE_API_KEY"))
     return bool(config.openai_key or os.environ.get("OPENAI_API_KEY"))
 
 
