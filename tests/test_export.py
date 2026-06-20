@@ -11,6 +11,7 @@ from papermind.output.schema import (
     CommonError,
     Contributions,
     PaperMeta,
+    RepoRef,
     Reproduction,
     Report,
     SetupStep,
@@ -63,6 +64,42 @@ def test_notebook_is_valid_nbformat():
 def test_setup_script_without_reproduction():
     report = Report(paper=PaperMeta(title="X"))
     assert "No reproduction information" in to_setup_script(report)
+
+
+def _report_with_repo():
+    # The richer, structured code_repo path (a verified RepoRef) — distinct from the
+    # plain official_code fallback used by _report() above.
+    return Report(
+        paper=PaperMeta(title="FlashAttention", arxiv_id="2205.14135"),
+        reproduction=Reproduction(
+            code_repo=RepoRef(
+                url="https://github.com/Dao-AILab/flash-attention.git",  # .git suffix
+                source="PapersWithCode", is_official=True, stars=1000,
+                install_commands=["pip install flash-attn"],
+                run_commands=["python benchmark.py"],
+            ),
+            version_tag="v2.0",
+        ),
+    )
+
+
+def test_setup_script_code_repo_clones_cds_and_installs():
+    script = to_setup_script(_report_with_repo())
+    assert "git clone https://github.com/Dao-AILab/flash-attention.git" in script
+    assert "cd flash-attention" in script             # repo dir from the URL
+    assert "cd flash-attention.git" not in script      # ...with the .git suffix stripped (else `cd` fails)
+    assert "git checkout v2.0" in script               # version tag checked out
+    assert "pip install flash-attn" in script          # real install command emitted
+    assert "# python benchmark.py" in script           # run command commented out for review
+
+
+def test_notebook_code_repo_clones_cds_and_installs():
+    nb = to_notebook(_report_with_repo())
+    code = "\n".join("".join(c["source"]) for c in nb["cells"] if c["cell_type"] == "code")
+    assert "!git clone https://github.com/Dao-AILab/flash-attention.git" in code
+    assert "%cd flash-attention" in code
+    assert "%cd flash-attention.git" not in code        # .git stripped here too
+    assert "!pip install flash-attn" in code
 
 
 def test_bibtex_entry():
