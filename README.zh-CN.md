@@ -105,7 +105,7 @@ docker run -p 8080:8080 -e OPENAI_API_KEY=sk-... -e PAPERMIND_TRUST_PROXY=1 pape
 
 `analyze`（四模块报告）· `summary`（TL;DR）· `ask`/`chat`（带依据问答）· `tutor`/`debug`（复现辅导）· `compare`（多篇对比）· `reproduce`（导出 setup.sh/notebook）· `search`/`batch`/`list` · `cite`。
 
-模型走 [litellm](https://github.com/BerriAI/litellm)：OpenAI / Anthropic / DeepSeek / Gemini / 本地 Ollama 任选；结果本地缓存，二次运行秒出。更多用法：`papermind --help`。
+模型走 [litellm](https://github.com/BerriAI/litellm)：OpenAI / Anthropic / DeepSeek / Gemini / Qwen（百炼）/ 本地 Ollama 任选；结果本地缓存，二次运行秒出。更多用法：`papermind --help`。
 
 ## 贡献 / License
 

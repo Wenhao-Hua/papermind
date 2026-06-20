@@ -17,6 +17,9 @@ All notable changes to PaperMind are documented here. The format follows
   `citation_pdf_url` meta tag — OpenReview, bioRxiv, ACL, PMLR, …).
 - **Gemini** as a first-class provider (chat + embeddings), alongside OpenAI,
   Anthropic, and DeepSeek.
+- **Qwen (Aliyun Bailian / DashScope)** as a provider — `papermind config set
+  qwen-key …`, then use any `dashscope/…` model, e.g. `figure-model
+  dashscope/qwen3-max` for higher-fidelity teaching figures.
 
 ### Changed
 - **Redesigned the web UI** (landing shell + report page) into one modern, light

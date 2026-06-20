@@ -106,7 +106,7 @@ docker run -p 8080:8080 -e OPENAI_API_KEY=sk-... -e PAPERMIND_TRUST_PROXY=1 pape
 
 `analyze` (4‑module report) · `summary` (TL;DR) · `ask`/`chat` (grounded Q&A) · `tutor`/`debug` (reproduction help) · `compare` (multi‑paper) · `reproduce` (export setup.sh / notebook) · `search`/`batch`/`list` · `cite`.
 
-Models via [litellm](https://github.com/BerriAI/litellm): OpenAI / Anthropic / DeepSeek / Gemini / local Ollama. Results are cached locally — re‑runs are instant. More: `papermind --help`.
+Models via [litellm](https://github.com/BerriAI/litellm): OpenAI / Anthropic / DeepSeek / Gemini / Qwen (DashScope) / local Ollama. Results are cached locally — re‑runs are instant. More: `papermind --help`.
 
 ## Contributing / License
 
