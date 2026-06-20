@@ -30,19 +30,13 @@ Thumbs.db
 # Playwright MCP browser artifacts / screenshots
 .playwright-mcp/
 
-# Dev-only preview pages / scratch screenshots / coverage / local MCP config
+# Dev-only scratch at the repo root (preview pages, screenshots, sample renders),
+# coverage, and the local MCP config. Real assets live under papermind/assets/ and
+# examples/figures/, so ignoring root-level images/PDFs is safe.
 examples/_*.html
-/candidates.png
-/home-hero.png
-/fig-preview.png
 /preview.html
-/framework-*.png
-/framework-*.svg
-/framework-*.pdf
-/fw-*.png
-/fw-*.svg
-/fw-*.pdf
-/papermind-home-*.png
-/test.pdf
+/*.png
+/*.svg
+/*.pdf
 .coverage
 .mcp.json
