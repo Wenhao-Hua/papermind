@@ -58,12 +58,12 @@ class FrameworkSpec(BaseModel):
 
 
 # --------------------------------------------------------------------------- #
-# Palette (matches the per-point teaching SVGs: indigo accent + neutral grays)
+# Palette (matches the site: ink-green-teal accent + warm neutrals)
 # --------------------------------------------------------------------------- #
-_FILL = {"io": "#f1f5f9", "box": "#eef2ff", "group": "#fbfcfe"}
-_STROKE = {"io": "#475569", "box": "#6366f1", "group": "#94a3b8"}
-_EDGE = {"solid": ("#475569", 2.0, ""), "emph": ("#6366f1", 2.6, ""), "dashed": ("#94a3b8", 1.8, "6,5")}
-_INK, _SUB = "#1e293b", "#334155"
+_FILL = {"io": "#f3f1ec", "box": "#e7efed", "group": "#fbfaf8"}
+_STROKE = {"io": "#5c5953", "box": "#1f5f55", "group": "#b3aea4"}
+_EDGE = {"solid": ("#5c5953", 2.0, ""), "emph": ("#1f5f55", 2.6, ""), "dashed": ("#b3aea4", 1.8, "6,5")}
+_INK, _SUB = "#1a1a18", "#5c5953"
 _PAD, _LABEL_FS, _LINE_FS, _LH = 12.0, 15.0, 12.5, 1.5
 _FONT = "'Segoe UI','PingFang SC','Microsoft YaHei',sans-serif"
 

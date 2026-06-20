@@ -718,7 +718,8 @@ main{min-width:0}
 .pm-ghs:hover{border-color:var(--accent);color:var(--accent)}
 
 /* home: a focused analyze tool (not a marketing page) */
-.pm-tool{max-width:720px;margin:0 auto;min-height:calc(100dvh - 168px);display:flex;flex-direction:column;justify-content:center;padding:20px 0 48px}
+.pm-tool{max-width:720px;margin:0 auto;padding:34px 0 52px}
+main>.pm-tool:only-child{min-height:calc(100dvh - 168px);display:flex;flex-direction:column;justify-content:center;padding:24px 0 48px}
 .tool-h{font-family:var(--serif);font-size:2rem;font-weight:700;letter-spacing:-.01em;margin:0 0 .35em}
 .tool-sub{color:var(--soft);font-size:1.02rem;line-height:1.6;margin:0 0 22px;max-width:62ch}
 .tool-note{font-size:.85rem;color:var(--faint);margin:0 0 14px}
@@ -736,7 +737,7 @@ main{min-width:0}
   .pm-brand{flex:1}
   .pm-nav{order:3;flex-basis:100%;flex-wrap:nowrap;overflow-x:auto;gap:2px;scrollbar-width:none}
   .pm-nav::-webkit-scrollbar{display:none}
-  .pm-tool{min-height:0;padding:28px 0 40px}
+  .pm-tool,main>.pm-tool:only-child{min-height:0;padding:28px 0 40px}
   .tool-h{font-size:1.7rem}
   .tool-in{flex-direction:column}
   .tool-in button{padding:13px}
