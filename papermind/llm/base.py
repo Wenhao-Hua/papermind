@@ -453,6 +453,10 @@ def _import_litellm():
         return litellm
     except ImportError as exc:  # pragma: no cover
         raise LLMError("litellm is required. Install with: pip install litellm") from exc
+    except (KeyboardInterrupt, SystemExit, GeneratorExit):  # pragma: no cover
+        raise
+    except BaseException as exc:  # pragma: no cover - e.g. pyo3 PanicException on broken installs
+        raise LLMError(f"litellm initialisation failed: {exc}") from exc
 
 
 def _supports_json_mode(model: str) -> bool:
