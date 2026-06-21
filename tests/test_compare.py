@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import papermind.compare as compare_mod
 from papermind.compare import build_comparison
-from papermind.output.compare_render import to_html, to_markdown
+from papermind.output.compare_render import to_csv, to_html, to_markdown
 from papermind.output.schema import (
     Benchmark,
     Contributions,
@@ -60,6 +60,32 @@ def test_comparison_html_table_and_links():
     assert html.startswith("<!DOCTYPE html>")
     assert "<th>2307.08691</th>" in html
     assert "<a href='https://github.com/x/y'>" in html  # official code linked
+
+
+def test_comparison_csv_structure():
+    import csv
+    import io
+
+    comp = _comparison()
+    text = to_csv(comp)
+    rows = list(csv.reader(io.StringIO(text)))
+    # header row contains all expected dimension names
+    assert rows[0] == ["标题", "arXiv", "年份", "核心贡献", "新颖之处", "关键方法", "性能/基准", "推荐硬件", "官方代码"]
+    # one data row per paper
+    assert len([r for r in rows if r and r[0] not in ("标题", "对比小结")]) == 2
+    # first paper row has correct arxiv id in column 1
+    assert rows[1][1] == "2307.08691"
+    # methods joined by "; "
+    assert rows[1][5] == "Tiling"
+
+
+def test_comparison_csv_via_schema_method():
+    comp = _comparison()
+    text = comp.to_csv()
+    assert "2307.08691" in text
+    assert "1706.03762" in text
+    # no synthesis in this comparison (synthesis="" by default from build_comparison)
+    assert "对比小结" not in text
 
 
 def test_comparison_json_round_trip():
