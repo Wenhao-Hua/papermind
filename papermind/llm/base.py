@@ -11,6 +11,7 @@ from __future__ import annotations
 import json
 import os
 import re
+import sys
 import threading
 from typing import TYPE_CHECKING, Callable, List, Optional
 
@@ -328,14 +329,21 @@ class LLMClient:
 
     def _record_usage(self, model: str, prompt_tokens: int, completion_tokens: int) -> None:
         cost = 0.0
-        try:
-            litellm = _import_litellm()
-            prompt_cost, completion_cost = litellm.cost_per_token(
-                model=model, prompt_tokens=prompt_tokens, completion_tokens=completion_tokens
-            )
-            cost = float(prompt_cost) + float(completion_cost)
-        except Exception:  # noqa: BLE001 - cost is best-effort; many models lack pricing
-            cost = 0.0
+        # Use sys.modules lookup instead of importing litellm here so that worker threads
+        # that call _record_usage never trigger the first import.  Some C/Rust extensions
+        # (pyo3 PanicException ← BaseException, not Exception) crash when their module is
+        # initialised from a non-main thread, so we only call cost_per_token when litellm
+        # is already loaded.  Normal usage: complete()/stream() imports litellm in the
+        # main thread first, so cost tracking is unaffected.
+        litellm = sys.modules.get("litellm")
+        if litellm is not None:
+            try:
+                prompt_cost, completion_cost = litellm.cost_per_token(
+                    model=model, prompt_tokens=prompt_tokens, completion_tokens=completion_tokens
+                )
+                cost = float(prompt_cost) + float(completion_cost)
+            except Exception:  # noqa: BLE001 - cost is best-effort; many models lack pricing
+                cost = 0.0
         with self._usage_lock:
             self.usage.record(prompt_tokens, completion_tokens, cost)
 
