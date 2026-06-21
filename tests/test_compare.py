@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import papermind.compare as compare_mod
 from papermind.compare import build_comparison
-from papermind.output.compare_render import to_html, to_markdown
+from papermind.output.compare_render import to_csv, to_html, to_markdown
 from papermind.output.schema import (
     Benchmark,
     Contributions,
@@ -60,6 +60,30 @@ def test_comparison_html_table_and_links():
     assert html.startswith("<!DOCTYPE html>")
     assert "<th>2307.08691</th>" in html
     assert "<a href='https://github.com/x/y'>" in html  # official code linked
+
+
+def test_comparison_csv_export():
+    import csv
+    import io
+
+    csv_text = to_csv(_comparison())
+    rows = list(csv.reader(io.StringIO(csv_text)))
+    # Header row: 维度 + paper arxiv ids
+    assert rows[0] == ["维度", "2307.08691", "1706.03762"]
+    # Find the 核心贡献 row
+    contrib_row = next(r for r in rows if r[0] == "核心贡献")
+    assert contrib_row[1] == "faster attention"
+    assert contrib_row[2] == "attention-only arch"
+    # Comparison.to_csv() also works
+    assert _comparison().to_csv() == csv_text
+
+
+def test_comparison_csv_synthesis_appended():
+    comp = _comparison()
+    comp.synthesis = "A is faster, B is older."
+    csv_text = to_csv(comp)
+    assert "对比小结" in csv_text
+    assert "A is faster, B is older." in csv_text
 
 
 def test_comparison_json_round_trip():
