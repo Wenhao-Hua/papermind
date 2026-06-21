@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import papermind.compare as compare_mod
 from papermind.compare import build_comparison
-from papermind.output.compare_render import to_html, to_markdown
+from papermind.output.compare_render import to_csv, to_html, to_markdown
 from papermind.output.schema import (
     Benchmark,
     Contributions,
@@ -93,3 +93,45 @@ def test_compare_orchestration_reuses_mocked_analyze(monkeypatch):
     assert [p.title for p in comp.papers] == ["FlashAttention-2", "Transformer"]
     assert comp.synthesis == ""  # synthesis skipped -> no LLM call
     assert comp.usage is not None
+
+
+def test_comparison_csv_header_and_rows():
+    csv_text = to_csv(_comparison())
+    lines = csv_text.splitlines()
+    # First line is UTF-8 BOM + header row
+    assert lines[0].lstrip("﻿") == "维度,2307.08691,1706.03762"
+    labels = [line.split(",")[0] for line in lines[1:] if line]
+    assert "核心贡献" in labels
+    assert "关键方法" in labels
+    assert "性能/基准" in labels
+
+
+def test_comparison_csv_no_synthesis_row():
+    comp = _comparison()
+    comp.synthesis = ""
+    csv_text = to_csv(comp)
+    assert "对比小结" not in csv_text
+
+
+def test_comparison_csv_synthesis_appended():
+    comp = _comparison()
+    comp.synthesis = "总结：两者互补"
+    csv_text = to_csv(comp)
+    assert "对比小结" in csv_text
+    assert "总结：两者互补" in csv_text
+
+
+def test_comparison_to_csv_method_matches_render():
+    comp = _comparison()
+    from papermind.output.compare_render import to_csv as render_csv
+    assert comp.to_csv() == render_csv(comp)
+
+
+def test_comparison_to_csv_writes_file(tmp_path):
+    out = str(tmp_path / "compare.csv")
+    comp = _comparison()
+    comp.to_csv(out)
+    import pathlib
+    content = pathlib.Path(out).read_text(encoding="utf-8")
+    assert "维度" in content
+    assert "2307.08691" in content
