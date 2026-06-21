@@ -2,9 +2,12 @@
 
 from __future__ import annotations
 
+import csv
+import io
+
 import papermind.compare as compare_mod
 from papermind.compare import build_comparison
-from papermind.output.compare_render import to_html, to_markdown
+from papermind.output.compare_render import to_csv, to_html, to_markdown
 from papermind.output.schema import (
     Benchmark,
     Contributions,
@@ -76,6 +79,54 @@ def test_has_compare_modules_rejects_partial_report():
     partial = Report(paper=PaperMeta(title="P", arxiv_id="2"),
                      contributions=Contributions(main_contribution="c", novelty="n"))
     assert compare_mod._has_compare_modules(partial) is False
+
+
+def test_comparison_csv_columns_and_rows():
+    comp = _comparison()
+    text = to_csv(comp)
+    reader = csv.reader(io.StringIO(text))
+    rows = list(reader)
+    # header row = dimension names
+    assert rows[0][0] == "标题"
+    assert "核心贡献" in rows[0]
+    assert "关键方法" in rows[0]
+    # one data row per paper
+    assert len(rows) == 3  # header + 2 papers (no synthesis)
+    # paper values are in row order
+    title_col = rows[0].index("标题")
+    assert rows[1][title_col] == "FlashAttention-2"
+    assert rows[2][title_col] == "Transformer"
+
+
+def test_comparison_csv_via_schema_method():
+    comp = _comparison()
+    text = comp.to_csv()
+    assert "标题" in text
+    assert "FlashAttention-2" in text
+    assert "Transformer" in text
+
+
+def test_comparison_csv_with_synthesis():
+    from papermind.output.schema import Comparison, ComparedPaper
+
+    comp = Comparison(
+        papers=[
+            ComparedPaper(title="A", arxiv_id="1", main_contribution="contrib-a"),
+            ComparedPaper(title="B", arxiv_id="2", main_contribution="contrib-b"),
+        ],
+        synthesis="A is faster; B is more general.",
+    )
+    text = to_csv(comp)
+    assert "对比小结" in text
+    assert "A is faster" in text
+
+
+def test_comparison_csv_file_write(tmp_path):
+    comp = _comparison()
+    out = str(tmp_path / "compare.csv")
+    comp.to_csv(out)
+    content = open(out, encoding="utf-8").read()
+    assert "FlashAttention-2" in content
 
 
 def test_compare_orchestration_reuses_mocked_analyze(monkeypatch):
