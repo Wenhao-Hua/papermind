@@ -2,6 +2,9 @@
 
 from __future__ import annotations
 
+import csv
+import io
+
 import papermind.compare as compare_mod
 from papermind.compare import build_comparison
 from papermind.output.compare_render import to_html, to_markdown
@@ -76,6 +79,38 @@ def test_has_compare_modules_rejects_partial_report():
     partial = Report(paper=PaperMeta(title="P", arxiv_id="2"),
                      contributions=Contributions(main_contribution="c", novelty="n"))
     assert compare_mod._has_compare_modules(partial) is False
+
+
+def test_comparison_csv_export():
+    comp = _comparison()
+    csv_text = comp.to_csv()
+    rows = list(csv.reader(io.StringIO(csv_text)))
+    # Header row: "维度" + one column per paper (arxiv id)
+    assert rows[0] == ["维度", "2307.08691", "1706.03762"]
+    # Every dimension label from _rows must appear in first column
+    labels = {r[0] for r in rows[1:] if r}
+    assert "标题" in labels
+    assert "核心贡献" in labels
+    assert "关键方法" in labels
+    # Data cells are present
+    title_row = next(r for r in rows if r and r[0] == "标题")
+    assert "FlashAttention-2" in title_row
+    assert "Transformer" in title_row
+
+
+def test_comparison_csv_includes_synthesis():
+    comp = _comparison()
+    comp.synthesis = "FlashAttention-2 是更快的实现。"
+    csv_text = comp.to_csv()
+    assert "对比小结" in csv_text
+    assert "FlashAttention-2 是更快的实现。" in csv_text
+
+
+def test_comparison_csv_no_synthesis_when_empty():
+    comp = _comparison()
+    comp.synthesis = ""
+    csv_text = comp.to_csv()
+    assert "对比小结" not in csv_text
 
 
 def test_compare_orchestration_reuses_mocked_analyze(monkeypatch):
