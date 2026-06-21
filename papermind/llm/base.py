@@ -30,6 +30,9 @@ _KEYLESS_PREFIXES = ("ollama/", "ollama_chat/", "local/")
 _JSON_OBJECT_RE = re.compile(r"\{.*\}", re.DOTALL)
 _JSON_ARRAY_RE = re.compile(r"\[.*\]", re.DOTALL)
 
+_litellm_module = None  # cached after first import; avoids concurrent-import races
+_litellm_import_lock = threading.Lock()
+
 
 class LLMClient:
     """Stateless-ish wrapper around litellm bound to a model + config."""
@@ -328,14 +331,20 @@ class LLMClient:
 
     def _record_usage(self, model: str, prompt_tokens: int, completion_tokens: int) -> None:
         cost = 0.0
-        try:
-            litellm = _import_litellm()
-            prompt_cost, completion_cost = litellm.cost_per_token(
-                model=model, prompt_tokens=prompt_tokens, completion_tokens=completion_tokens
-            )
-            cost = float(prompt_cost) + float(completion_cost)
-        except Exception:  # noqa: BLE001 - cost is best-effort; many models lack pricing
-            cost = 0.0
+        # Cost is best-effort: only attempt lookup if litellm is already imported.
+        # Triggering a fresh import from a background thread can cause uncatchable
+        # Rust-level panics in environments with broken native extensions (e.g. pyo3
+        # + cryptography mismatch). In normal usage _import_litellm() is always
+        # called from the main thread first (via complete()), so cost is correct.
+        cached = _litellm_module
+        if cached is not None:
+            try:
+                prompt_cost, completion_cost = cached.cost_per_token(
+                    model=model, prompt_tokens=prompt_tokens, completion_tokens=completion_tokens
+                )
+                cost = float(prompt_cost) + float(completion_cost)
+            except Exception:  # noqa: BLE001 - many models lack pricing data
+                cost = 0.0
         with self._usage_lock:
             self.usage.record(prompt_tokens, completion_tokens, cost)
 
@@ -446,13 +455,20 @@ def _get_local_encoder(model_name: str, cls):
 
 
 def _import_litellm():
-    try:
-        import litellm
+    global _litellm_module
+    if _litellm_module is not None:
+        return _litellm_module
+    with _litellm_import_lock:
+        if _litellm_module is not None:  # double-checked locking
+            return _litellm_module
+        try:
+            import litellm
 
-        litellm.drop_params = True  # silently drop unsupported params per provider
-        return litellm
-    except ImportError as exc:  # pragma: no cover
-        raise LLMError("litellm is required. Install with: pip install litellm") from exc
+            litellm.drop_params = True  # silently drop unsupported params per provider
+            _litellm_module = litellm
+            return litellm
+        except ImportError as exc:  # pragma: no cover
+            raise LLMError("litellm is required. Install with: pip install litellm") from exc
 
 
 def _supports_json_mode(model: str) -> bool:
