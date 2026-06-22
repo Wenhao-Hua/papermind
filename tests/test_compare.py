@@ -2,9 +2,12 @@
 
 from __future__ import annotations
 
+import csv
+import io
+
 import papermind.compare as compare_mod
 from papermind.compare import build_comparison
-from papermind.output.compare_render import to_html, to_markdown
+from papermind.output.compare_render import to_csv, to_html, to_markdown
 from papermind.output.schema import (
     Benchmark,
     Contributions,
@@ -67,6 +70,41 @@ def test_comparison_json_round_trip():
     data = comp.to_dict()
     assert data["papers"][0]["arxiv_id"] == "2307.08691"
     assert "usage" not in data  # usage excluded from export
+
+
+def test_comparison_csv_structure():
+    comp = _comparison()
+    text = to_csv(comp)
+    rows = list(csv.reader(io.StringIO(text)))
+    # header row: 维度 + one column per paper
+    assert rows[0] == ["维度", "2307.08691", "1706.03762"]
+    # each data row has the same width
+    data_rows = [r for r in rows if r]
+    assert all(len(r) == 3 for r in data_rows)
+    # spot-check a row
+    labels = [r[0] for r in data_rows]
+    assert "核心贡献" in labels
+    idx = labels.index("核心贡献")
+    assert data_rows[idx][1] == "faster attention"
+    assert data_rows[idx][2] == "attention-only arch"
+
+
+def test_comparison_csv_synthesis():
+    from papermind.output.schema import Comparison, ComparedPaper
+    comp = Comparison(
+        papers=[ComparedPaper(title="A", arxiv_id="001"), ComparedPaper(title="B", arxiv_id="002")],
+        synthesis="A is better.",
+    )
+    text = to_csv(comp)
+    assert "对比小结" in text
+    assert "A is better." in text
+
+
+def test_comparison_csv_via_schema_method():
+    comp = _comparison()
+    text = comp.to_csv()
+    assert "维度" in text
+    assert "2307.08691" in text
 
 
 def test_has_compare_modules_rejects_partial_report():
