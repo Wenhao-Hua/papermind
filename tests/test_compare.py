@@ -2,9 +2,12 @@
 
 from __future__ import annotations
 
+import csv
+import io
+
 import papermind.compare as compare_mod
 from papermind.compare import build_comparison
-from papermind.output.compare_render import to_html, to_markdown
+from papermind.output.compare_render import to_csv, to_html, to_markdown
 from papermind.output.schema import (
     Benchmark,
     Contributions,
@@ -60,6 +63,34 @@ def test_comparison_html_table_and_links():
     assert html.startswith("<!DOCTYPE html>")
     assert "<th>2307.08691</th>" in html
     assert "<a href='https://github.com/x/y'>" in html  # official code linked
+
+
+def test_comparison_csv_structure():
+    comp = _comparison()
+    text = to_csv(comp)
+    rows = list(csv.reader(io.StringIO(text)))
+    # header row + one row per paper
+    assert len(rows) == 3
+    assert rows[0][0] == "arxiv_id"
+    assert "main_contribution" in rows[0]
+    assert rows[1][0] == "2307.08691"
+    assert rows[2][0] == "1706.03762"
+
+
+def test_comparison_csv_via_schema_method():
+    comp = _comparison()
+    text = comp.to_csv()
+    rows = list(csv.reader(io.StringIO(text)))
+    assert rows[1][rows[0].index("title")] == "FlashAttention-2"
+    assert rows[1][rows[0].index("methods")] == "Tiling"
+
+
+def test_comparison_csv_no_synthesis_column():
+    # synthesis is a free-text summary, not a per-paper field; it must not appear as a CSV column
+    comp = _comparison()
+    text = to_csv(comp)
+    header = text.splitlines()[0]
+    assert "synthesis" not in header
 
 
 def test_comparison_json_round_trip():
