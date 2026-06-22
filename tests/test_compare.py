@@ -2,9 +2,12 @@
 
 from __future__ import annotations
 
+import csv
+import io
+
 import papermind.compare as compare_mod
 from papermind.compare import build_comparison
-from papermind.output.compare_render import to_html, to_markdown
+from papermind.output.compare_render import to_csv, to_html, to_markdown
 from papermind.output.schema import (
     Benchmark,
     Contributions,
@@ -76,6 +79,43 @@ def test_has_compare_modules_rejects_partial_report():
     partial = Report(paper=PaperMeta(title="P", arxiv_id="2"),
                      contributions=Contributions(main_contribution="c", novelty="n"))
     assert compare_mod._has_compare_modules(partial) is False
+
+
+def test_comparison_csv_headers_and_rows():
+    csv_text = to_csv(_comparison())
+    rows = list(csv.reader(io.StringIO(csv_text)))
+    # First row is the header: 维度 + arxiv IDs
+    assert rows[0] == ["维度", "2307.08691", "1706.03762"]
+    # Verify a data row exists with expected content
+    dim_labels = [r[0] for r in rows]
+    assert "核心贡献" in dim_labels
+    contrib_row = next(r for r in rows if r[0] == "核心贡献")
+    assert contrib_row[1] == "faster attention"
+    assert contrib_row[2] == "attention-only arch"
+
+
+def test_comparison_csv_synthesis_appended():
+    comp = _comparison()
+    comp.synthesis = "Both papers improve Transformer efficiency."
+    csv_text = to_csv(comp)
+    assert "对比小结" in csv_text
+    assert "Both papers improve Transformer efficiency." in csv_text
+
+
+def test_comparison_csv_no_synthesis_when_empty():
+    csv_text = to_csv(_comparison())
+    assert "对比小结" not in csv_text
+
+
+def test_comparison_to_csv_method_matches_render(tmp_path):
+    comp = _comparison()
+    from papermind.output.compare_render import to_csv as render_csv
+
+    assert comp.to_csv() == render_csv(comp)
+
+    out = tmp_path / "out.csv"
+    comp.to_csv(str(out))
+    assert out.read_text(encoding="utf-8") == render_csv(comp)
 
 
 def test_compare_orchestration_reuses_mocked_analyze(monkeypatch):
