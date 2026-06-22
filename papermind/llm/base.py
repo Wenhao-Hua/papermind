@@ -336,6 +336,10 @@ class LLMClient:
             cost = float(prompt_cost) + float(completion_cost)
         except Exception:  # noqa: BLE001 - cost is best-effort; many models lack pricing
             cost = 0.0
+        except BaseException as exc:  # pyo3_runtime.PanicException is BaseException, not Exception
+            if isinstance(exc, (SystemExit, KeyboardInterrupt)):
+                raise
+            cost = 0.0
         with self._usage_lock:
             self.usage.record(prompt_tokens, completion_tokens, cost)
 
@@ -438,6 +442,12 @@ def _count_tokens(litellm, model: str, messages=None, text: str = "") -> int:
 
 _LOCAL_ENCODERS: dict = {}
 
+# Serialises the very first litellm import across threads.
+# litellm pulls in cryptography (via its OCI module), whose pyo3/Rust
+# extension panics when initialised concurrently from multiple threads.
+# After the first import succeeds, sys.modules cache makes the lock a no-op.
+_LITELLM_IMPORT_LOCK = threading.Lock()
+
 
 def _get_local_encoder(model_name: str, cls):
     if model_name not in _LOCAL_ENCODERS:
@@ -446,13 +456,14 @@ def _get_local_encoder(model_name: str, cls):
 
 
 def _import_litellm():
-    try:
-        import litellm
+    with _LITELLM_IMPORT_LOCK:
+        try:
+            import litellm
 
-        litellm.drop_params = True  # silently drop unsupported params per provider
-        return litellm
-    except ImportError as exc:  # pragma: no cover
-        raise LLMError("litellm is required. Install with: pip install litellm") from exc
+            litellm.drop_params = True  # silently drop unsupported params per provider
+            return litellm
+        except ImportError as exc:  # pragma: no cover
+            raise LLMError("litellm is required. Install with: pip install litellm") from exc
 
 
 def _supports_json_mode(model: str) -> bool:
