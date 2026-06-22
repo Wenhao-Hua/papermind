@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import papermind.compare as compare_mod
 from papermind.compare import build_comparison
-from papermind.output.compare_render import to_html, to_markdown
+from papermind.output.compare_render import to_csv, to_html, to_markdown
 from papermind.output.schema import (
     Benchmark,
     Contributions,
@@ -69,6 +69,39 @@ def test_comparison_json_round_trip():
     assert "usage" not in data  # usage excluded from export
 
 
+def test_comparison_csv_headers_and_rows():
+    import csv
+    import io
+
+    csv_text = to_csv(_comparison())
+    rows = list(csv.reader(io.StringIO(csv_text)))
+    # header row: 维度, paper1_id, paper2_id
+    assert rows[0] == ["维度", "2307.08691", "1706.03762"]
+    # find the 核心贡献 row
+    contrib_row = next(r for r in rows if r[0] == "核心贡献")
+    assert contrib_row[1] == "faster attention"
+    assert contrib_row[2] == "attention-only arch"
+
+
+def test_comparison_csv_round_trip_via_method(tmp_path):
+    import csv
+    import io
+
+    comp = _comparison()
+    text = comp.to_csv()
+    rows = list(csv.reader(io.StringIO(text)))
+    ids = rows[0][1:]
+    assert ids == ["2307.08691", "1706.03762"]
+
+
+def test_comparison_csv_written_to_file(tmp_path):
+    out = str(tmp_path / "compare.csv")
+    _comparison().to_csv(out)
+    content = open(out, encoding="utf-8").read()
+    assert "维度" in content
+    assert "2307.08691" in content
+
+
 def test_has_compare_modules_rejects_partial_report():
     full = _report("F", "1", "c", "M", "2x")  # contributions + technical + reproduction
     assert compare_mod._has_compare_modules(full) is True
@@ -76,6 +109,30 @@ def test_has_compare_modules_rejects_partial_report():
     partial = Report(paper=PaperMeta(title="P", arxiv_id="2"),
                      contributions=Contributions(main_contribution="c", novelty="n"))
     assert compare_mod._has_compare_modules(partial) is False
+
+
+def test_compare_cli_csv_format(monkeypatch, tmp_path):
+    from typer.testing import CliRunner
+    from papermind.cli import app
+
+    reports = {
+        "arxiv:2307.08691": _report("FlashAttention-2", "2307.08691", "faster", "Tiling", "2.0x"),
+        "arxiv:1706.03762": _report("Transformer", "1706.03762", "attention", "MHA", None),
+    }
+
+    def fake_compare(sources, **kwargs):
+        from papermind.compare import build_comparison
+        return build_comparison([reports[s] for s in sources])
+
+    monkeypatch.setattr(compare_mod, "compare", fake_compare)
+    out = str(tmp_path / "out")
+    result = CliRunner().invoke(app, ["compare", "arxiv:2307.08691", "arxiv:1706.03762",
+                                      "--no-synthesis", "-f", "csv", "-o", out])
+    assert result.exit_code == 0
+    assert (tmp_path / "out.csv").exists()
+    content = (tmp_path / "out.csv").read_text(encoding="utf-8")
+    assert "维度" in content
+    assert "2307.08691" in content
 
 
 def test_compare_orchestration_reuses_mocked_analyze(monkeypatch):
