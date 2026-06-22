@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import papermind.compare as compare_mod
 from papermind.compare import build_comparison
-from papermind.output.compare_render import to_html, to_markdown
+from papermind.output.compare_render import to_csv, to_html, to_markdown
 from papermind.output.schema import (
     Benchmark,
     Contributions,
@@ -76,6 +76,43 @@ def test_has_compare_modules_rejects_partial_report():
     partial = Report(paper=PaperMeta(title="P", arxiv_id="2"),
                      contributions=Contributions(main_contribution="c", novelty="n"))
     assert compare_mod._has_compare_modules(partial) is False
+
+
+def test_comparison_csv_structure():
+    import csv
+    import io
+
+    comp = _comparison()
+    text = to_csv(comp)
+    rows = list(csv.reader(io.StringIO(text)))
+    # Header row: "维度" + arxiv IDs
+    assert rows[0] == ["维度", "2307.08691", "1706.03762"]
+    # Dimension rows: 9 total
+    labels = [r[0] for r in rows[1:]]
+    assert "标题" in labels
+    assert "核心贡献" in labels
+    assert "关键方法" in labels
+    # Title values in their row
+    title_row = next(r for r in rows if r[0] == "标题")
+    assert title_row[1] == "FlashAttention-2"
+    assert title_row[2] == "Transformer"
+    # round-trip via Comparison.to_csv
+    assert comp.to_csv() == text
+
+
+def test_comparison_csv_with_synthesis():
+    import csv
+    import io
+
+    comp = _comparison()
+    comp.synthesis = "FlashAttention-2 wins on speed."
+    text = to_csv(comp)
+    rows = list(csv.reader(io.StringIO(text)))
+    # blank separator row then synthesis
+    non_empty = [r for r in rows if any(r)]
+    synth_row = next((r for r in non_empty if r[0] == "对比小结"), None)
+    assert synth_row is not None
+    assert synth_row[1] == "FlashAttention-2 wins on speed."
 
 
 def test_compare_orchestration_reuses_mocked_analyze(monkeypatch):
