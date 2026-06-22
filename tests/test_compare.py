@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import papermind.compare as compare_mod
 from papermind.compare import build_comparison
-from papermind.output.compare_render import to_html, to_markdown
+from papermind.output.compare_render import to_csv, to_html, to_markdown
 from papermind.output.schema import (
     Benchmark,
     Contributions,
@@ -93,3 +93,60 @@ def test_compare_orchestration_reuses_mocked_analyze(monkeypatch):
     assert [p.title for p in comp.papers] == ["FlashAttention-2", "Transformer"]
     assert comp.synthesis == ""  # synthesis skipped -> no LLM call
     assert comp.usage is not None
+
+
+def test_to_csv_header_and_rows():
+    import csv
+    import io
+
+    comp = _comparison()
+    text = to_csv(comp)
+    reader = csv.reader(io.StringIO(text))
+    rows = list(reader)
+    # first row: header "维度" + one column per paper (arxiv IDs)
+    assert rows[0][0] == "维度"
+    assert "2307.08691" in rows[0]
+    assert "1706.03762" in rows[0]
+    # subsequent rows: one per dimension label
+    labels = [r[0] for r in rows[1:] if r]
+    assert "标题" in labels
+    assert "核心贡献" in labels
+    assert "性能/基准" in labels
+
+
+def test_to_csv_values_match_papers():
+    import csv
+    import io
+
+    comp = _comparison()
+    text = to_csv(comp)
+    reader = csv.reader(io.StringIO(text))
+    rows = {r[0]: r[1:] for r in reader if len(r) >= 2}
+    assert rows["标题"][0] == "FlashAttention-2"
+    assert rows["标题"][1] == "Transformer"
+    assert rows["核心贡献"][0] == "faster attention"
+
+
+def test_comparison_to_csv_method(tmp_path):
+    comp = _comparison()
+    text = comp.to_csv()
+    assert "维度" in text
+    assert "FlashAttention-2" in text
+
+    out = tmp_path / "out.csv"
+    comp.to_csv(str(out))
+    assert out.read_text(encoding="utf-8") == text
+
+
+def test_to_csv_with_synthesis():
+    import csv
+    import io
+
+    comp = _comparison()
+    comp.synthesis = "Flash is faster; Transformer is the baseline."
+    text = to_csv(comp)
+    reader = csv.reader(io.StringIO(text))
+    rows = list(reader)
+    flat = " ".join(" ".join(r) for r in rows)
+    assert "对比小结" in flat
+    assert "Flash is faster" in flat
