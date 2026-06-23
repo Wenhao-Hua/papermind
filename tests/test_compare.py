@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import papermind.compare as compare_mod
 from papermind.compare import build_comparison
-from papermind.output.compare_render import to_html, to_markdown
+from papermind.output.compare_render import to_csv, to_html, to_markdown
 from papermind.output.schema import (
     Benchmark,
     Contributions,
@@ -60,6 +60,49 @@ def test_comparison_html_table_and_links():
     assert html.startswith("<!DOCTYPE html>")
     assert "<th>2307.08691</th>" in html
     assert "<a href='https://github.com/x/y'>" in html  # official code linked
+
+
+def test_comparison_csv_structure():
+    import csv
+    import io
+
+    comp = _comparison()
+    text = to_csv(comp)
+    rows = list(csv.reader(io.StringIO(text)))
+    # Header row: "维度", then one column per paper (arxiv id)
+    assert rows[0][0] == "维度"
+    assert "2307.08691" in rows[0]
+    assert "1706.03762" in rows[0]
+    # Each dimension row has correct number of columns
+    paper_count = len(comp.papers)
+    for row in rows[1:]:
+        if row:  # skip blank separator row
+            assert len(row) == paper_count + 1
+    # Check a few dimension values appear
+    labels = [r[0] for r in rows if r]
+    assert "标题" in labels
+    assert "核心贡献" in labels
+    assert "关键方法" in labels
+
+
+def test_comparison_csv_via_schema_method():
+    import csv
+    import io
+
+    comp = _comparison()
+    text = comp.to_csv()
+    rows = list(csv.reader(io.StringIO(text)))
+    assert rows[0][0] == "维度"
+    assert len(rows) > 1
+
+
+def test_comparison_csv_written_to_file(tmp_path):
+    comp = _comparison()
+    out = str(tmp_path / "compare.csv")
+    result = comp.to_csv(path=out)
+    assert result  # returns text
+    import pathlib
+    assert pathlib.Path(out).read_text(encoding="utf-8").startswith("维度,")
 
 
 def test_comparison_json_round_trip():
