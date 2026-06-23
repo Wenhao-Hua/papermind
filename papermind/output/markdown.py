@@ -84,6 +84,25 @@ def _toc_md(report: Report) -> List[str]:
     return [f"- [{label}](#{anchor})" for anchor, label in items] + [""]
 
 
+def _reading_minutes(report: Report) -> int:
+    """Estimate reading time from character count of report content fields (≈300 chars/min)."""
+    parts: List[str] = []
+    if report.contributions:
+        c = report.contributions
+        parts += [c.main_contribution, c.novelty, c.problem_solved]
+    for p in report.technical.details:
+        parts += [p.explanation, p.analogy or ""]
+    for conn in report.connections.related_works:
+        parts.append(conn.relationship)
+    if report.reproduction:
+        r = report.reproduction
+        parts += [r.requirements or "", r.recommended_hardware or ""]
+        for step in r.env_setup_steps:
+            parts.append(step.desc)
+    chars = sum(len(t) for t in parts if t)
+    return max(1, round(chars / 300))
+
+
 def _meta_line(report: Report) -> str:
     paper = report.paper
     bits = []
@@ -96,6 +115,15 @@ def _meta_line(report: Report) -> str:
         bits.append(f"**arXiv:** [{paper.arxiv_id}](https://arxiv.org/abs/{paper.arxiv_id})")
     if paper.pdf_url:
         bits.append(f"[PDF]({paper.pdf_url})")
+    has_content = bool(
+        report.contributions
+        or report.technical.details
+        or report.connections.related_works
+        or report.reproduction
+    )
+    if has_content:
+        mins = _reading_minutes(report)
+        bits.append(f"约 {mins} 分钟阅读")
     return "  •  ".join(bits)
 
 
