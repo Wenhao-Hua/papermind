@@ -30,6 +30,12 @@ _KEYLESS_PREFIXES = ("ollama/", "ollama_chat/", "local/")
 _JSON_OBJECT_RE = re.compile(r"\{.*\}", re.DOTALL)
 _JSON_ARRAY_RE = re.compile(r"\[.*\]", re.DOTALL)
 
+# litellm is imported lazily but the import is NOT thread-safe in all environments
+# (e.g. cryptography's Rust bindings panic on concurrent first-time import).
+# Cache the module behind a lock so it is imported at most once.
+_LITELLM_MODULE = None
+_LITELLM_IMPORT_LOCK = threading.Lock()
+
 
 class LLMClient:
     """Stateless-ish wrapper around litellm bound to a model + config."""
@@ -45,6 +51,17 @@ class LLMClient:
         self.temperature = temperature
         self.usage = Usage()  # accumulated across all calls on this client
         self._usage_lock = threading.Lock()  # usage is updated from parallel workers
+
+        # Pre-import litellm on the calling (main) thread so that worker threads that
+        # later call _record_usage never trigger a first-time module import from a thread.
+        # Some environments (e.g. cryptography's Rust/pyo3 bindings) panic when their
+        # C-extension is first initialised from a non-main thread.
+        try:
+            _import_litellm()
+        except (SystemExit, KeyboardInterrupt):  # pragma: no cover
+            raise
+        except BaseException:  # noqa: BLE001 - litellm unavailable; errors surface at call time
+            pass
 
         # Free local path: with no API key but Ollama running, default to a local model.
         if model is None:
@@ -334,7 +351,9 @@ class LLMClient:
                 model=model, prompt_tokens=prompt_tokens, completion_tokens=completion_tokens
             )
             cost = float(prompt_cost) + float(completion_cost)
-        except Exception:  # noqa: BLE001 - cost is best-effort; many models lack pricing
+        except (SystemExit, KeyboardInterrupt):  # never silence process-control signals
+            raise
+        except BaseException:  # noqa: BLE001 - cost is best-effort; catch pyo3 PanicException too
             cost = 0.0
         with self._usage_lock:
             self.usage.record(prompt_tokens, completion_tokens, cost)
@@ -446,13 +465,20 @@ def _get_local_encoder(model_name: str, cls):
 
 
 def _import_litellm():
-    try:
-        import litellm
+    global _LITELLM_MODULE
+    if _LITELLM_MODULE is not None:
+        return _LITELLM_MODULE
+    with _LITELLM_IMPORT_LOCK:
+        if _LITELLM_MODULE is not None:  # another thread beat us here
+            return _LITELLM_MODULE
+        try:
+            import litellm
 
-        litellm.drop_params = True  # silently drop unsupported params per provider
-        return litellm
-    except ImportError as exc:  # pragma: no cover
-        raise LLMError("litellm is required. Install with: pip install litellm") from exc
+            litellm.drop_params = True  # silently drop unsupported params per provider
+            _LITELLM_MODULE = litellm
+            return litellm
+        except ImportError as exc:  # pragma: no cover
+            raise LLMError("litellm is required. Install with: pip install litellm") from exc
 
 
 def _supports_json_mode(model: str) -> bool:
