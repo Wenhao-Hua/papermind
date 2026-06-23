@@ -224,3 +224,32 @@ def test_demo_plays_offline_instantly():
     assert "Attention Is All You Need" in out
     assert "论文事实" in out and "基于论文的推理" in out  # layered answer shown
     assert "原文依据" in out and "Section 3.2.1" in out
+
+
+def test_reading_time_in_html_and_markdown():
+    from papermind.output.html import _reading_minutes as html_reading_minutes
+    from papermind.output.markdown import _reading_minutes as md_reading_minutes
+
+    bare = Report(paper=PaperMeta(title="T"))
+    # Minimum 1 minute even for an empty report.
+    assert html_reading_minutes(bare) >= 1
+    assert md_reading_minutes(bare) >= 1
+
+    rich_report = Report(
+        paper=PaperMeta(title="T"),
+        contributions=Contributions(
+            main_contribution=" ".join(["word"] * 400),
+            novelty="novel",
+            problem_solved="problem",
+        ),
+        technical=TechnicalSection(details=[TechnicalPoint(name="N", explanation=" ".join(["e"] * 200))]),
+    )
+    # A report with ~600 words of content should need more than 1 minute.
+    assert html_reading_minutes(rich_report) >= 2
+    assert md_reading_minutes(rich_report) >= 2
+
+    # Both renderers display the estimate.
+    html_out = rich_report.to_html()
+    md_out = rich_report.to_markdown()
+    assert "分钟阅读" in html_out
+    assert "分钟阅读" in md_out

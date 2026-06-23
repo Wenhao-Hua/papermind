@@ -22,6 +22,28 @@ from papermind.output.schema import (
 _DIFFICULTY_BADGE = {"high": "🔴 high", "mid": "🟡 mid", "low": "🟢 low"}
 
 
+def _reading_minutes(report: Report) -> int:
+    """Estimate reading time for the generated report in minutes (min 1)."""
+    parts: List[str] = []
+    if report.contributions:
+        c = report.contributions
+        parts += [c.main_contribution, c.novelty, c.problem_solved]
+        parts += [s.text for s in c.sources]
+    for p in report.technical.details:
+        parts += [p.name, p.explanation, p.analogy or ""]
+    for w in report.connections.related_works:
+        parts += [w.concept, w.paper, w.relationship]
+    if report.reproduction:
+        r = report.reproduction
+        parts += [r.requirements or "", r.recommended_hardware or ""]
+        parts += list(r.key_hyperparams)
+        parts += [s.title + " " + s.desc for s in r.env_setup_steps]
+        parts += [e.error + " " + e.cause for e in r.common_errors]
+        parts += list(r.gotchas)
+    words = sum(len(t.split()) for t in parts if t)
+    return max(1, round(words / 200))
+
+
 def _mathjax(formula: str) -> str:
     """A multi-line formula uses ``\\\\`` line breaks, which MathJax rejects outside an
     alignment environment ("Misplaced \\"). Wrap such formulas in ``aligned`` so they render."""
@@ -96,6 +118,8 @@ def _meta_line(report: Report) -> str:
         bits.append(f"**arXiv:** [{paper.arxiv_id}](https://arxiv.org/abs/{paper.arxiv_id})")
     if paper.pdf_url:
         bits.append(f"[PDF]({paper.pdf_url})")
+    mins = _reading_minutes(report)
+    bits.append(f"约 {mins} 分钟阅读")
     return "  •  ".join(bits)
 
 

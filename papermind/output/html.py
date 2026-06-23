@@ -177,6 +177,28 @@ def esc(text) -> str:
     return html.escape(str(text)) if text is not None else ""
 
 
+def _reading_minutes(report: Report) -> int:
+    """Estimate reading time for the generated report in minutes (min 1)."""
+    parts: List[str] = []
+    if report.contributions:
+        c = report.contributions
+        parts += [c.main_contribution, c.novelty, c.problem_solved]
+        parts += [s.text for s in c.sources]
+    for p in report.technical.details:
+        parts += [p.name, p.explanation, p.analogy or ""]
+    for w in report.connections.related_works:
+        parts += [w.concept, w.paper, w.relationship]
+    if report.reproduction:
+        r = report.reproduction
+        parts += [r.requirements or "", r.recommended_hardware or ""]
+        parts += list(r.key_hyperparams)
+        parts += [s.title + " " + s.desc for s in r.env_setup_steps]
+        parts += [e.error + " " + e.cause for e in r.common_errors]
+        parts += list(r.gotchas)
+    words = sum(len(t.split()) for t in parts if t)
+    return max(1, round(words / 200))
+
+
 def _cmd_block(command: str) -> str:
     return (
         '<div class="codeblock"><button class="copy-code" onclick="pmCopyCode(this)">复制</button>'
@@ -222,6 +244,8 @@ def _meta(report: Report) -> str:
         bits.append(f'<b>arXiv:</b> <a href="https://arxiv.org/abs/{esc(paper.arxiv_id)}">{esc(paper.arxiv_id)}</a>')
     if paper.pdf_url:
         bits.append(f'<a href="{esc(paper.pdf_url)}">PDF</a>')
+    mins = _reading_minutes(report)
+    bits.append(f"约 {mins} 分钟阅读")
     return " &nbsp;•&nbsp; ".join(bits)
 
 
