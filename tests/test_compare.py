@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import papermind.compare as compare_mod
 from papermind.compare import build_comparison
-from papermind.output.compare_render import to_html, to_markdown
+from papermind.output.compare_render import to_csv, to_html, to_markdown
 from papermind.output.schema import (
     Benchmark,
     Contributions,
@@ -93,3 +93,51 @@ def test_compare_orchestration_reuses_mocked_analyze(monkeypatch):
     assert [p.title for p in comp.papers] == ["FlashAttention-2", "Transformer"]
     assert comp.synthesis == ""  # synthesis skipped -> no LLM call
     assert comp.usage is not None
+
+
+def test_comparison_csv_structure():
+    import csv
+    import io
+
+    comp = _comparison()
+    csv_text = to_csv(comp)
+    rows = list(csv.reader(io.StringIO(csv_text)))
+    # header row: "维度", paper1_id, paper2_id
+    assert rows[0] == ["维度", "2307.08691", "1706.03762"]
+    # each dimension row starts with the label
+    labels = [r[0] for r in rows[1:] if r]
+    assert "核心贡献" in labels
+    assert "关键方法" in labels
+    # values present for first paper
+    contrib_row = next(r for r in rows if r and r[0] == "核心贡献")
+    assert contrib_row[1] == "faster attention"
+
+
+def test_comparison_csv_file_write(tmp_path):
+    comp = _comparison()
+    dest = str(tmp_path / "out.csv")
+    text = comp.to_csv(dest)
+    assert (tmp_path / "out.csv").read_text(encoding="utf-8") == text
+    assert "维度" in text
+    assert "2307.08691" in text
+
+
+def test_comparison_csv_with_synthesis():
+    import csv
+    import io
+
+    from papermind.output.schema import Comparison, ComparedPaper
+
+    comp = Comparison(
+        papers=[
+            ComparedPaper(title="A", arxiv_id="1111.1111", main_contribution="contrib A"),
+            ComparedPaper(title="B", arxiv_id="2222.2222", main_contribution="contrib B"),
+        ],
+        synthesis="Both papers address efficiency.",
+    )
+    csv_text = to_csv(comp)
+    rows = list(csv.reader(io.StringIO(csv_text)))
+    # synthesis appended after blank row
+    non_empty = [r for r in rows if r]
+    assert any("对比小结" in r[0] for r in non_empty)
+    assert any("Both papers address efficiency." in " ".join(r) for r in non_empty)
