@@ -2,9 +2,12 @@
 
 from __future__ import annotations
 
+import csv
+import io
+
 import papermind.compare as compare_mod
 from papermind.compare import build_comparison
-from papermind.output.compare_render import to_html, to_markdown
+from papermind.output.compare_render import to_csv, to_html, to_markdown
 from papermind.output.schema import (
     Benchmark,
     Contributions,
@@ -76,6 +79,65 @@ def test_has_compare_modules_rejects_partial_report():
     partial = Report(paper=PaperMeta(title="P", arxiv_id="2"),
                      contributions=Contributions(main_contribution="c", novelty="n"))
     assert compare_mod._has_compare_modules(partial) is False
+
+
+def test_comparison_csv_has_header_and_rows():
+    comp = _comparison()
+    text = to_csv(comp)
+    reader = csv.reader(io.StringIO(text))
+    rows = list(reader)
+    # Header row
+    assert rows[0] == ["标题", "arXiv", "年份", "核心贡献", "新颖之处", "关键方法", "性能/基准", "推荐硬件", "官方代码"]
+    # Two data rows
+    assert len(rows) == 3  # header + 2 papers (no synthesis in _comparison())
+    assert rows[1][0] == "FlashAttention-2"
+    assert rows[1][1] == "2307.08691"
+    assert rows[2][1] == "1706.03762"
+    # Methods joined with "; "
+    assert rows[1][5] == "Tiling"
+
+
+def test_comparison_csv_methods_joined():
+    from papermind.output.schema import ComparedPaper, Comparison
+
+    comp = Comparison(
+        papers=[
+            ComparedPaper(title="P1", arxiv_id="a1", year=2023, methods=["Tiling", "Flash"]),
+            ComparedPaper(title="P2", arxiv_id="a2"),
+        ]
+    )
+    text = to_csv(comp)
+    reader = csv.reader(io.StringIO(text))
+    rows = list(reader)
+    assert rows[1][5] == "Tiling; Flash"
+    assert rows[2][5] == ""  # empty methods -> empty string
+
+
+def test_comparison_csv_includes_synthesis():
+    from papermind.output.schema import ComparedPaper, Comparison
+
+    comp = Comparison(
+        papers=[ComparedPaper(title="P1"), ComparedPaper(title="P2")],
+        synthesis="P1 is faster than P2.",
+    )
+    text = to_csv(comp)
+    assert "对比小结" in text
+    assert "P1 is faster than P2." in text
+
+
+def test_comparison_to_csv_method_returns_string():
+    comp = _comparison()
+    text = comp.to_csv()
+    assert "FlashAttention-2" in text
+    assert "2307.08691" in text
+
+
+def test_comparison_to_csv_writes_file(tmp_path):
+    comp = _comparison()
+    out = str(tmp_path / "compare.csv")
+    comp.to_csv(out)
+    content = open(out, encoding="utf-8").read()
+    assert "FlashAttention-2" in content
 
 
 def test_compare_orchestration_reuses_mocked_analyze(monkeypatch):
