@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import papermind.compare as compare_mod
 from papermind.compare import build_comparison
-from papermind.output.compare_render import to_html, to_markdown
+from papermind.output.compare_render import to_csv, to_html, to_markdown
 from papermind.output.schema import (
     Benchmark,
     Contributions,
@@ -60,6 +60,29 @@ def test_comparison_html_table_and_links():
     assert html.startswith("<!DOCTYPE html>")
     assert "<th>2307.08691</th>" in html
     assert "<a href='https://github.com/x/y'>" in html  # official code linked
+
+
+def test_comparison_csv_export():
+    import csv
+    import io
+
+    csv_text = to_csv(_comparison())
+    reader = csv.reader(io.StringIO(csv_text))
+    rows = list(reader)
+    # header row: 论文 + all dimension labels
+    assert rows[0][0] == "论文"
+    assert "标题" in rows[0]
+    assert "年份" in rows[0]
+    assert "核心贡献" in rows[0]
+    # one data row per paper
+    assert len(rows) == 3  # header + 2 papers
+    paper_ids = [r[0] for r in rows[1:]]
+    assert "2307.08691" in paper_ids
+    assert "1706.03762" in paper_ids
+    # data values present
+    all_text = csv_text
+    assert "faster attention" in all_text
+    assert "attention-only arch" in all_text
 
 
 def test_comparison_json_round_trip():
