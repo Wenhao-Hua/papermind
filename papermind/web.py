@@ -412,28 +412,58 @@ def create_app(live: bool = False, rate_per_ip: int = 8, rate_global: int = 300,
         return _page("/search", _search_form(), live)
 
     @app.post("/search", response_class=HTMLResponse)
-    def search_route(query: str = Form(...)):
+    def search_route(
+        query: str = Form(...),
+        year_from: Optional[str] = Form(None),
+        year_to: Optional[str] = Form(None),
+    ):
         from papermind.parser.arxiv import search_arxiv
+        from urllib.parse import quote
 
         try:
             results = search_arxiv(query.strip(), max_results=12)
         except PaperMindError as exc:
             return _page("/search", _search_form(str(exc)), live)
+
+        yr_from = int(year_from) if year_from and year_from.strip().isdigit() else None
+        yr_to = int(year_to) if year_to and year_to.strip().isdigit() else None
+        if yr_from or yr_to:
+            total = len(results)
+            results = [
+                r for r in results
+                if r.year is not None
+                and (yr_from is None or r.year >= yr_from)
+                and (yr_to is None or r.year <= yr_to)
+            ]
+            filter_note = (
+                f"<p class='hint'>年份过滤后共 {len(results)} 篇（共检索到 {total} 篇）</p>"
+                if len(results) != total else ""
+            )
+        else:
+            filter_note = ""
+
         rows = ""
         for r in results:
-            from urllib.parse import quote
-
             abs_url = f"https://arxiv.org/abs/{r.arxiv_id}"
             rows += (
                 f"<tr><td class='aid'><a href='/analyze?source={quote(abs_url, safe='')}'>{_e(r.arxiv_id)}</a></td>"
                 f"<td>{r.year or '—'}</td>"
                 f"<td class='ttl'><a href='{_e(abs_url)}' target='_blank' rel='noopener'>{_e(r.title)}</a></td></tr>"
             )
-        table = (
-            f"<table><thead><tr><th>arXiv</th><th>{_t('Year', '年份')}</th><th>{_t('Title', '标题（原文）')}</th></tr></thead>"
-            f"<tbody>{rows}</tbody></table>"
+        if not rows:
+            table = "<p class='hint'>没有符合条件的结果，尝试放宽年份范围或更换关键词。</p>"
+        else:
+            table = (
+                f"<table><thead><tr><th>arXiv</th><th>{_t('Year', '年份')}</th>"
+                f"<th>{_t('Title', '标题（原文）')}</th></tr></thead>"
+                f"<tbody>{rows}</tbody></table>"
+            )
+        return _page(
+            "/search",
+            _search_form(query=query.strip(), year_from=year_from, year_to=year_to)
+            + f"<section class='panel'>{filter_note}{table}</section>",
+            live,
         )
-        return _page("/search", _search_form() + f"<section class='panel'>{table}</section>", live)
 
     return app
 
@@ -877,11 +907,24 @@ def _ask_form(live: bool, error: str = "", source: str = "") -> str:
                       inner, error=error)
 
 
-def _search_form(error: str = "") -> str:
+def _search_form(
+    error: str = "",
+    query: str = "",
+    year_from: Optional[str] = None,
+    year_to: Optional[str] = None,
+) -> str:
+    q_val = f" value='{_e(query)}'" if query else ""
+    yf_val = f" value='{_e(year_from)}'" if year_from else ""
+    yt_val = f" value='{_e(year_to)}'" if year_to else ""
     inner = (
         "<form class='tool-form' method='post' action='/search'>"
-        "<div class='tool-in'><input name='query' placeholder='关键词，例：flash attention' autofocus>"
-        "<button>搜索</button></div></form>"
+        f"<div class='tool-in'><input name='query' placeholder='关键词，例：flash attention' autofocus{q_val}>"
+        "<button>搜索</button></div>"
+        "<div class='tool-opts'>"
+        f"<label class='yr-lbl'>年份从 <input class='yr-in' name='year_from' type='number' min='1991' max='2099' placeholder='例 2020'{yf_val}></label>"
+        f"<label class='yr-lbl'>到 <input class='yr-in' name='year_to' type='number' min='1991' max='2099' placeholder='例 2025'{yt_val}></label>"
+        "</div>"
+        "</form>"
     )
     return _tool_page("搜索 arXiv", "关键词检索，不调用模型。点结果里的论文即可分析 / 问答。", inner, error=error)
 

@@ -93,6 +93,42 @@ def test_search_works_without_model(monkeypatch):
     assert "2307.08691" in r.text and "/analyze?source=" in r.text  # links to analyze (via the paper URL)
 
 
+def test_search_year_filter(monkeypatch):
+    import papermind.parser.arxiv as arxiv_mod
+    from papermind.output.schema import PaperMeta
+
+    papers = [
+        PaperMeta(title="Old Paper", arxiv_id="1501.00001", year=2015),
+        PaperMeta(title="New Paper", arxiv_id="2307.08691", year=2023),
+        PaperMeta(title="Mid Paper", arxiv_id="2001.00001", year=2020),
+    ]
+    monkeypatch.setattr(arxiv_mod, "search_arxiv", lambda q, max_results=12: papers)
+    client = TestClient(create_app(live=False))
+
+    # year_from filter: only >= 2020
+    r = client.post("/search", data={"query": "attention", "year_from": "2020"})
+    assert r.status_code == 200
+    assert "2307.08691" in r.text and "2001.00001" in r.text
+    assert "1501.00001" not in r.text  # 2015 paper filtered out
+    assert "年份过滤后" in r.text
+
+    # year_to filter: only <= 2020
+    r2 = client.post("/search", data={"query": "attention", "year_to": "2020"})
+    assert r2.status_code == 200
+    assert "1501.00001" in r2.text and "2001.00001" in r2.text
+    assert "2307.08691" not in r2.text  # 2023 paper filtered out
+
+    # no results after filter
+    r3 = client.post("/search", data={"query": "attention", "year_from": "2099"})
+    assert r3.status_code == 200
+    assert "没有符合条件的结果" in r3.text
+
+    # no filter: all three show up
+    r4 = client.post("/search", data={"query": "attention"})
+    assert r4.status_code == 200
+    assert "1501.00001" in r4.text and "2307.08691" in r4.text
+
+
 def test_analyze_demo_mode_does_not_run_when_uncached(monkeypatch, tmp_path):
     from papermind.output.schema import PaperMeta
 
