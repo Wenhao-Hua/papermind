@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import papermind.compare as compare_mod
 from papermind.compare import build_comparison
-from papermind.output.compare_render import to_html, to_markdown
+from papermind.output.compare_render import to_csv, to_html, to_markdown
 from papermind.output.schema import (
     Benchmark,
     Contributions,
@@ -60,6 +60,34 @@ def test_comparison_html_table_and_links():
     assert html.startswith("<!DOCTYPE html>")
     assert "<th>2307.08691</th>" in html
     assert "<a href='https://github.com/x/y'>" in html  # official code linked
+
+
+def test_comparison_csv_columns_and_rows():
+    import csv as csv_mod
+    import io
+
+    csv_text = to_csv(_comparison())
+    reader = list(csv_mod.reader(io.StringIO(csv_text)))
+    # header row + one row per paper
+    assert len(reader) == 3
+    header = reader[0]
+    assert "标题" in header
+    assert "arXiv" in header
+    assert "核心贡献" in header
+    # each paper row has the same number of columns as the header
+    assert len(reader[1]) == len(header)
+    assert len(reader[2]) == len(header)
+    # spot-check values in the right column position
+    title_col = header.index("标题")
+    assert reader[1][title_col] == "FlashAttention-2"
+    assert reader[2][title_col] == "Transformer"
+
+
+def test_comparison_csv_via_comparison_method():
+    comp = _comparison()
+    csv_text = comp.to_csv()
+    assert "FlashAttention-2" in csv_text
+    assert "faster attention" in csv_text
 
 
 def test_comparison_json_round_trip():
