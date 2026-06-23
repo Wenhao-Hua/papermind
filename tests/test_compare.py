@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import papermind.compare as compare_mod
 from papermind.compare import build_comparison
-from papermind.output.compare_render import to_html, to_markdown
+from papermind.output.compare_render import to_csv, to_html, to_markdown
 from papermind.output.schema import (
     Benchmark,
     Contributions,
@@ -67,6 +67,58 @@ def test_comparison_json_round_trip():
     data = comp.to_dict()
     assert data["papers"][0]["arxiv_id"] == "2307.08691"
     assert "usage" not in data  # usage excluded from export
+
+
+def test_comparison_csv_structure():
+    import csv
+    import io
+
+    comp = _comparison()
+    text = to_csv(comp)
+    rows = list(csv.reader(io.StringIO(text)))
+    # header row: 维度 + two paper ids
+    assert rows[0] == ["维度", "2307.08691", "1706.03762"]
+    # at least one data row per dimension label
+    labels = [r[0] for r in rows[1:]]
+    assert "核心贡献" in labels
+    assert "关键方法" in labels
+    assert "年份" in labels
+    # verify cell content for a known dimension
+    contrib_row = next(r for r in rows if r[0] == "核心贡献")
+    assert contrib_row[1] == "faster attention"
+    assert contrib_row[2] == "attention-only arch"
+
+
+def test_comparison_csv_synthesis_row():
+    import csv
+    import io
+
+    from papermind.output.schema import ComparedPaper, Comparison
+
+    comp = Comparison(
+        papers=[
+            ComparedPaper(title="A", arxiv_id="0001"),
+            ComparedPaper(title="B", arxiv_id="0002"),
+        ],
+        synthesis="A wins on speed; B wins on accuracy.",
+    )
+    text = to_csv(comp)
+    rows = list(csv.reader(io.StringIO(text)))
+    synth_row = next((r for r in rows if r[0] == "对比小结"), None)
+    assert synth_row is not None
+    assert "A wins on speed" in synth_row[1]
+
+
+def test_comparison_csv_no_arxiv_id_uses_positional_header():
+    import csv
+    import io
+
+    from papermind.output.schema import ComparedPaper, Comparison
+
+    comp = Comparison(papers=[ComparedPaper(title="X"), ComparedPaper(title="Y")])
+    text = to_csv(comp)
+    rows = list(csv.reader(io.StringIO(text)))
+    assert rows[0] == ["维度", "#1", "#2"]
 
 
 def test_has_compare_modules_rejects_partial_report():
