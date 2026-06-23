@@ -4,7 +4,10 @@ from __future__ import annotations
 
 import papermind.compare as compare_mod
 from papermind.compare import build_comparison
-from papermind.output.compare_render import to_html, to_markdown
+import csv
+import io
+
+from papermind.output.compare_render import to_csv, to_html, to_markdown
 from papermind.output.schema import (
     Benchmark,
     Contributions,
@@ -93,3 +96,51 @@ def test_compare_orchestration_reuses_mocked_analyze(monkeypatch):
     assert [p.title for p in comp.papers] == ["FlashAttention-2", "Transformer"]
     assert comp.synthesis == ""  # synthesis skipped -> no LLM call
     assert comp.usage is not None
+
+
+def test_comparison_csv_structure():
+    comp = _comparison()
+    text = to_csv(comp)
+    rows = list(csv.reader(io.StringIO(text)))
+    # header row: "维度", then one column per paper
+    assert rows[0] == ["维度", "2307.08691", "1706.03762"]
+    # every dimension row present
+    labels = [r[0] for r in rows[1:]]
+    assert "标题" in labels
+    assert "核心贡献" in labels
+    assert "官方代码" in labels
+    # each data row has 3 columns (维度 + 2 papers)
+    for row in rows[1:]:
+        assert len(row) == 3
+
+
+def test_comparison_csv_via_schema_method():
+    comp = _comparison()
+    text = comp.to_csv()
+    assert "FlashAttention-2" in text
+    assert "2307.08691" in text
+    assert "faster attention" in text
+
+
+def test_comparison_csv_with_synthesis():
+    from papermind.output.schema import Comparison, ComparedPaper
+
+    comp = Comparison(
+        papers=[ComparedPaper(title="A", arxiv_id="1"), ComparedPaper(title="B", arxiv_id="2")],
+        synthesis="Both papers improve transformers.",
+    )
+    text = to_csv(comp)
+    rows = list(csv.reader(io.StringIO(text)))
+    last = rows[-1]
+    assert last[0] == "对比小结"
+    assert "Both papers improve transformers." in last[1]
+
+
+def test_comparison_csv_write_to_file(tmp_path):
+    comp = _comparison()
+    out = str(tmp_path / "compare.csv")
+    comp.to_csv(path=out)
+    import pathlib
+    content = pathlib.Path(out).read_text(encoding="utf-8")
+    assert "维度" in content
+    assert "FlashAttention-2" in content
