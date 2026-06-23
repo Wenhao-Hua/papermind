@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import papermind.compare as compare_mod
 from papermind.compare import build_comparison
-from papermind.output.compare_render import to_html, to_markdown
+from papermind.output.compare_render import to_csv, to_html, to_markdown
 from papermind.output.schema import (
     Benchmark,
     Contributions,
@@ -53,6 +53,47 @@ def test_comparison_markdown_table():
     assert "| 维度 | 2307.08691 | 1706.03762 |" in md
     assert "| 核心贡献 | faster attention | attention-only arch |" in md
     assert "| 关键方法 | Tiling | Self-Attention |" in md
+
+
+def test_comparison_csv_columns_and_rows():
+    import csv
+    import io
+
+    comp = _comparison()
+    text = to_csv(comp)
+    rows = list(csv.reader(io.StringIO(text)))
+    # header row: 维度, then one column per paper
+    assert rows[0] == ["维度", "2307.08691", "1706.03762"]
+    # 维度 labels are the first column
+    labels = [r[0] for r in rows[1:] if r]
+    assert "核心贡献" in labels
+    assert "关键方法" in labels
+    # values appear correctly
+    contrib_row = next(r for r in rows if r and r[0] == "核心贡献")
+    assert contrib_row[1] == "faster attention"
+    assert contrib_row[2] == "attention-only arch"
+
+
+def test_comparison_csv_with_synthesis():
+    import csv
+    import io
+
+    comp = _comparison()
+    comp.synthesis = "Both papers advance transformer efficiency."
+    text = to_csv(comp)
+    rows = list(csv.reader(io.StringIO(text)))
+    synth_rows = [r for r in rows if r and r[0] == "对比小结"]
+    assert synth_rows, "synthesis row missing"
+    assert synth_rows[0][1] == "Both papers advance transformer efficiency."
+
+
+def test_comparison_csv_file_write(tmp_path):
+    path = str(tmp_path / "compare.csv")
+    comp = _comparison()
+    comp.to_csv(path)
+    content = (tmp_path / "compare.csv").read_text(encoding="utf-8")
+    assert "2307.08691" in content
+    assert "核心贡献" in content
 
 
 def test_comparison_html_table_and_links():
