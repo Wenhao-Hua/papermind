@@ -2,9 +2,14 @@
 
 from __future__ import annotations
 
+import csv
+import io
+import tempfile
+from pathlib import Path
+
 import papermind.compare as compare_mod
 from papermind.compare import build_comparison
-from papermind.output.compare_render import to_html, to_markdown
+from papermind.output.compare_render import to_csv, to_html, to_markdown
 from papermind.output.schema import (
     Benchmark,
     Contributions,
@@ -76,6 +81,40 @@ def test_has_compare_modules_rejects_partial_report():
     partial = Report(paper=PaperMeta(title="P", arxiv_id="2"),
                      contributions=Contributions(main_contribution="c", novelty="n"))
     assert compare_mod._has_compare_modules(partial) is False
+
+
+def test_comparison_csv_structure():
+    csv_text = to_csv(_comparison())
+    reader = csv.reader(io.StringIO(csv_text))
+    rows = list(reader)
+    # header row: 维度 + one column per paper
+    assert rows[0] == ["维度", "2307.08691", "1706.03762"]
+    # find the 核心贡献 row
+    contrib_row = next(r for r in rows if r[0] == "核心贡献")
+    assert contrib_row[1] == "faster attention"
+    assert contrib_row[2] == "attention-only arch"
+    # find 关键方法 row
+    method_row = next(r for r in rows if r[0] == "关键方法")
+    assert method_row[1] == "Tiling"
+    assert method_row[2] == "Self-Attention"
+
+
+def test_comparison_csv_to_file():
+    comp = _comparison()
+    with tempfile.TemporaryDirectory() as td:
+        path = str(Path(td) / "compare.csv")
+        text = comp.to_csv(path)
+        assert Path(path).exists()
+        assert "核心贡献" in Path(path).read_text(encoding="utf-8")
+        assert text == Path(path).read_text(encoding="utf-8")
+
+
+def test_comparison_csv_with_synthesis():
+    comp = _comparison()
+    comp.synthesis = "Two important papers."
+    csv_text = to_csv(comp)
+    assert "对比小结" in csv_text
+    assert "Two important papers." in csv_text
 
 
 def test_compare_orchestration_reuses_mocked_analyze(monkeypatch):
