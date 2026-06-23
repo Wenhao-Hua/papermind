@@ -2,9 +2,12 @@
 
 from __future__ import annotations
 
+import csv
+import io
+
 import papermind.compare as compare_mod
 from papermind.compare import build_comparison
-from papermind.output.compare_render import to_html, to_markdown
+from papermind.output.compare_render import to_csv, to_html, to_markdown
 from papermind.output.schema import (
     Benchmark,
     Contributions,
@@ -93,3 +96,44 @@ def test_compare_orchestration_reuses_mocked_analyze(monkeypatch):
     assert [p.title for p in comp.papers] == ["FlashAttention-2", "Transformer"]
     assert comp.synthesis == ""  # synthesis skipped -> no LLM call
     assert comp.usage is not None
+
+
+def test_comparison_csv_columns_and_rows():
+    comp = _comparison()
+    text = to_csv(comp)
+    rows = list(csv.reader(io.StringIO(text)))
+    header = rows[0]
+    assert "title" in header
+    assert "arxiv_id" in header
+    assert "main_contribution" in header
+    assert "methods" in header
+    # one data row per paper
+    assert len(rows) == 3  # header + 2 papers
+    arxiv_col = header.index("arxiv_id")
+    assert rows[1][arxiv_col] == "2307.08691"
+    assert rows[2][arxiv_col] == "1706.03762"
+
+
+def test_comparison_csv_schema_method():
+    comp = _comparison()
+    text = comp.to_csv()
+    assert text.startswith("title,")
+    rows = list(csv.reader(io.StringIO(text)))
+    assert len(rows) == 3  # header + 2 papers, no synthesis row (synthesis is empty)
+
+
+def test_comparison_csv_synthesis_row():
+    comp = _comparison()
+    comp.synthesis = "Paper A is faster; Paper B is more general."
+    text = to_csv(comp)
+    assert "synthesis" in text
+    assert "Paper A is faster" in text
+
+
+def test_comparison_csv_file_write(tmp_path):
+    comp = _comparison()
+    out = str(tmp_path / "compare.csv")
+    comp.to_csv(out)
+    content = open(out, encoding="utf-8").read()
+    rows = list(csv.reader(io.StringIO(content)))
+    assert rows[0][0] == "title"
