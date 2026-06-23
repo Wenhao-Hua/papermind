@@ -68,3 +68,50 @@ def test_bibtex_without_arxiv_is_misc():
     meta = PaperMeta(title="Some Local Paper", authors=["Jane Doe"], year=2020)
     bib = to_bibtex(meta)
     assert bib.startswith("@misc{doe2020some,")
+
+
+def test_reading_time_appears_in_html_and_markdown():
+    from papermind.output.schema import Contributions
+
+    report = Report(
+        paper=PaperMeta(title="T", year=2024, authors=["A"]),
+        contributions=Contributions(
+            main_contribution="We propose a faster attention mechanism with better parallelism.",
+            novelty="Tile-based memory access pattern avoids redundant HBM reads.",
+            problem_solved="Slow attention due to memory bandwidth bottleneck.",
+        ),
+    )
+    html = report.to_html()
+    md = report.to_markdown()
+    assert "分钟阅读" in html
+    assert "分钟阅读" in md
+
+
+def test_reading_time_absent_for_empty_report():
+    report = Report(paper=PaperMeta(title="Empty Paper", year=2024))
+    assert "分钟阅读" not in report.to_html()
+    assert "分钟阅读" not in report.to_markdown()
+
+
+def test_reading_time_scales_with_content():
+    from papermind.output.html import _reading_minutes
+    from papermind.output.schema import Contributions, TechnicalPoint, TechnicalSection
+
+    short_report = Report(
+        paper=PaperMeta(title="Short"),
+        contributions=Contributions(
+            main_contribution="short",
+            novelty="short",
+            problem_solved="short",
+        ),
+    )
+    long_text = "This is a detailed explanation of a complex technical concept. " * 30
+    long_report = Report(
+        paper=PaperMeta(title="Long"),
+        technical=TechnicalSection(details=[
+            TechnicalPoint(name=f"p{i}", explanation=long_text, difficulty="high")
+            for i in range(5)
+        ]),
+    )
+    assert _reading_minutes(short_report) >= 1
+    assert _reading_minutes(long_report) > _reading_minutes(short_report)
