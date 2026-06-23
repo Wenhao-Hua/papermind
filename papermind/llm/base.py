@@ -334,7 +334,12 @@ class LLMClient:
                 model=model, prompt_tokens=prompt_tokens, completion_tokens=completion_tokens
             )
             cost = float(prompt_cost) + float(completion_cost)
-        except Exception:  # noqa: BLE001 - cost is best-effort; many models lack pricing
+        except BaseException as _exc:  # noqa: BLE001 - cost is best-effort; many models lack pricing
+            # Re-raise clean-shutdown signals; swallow everything else (including
+            # pyo3 PanicException from cryptography C-extension init in threads)
+            # so the usage counter is always recorded even when cost lookup fails.
+            if isinstance(_exc, (KeyboardInterrupt, SystemExit)):
+                raise
             cost = 0.0
         with self._usage_lock:
             self.usage.record(prompt_tokens, completion_tokens, cost)
