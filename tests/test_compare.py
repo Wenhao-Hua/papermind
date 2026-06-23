@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import papermind.compare as compare_mod
 from papermind.compare import build_comparison
-from papermind.output.compare_render import to_html, to_markdown
+from papermind.output.compare_render import to_csv, to_html, to_markdown
 from papermind.output.schema import (
     Benchmark,
     Contributions,
@@ -76,6 +76,39 @@ def test_has_compare_modules_rejects_partial_report():
     partial = Report(paper=PaperMeta(title="P", arxiv_id="2"),
                      contributions=Contributions(main_contribution="c", novelty="n"))
     assert compare_mod._has_compare_modules(partial) is False
+
+
+def test_comparison_csv_export():
+    comp = _comparison()
+    csv_text = to_csv(comp)
+    # BOM prefix for Excel
+    assert csv_text.startswith("﻿")
+    lines = csv_text.splitlines()
+    # Header row: 维度 + paper IDs
+    assert lines[0] == "﻿维度,2307.08691,1706.03762"
+    # Contains dimension rows
+    assert any("核心贡献" in line for line in lines)
+    assert any("faster attention" in line for line in lines)
+    assert any("attention-only arch" in line for line in lines)
+    # No synthesis -> no extra rows beyond the 9 dimensions + header
+    assert len(lines) == 10
+
+
+def test_comparison_csv_with_synthesis():
+    comp = _comparison()
+    comp.synthesis = "FlashAttention-2 是 Transformer 的优化版本。"
+    csv_text = to_csv(comp)
+    assert "对比小结" in csv_text
+    assert "FlashAttention-2 是 Transformer 的优化版本" in csv_text
+
+
+def test_comparison_csv_via_schema_method(tmp_path):
+    comp = _comparison()
+    out = tmp_path / "compare.csv"
+    result = comp.to_csv(str(out))
+    assert out.exists()
+    assert out.read_text(encoding="utf-8").startswith("﻿")
+    assert result == out.read_text(encoding="utf-8")
 
 
 def test_compare_orchestration_reuses_mocked_analyze(monkeypatch):
