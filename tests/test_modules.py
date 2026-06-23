@@ -182,6 +182,39 @@ def test_markdown_has_toc_with_anchors():
     assert '<a id="contributions"></a>' in md and '<a id="technical"></a>' in md
 
 
+def test_reading_time_appears_in_markdown_and_html():
+    from papermind.output.markdown import _reading_time_min
+
+    report = Report(
+        paper=PaperMeta(title="T", year=2023),
+        contributions=Contributions(
+            main_contribution="This paper introduces a novel mechanism for fast attention computation.",
+            novelty="Reduces complexity from O(n^2) to O(n log n) by using sparse patterns.",
+            problem_solved="Quadratic memory growth in standard self-attention.",
+        ),
+        technical=TechnicalSection(details=[
+            TechnicalPoint(name="Sparse Attention", explanation="Attends only to local and global tokens to reduce cost.", difficulty="mid"),
+            TechnicalPoint(name="Flash Tiling", explanation="Tiles the attention computation to fit in SRAM and avoid HBM reads.", difficulty="high"),
+        ]),
+    )
+
+    mins = _reading_time_min(report)
+    assert mins >= 1
+
+    md = report.to_markdown()
+    assert f"约 {mins} 分钟阅读" in md
+
+    html = report.to_html()
+    assert f"约 {mins} 分钟阅读" in html
+
+
+def test_reading_time_minimum_one_minute():
+    from papermind.output.markdown import _reading_time_min
+
+    # An empty / minimal report should still show at least 1 minute.
+    assert _reading_time_min(Report(paper=PaperMeta(title="Empty"))) == 1
+
+
 def test_html_export_self_contained(tmp_path):
     from papermind.output.schema import Figure
 
