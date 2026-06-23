@@ -2,9 +2,12 @@
 
 from __future__ import annotations
 
+import csv
+import io
+
 import papermind.compare as compare_mod
 from papermind.compare import build_comparison
-from papermind.output.compare_render import to_html, to_markdown
+from papermind.output.compare_render import to_csv, to_html, to_markdown
 from papermind.output.schema import (
     Benchmark,
     Contributions,
@@ -93,3 +96,56 @@ def test_compare_orchestration_reuses_mocked_analyze(monkeypatch):
     assert [p.title for p in comp.papers] == ["FlashAttention-2", "Transformer"]
     assert comp.synthesis == ""  # synthesis skipped -> no LLM call
     assert comp.usage is not None
+
+
+def test_comparison_csv_has_header_and_rows():
+    comp = _comparison()
+    csv_text = to_csv(comp)
+    rows = list(csv.reader(io.StringIO(csv_text)))
+    # first row is the header
+    assert rows[0] == ["title", "arxiv_id", "year", "main_contribution", "novelty", "methods", "benchmark", "hardware", "official_code"]
+    # one data row per paper
+    assert len(rows) == 3  # header + 2 papers
+    assert rows[1][0] == "FlashAttention-2"
+    assert rows[1][1] == "2307.08691"
+    assert rows[2][1] == "1706.03762"
+
+
+def test_comparison_csv_fields_match_data():
+    comp = _comparison()
+    csv_text = to_csv(comp)
+    rows = list(csv.reader(io.StringIO(csv_text)))
+    p0 = rows[1]
+    assert p0[3] == "faster attention"  # main_contribution
+    assert "Tiling" in p0[5]            # methods
+
+
+def test_comparison_csv_synthesis_appended():
+    from papermind.output.schema import ComparedPaper, Comparison
+    comp = Comparison(
+        papers=[ComparedPaper(title="A", arxiv_id="1111.1111")],
+        synthesis="These papers share X.",
+    )
+    csv_text = to_csv(comp)
+    assert "对比小结" in csv_text
+    assert "These papers share X." in csv_text
+
+
+def test_comparison_csv_via_schema_method(tmp_path):
+    comp = _comparison()
+    # in-memory
+    text = comp.to_csv()
+    assert "title" in text and "FlashAttention-2" in text
+    # write to file
+    out = tmp_path / "compare.csv"
+    comp.to_csv(str(out))
+    assert out.exists()
+    assert "FlashAttention-2" in out.read_text(encoding="utf-8")
+
+
+def test_comparison_csv_special_chars_escaped():
+    from papermind.output.schema import ComparedPaper, Comparison
+    comp = Comparison(papers=[ComparedPaper(title='Title with, comma and "quotes"')])
+    csv_text = to_csv(comp)
+    rows = list(csv.reader(io.StringIO(csv_text)))
+    assert rows[1][0] == 'Title with, comma and "quotes"'
