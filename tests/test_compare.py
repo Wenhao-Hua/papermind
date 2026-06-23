@@ -2,9 +2,12 @@
 
 from __future__ import annotations
 
+import csv
+import io
+
 import papermind.compare as compare_mod
 from papermind.compare import build_comparison
-from papermind.output.compare_render import to_html, to_markdown
+from papermind.output.compare_render import to_csv, to_html, to_markdown
 from papermind.output.schema import (
     Benchmark,
     Contributions,
@@ -93,3 +96,44 @@ def test_compare_orchestration_reuses_mocked_analyze(monkeypatch):
     assert [p.title for p in comp.papers] == ["FlashAttention-2", "Transformer"]
     assert comp.synthesis == ""  # synthesis skipped -> no LLM call
     assert comp.usage is not None
+
+
+def test_comparison_csv_structure():
+    comp = _comparison()
+    text = to_csv(comp)
+    rows = list(csv.reader(io.StringIO(text)))
+    # header row: ["dimension", "2307.08691", "1706.03762"]
+    assert rows[0] == ["dimension", "2307.08691", "1706.03762"]
+    # dimension labels are in the first column
+    labels = [r[0] for r in rows[1:] if r]
+    assert "标题" in labels
+    assert "核心贡献" in labels
+    assert "关键方法" in labels
+
+
+def test_comparison_csv_values():
+    comp = _comparison()
+    text = to_csv(comp)
+    rows = {r[0]: r[1:] for r in csv.reader(io.StringIO(text)) if r}
+    assert rows["标题"] == ["FlashAttention-2", "Transformer"]
+    assert rows["年份"] == ["2023", "2023"]
+    assert rows["核心贡献"] == ["faster attention", "attention-only arch"]
+    assert rows["关键方法"] == ["Tiling", "Self-Attention"]
+
+
+def test_comparison_csv_synthesis_appended():
+    comp = _comparison()
+    comp.synthesis = "Both improve attention."
+    text = to_csv(comp)
+    assert "synthesis" in text
+    assert "Both improve attention." in text
+
+
+def test_comparison_to_csv_method_writes_file(tmp_path):
+    comp = _comparison()
+    path = str(tmp_path / "out.csv")
+    comp.to_csv(path)
+    content = open(path).read()
+    rows = list(csv.reader(io.StringIO(content)))
+    assert rows[0][0] == "dimension"
+    assert any("FlashAttention-2" in r for r in content.splitlines())
