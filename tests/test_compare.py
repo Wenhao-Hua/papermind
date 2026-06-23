@@ -2,9 +2,12 @@
 
 from __future__ import annotations
 
+import csv
+import io
+
 import papermind.compare as compare_mod
 from papermind.compare import build_comparison
-from papermind.output.compare_render import to_html, to_markdown
+from papermind.output.compare_render import to_csv, to_html, to_markdown
 from papermind.output.schema import (
     Benchmark,
     Contributions,
@@ -76,6 +79,45 @@ def test_has_compare_modules_rejects_partial_report():
     partial = Report(paper=PaperMeta(title="P", arxiv_id="2"),
                      contributions=Contributions(main_contribution="c", novelty="n"))
     assert compare_mod._has_compare_modules(partial) is False
+
+
+def test_comparison_csv_headers_and_rows():
+    csv_text = to_csv(_comparison())
+    reader = csv.DictReader(io.StringIO(csv_text))
+    rows = list(reader)
+    assert len(rows) == 2
+    assert set(rows[0].keys()) == {
+        "title", "arxiv_id", "year", "main_contribution", "novelty",
+        "methods", "benchmark", "hardware", "official_code",
+    }
+    assert rows[0]["arxiv_id"] == "2307.08691"
+    assert rows[0]["main_contribution"] == "faster attention"
+    assert rows[0]["methods"] == "Tiling"
+    assert rows[1]["arxiv_id"] == "1706.03762"
+
+
+def test_comparison_csv_synthesis_appended():
+    comp = _comparison()
+    comp.synthesis = "FlashAttention-2 is faster."
+    csv_text = to_csv(comp)
+    assert "FlashAttention-2 is faster." in csv_text
+
+
+def test_comparison_csv_via_schema_method():
+    comp = _comparison()
+    csv_text = comp.to_csv()
+    assert "2307.08691" in csv_text
+    assert "1706.03762" in csv_text
+
+
+def test_comparison_csv_writes_to_file(tmp_path):
+    comp = _comparison()
+    out = str(tmp_path / "compare.csv")
+    returned = comp.to_csv(out)
+    assert (tmp_path / "compare.csv").exists()
+    content = (tmp_path / "compare.csv").read_text(encoding="utf-8")
+    assert content == returned
+    assert "2307.08691" in content
 
 
 def test_compare_orchestration_reuses_mocked_analyze(monkeypatch):

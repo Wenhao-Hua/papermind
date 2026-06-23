@@ -1,8 +1,10 @@
-"""Render a Comparison as a side-by-side Markdown or HTML table."""
+"""Render a Comparison as a side-by-side Markdown or HTML table, or a CSV spreadsheet."""
 
 from __future__ import annotations
 
+import csv
 import html as _html
+import io
 from typing import Callable, List, Tuple
 
 from papermind.output.schema import ComparedPaper, Comparison
@@ -83,6 +85,43 @@ def _html_cell(label: str, value: str) -> str:
     if label == "官方代码" and value.startswith("http"):
         return f"<a href='{_e(value)}'>{_e(value)}</a>"
     return _e(value)
+
+
+_CSV_FIELDS = [
+    ("title", "标题"),
+    ("arxiv_id", "arXiv"),
+    ("year", "年份"),
+    ("main_contribution", "核心贡献"),
+    ("novelty", "新颖之处"),
+    ("methods", "关键方法"),
+    ("benchmark", "性能/基准"),
+    ("hardware", "推荐硬件"),
+    ("official_code", "官方代码"),
+]
+
+
+def to_csv(comparison: Comparison) -> str:
+    """Export comparison results as CSV with one row per paper."""
+    buf = io.StringIO()
+    eng_keys = [k for k, _ in _CSV_FIELDS]
+    writer = csv.DictWriter(buf, fieldnames=eng_keys, lineterminator="\n")
+    writer.writeheader()
+    for p in comparison.papers:
+        writer.writerow({
+            "title": p.title or "",
+            "arxiv_id": p.arxiv_id or "",
+            "year": str(p.year) if p.year else "",
+            "main_contribution": p.main_contribution or "",
+            "novelty": p.novelty or "",
+            "methods": "; ".join(p.methods) if p.methods else "",
+            "benchmark": p.benchmark or "",
+            "hardware": p.hardware or "",
+            "official_code": p.official_code or "",
+        })
+    if comparison.synthesis:
+        buf.write("\nsynthesis\n")
+        buf.write(comparison.synthesis.replace("\n", " ") + "\n")
+    return buf.getvalue()
 
 
 def _e(text) -> str:
