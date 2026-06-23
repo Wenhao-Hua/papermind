@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import papermind.compare as compare_mod
 from papermind.compare import build_comparison
-from papermind.output.compare_render import to_html, to_markdown
+from papermind.output.compare_render import to_csv, to_html, to_markdown
 from papermind.output.schema import (
     Benchmark,
     Contributions,
@@ -67,6 +67,45 @@ def test_comparison_json_round_trip():
     data = comp.to_dict()
     assert data["papers"][0]["arxiv_id"] == "2307.08691"
     assert "usage" not in data  # usage excluded from export
+
+
+def test_comparison_csv_structure():
+    import csv
+    import io
+
+    comp = _comparison()
+    text = to_csv(comp)
+    rows = list(csv.reader(io.StringIO(text)))
+    # header row: dimension + one column per paper
+    assert rows[0] == ["维度", "2307.08691", "1706.03762"]
+    # spot-check a data row
+    labels = [r[0] for r in rows]
+    assert "核心贡献" in labels
+    assert "关键方法" in labels
+    row_contrib = next(r for r in rows if r[0] == "核心贡献")
+    assert row_contrib[1] == "faster attention"
+    assert row_contrib[2] == "attention-only arch"
+
+
+def test_comparison_csv_to_file(tmp_path):
+    comp = _comparison()
+    out = str(tmp_path / "out.csv")
+    comp.to_csv(out)
+    content = (tmp_path / "out.csv").read_text(encoding="utf-8")
+    assert "2307.08691" in content
+    assert "faster attention" in content
+
+
+def test_comparison_csv_no_synthesis():
+    import csv
+    import io
+
+    comp = _comparison()
+    comp.synthesis = ""
+    text = to_csv(comp)
+    rows = list(csv.reader(io.StringIO(text)))
+    # no blank row / synthesis row when synthesis is empty
+    assert all(len(r) == 0 or r[0] != "对比小结" for r in rows)
 
 
 def test_has_compare_modules_rejects_partial_report():
