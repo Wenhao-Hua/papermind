@@ -96,6 +96,8 @@ def _meta_line(report: Report) -> str:
         bits.append(f"**arXiv:** [{paper.arxiv_id}](https://arxiv.org/abs/{paper.arxiv_id})")
     if paper.pdf_url:
         bits.append(f"[PDF]({paper.pdf_url})")
+    mins = report.reading_time_min()
+    bits.append(f"约 {mins} 分钟阅读")
     return "  •  ".join(bits)
 
 

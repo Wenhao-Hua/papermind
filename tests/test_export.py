@@ -68,3 +68,38 @@ def test_bibtex_without_arxiv_is_misc():
     meta = PaperMeta(title="Some Local Paper", authors=["Jane Doe"], year=2020)
     bib = to_bibtex(meta)
     assert bib.startswith("@misc{doe2020some,")
+
+
+def test_reading_time_min_returns_at_least_one():
+    empty = Report(paper=PaperMeta(title="X"))
+    assert empty.reading_time_min() == 1
+
+
+def test_reading_time_grows_with_content():
+    from papermind.output.schema import (
+        Contributions,
+        TechnicalPoint,
+        TechnicalSection,
+    )
+
+    long_text = "这是一段很长的中文内容。" * 200
+    report = Report(
+        paper=PaperMeta(title="T"),
+        contributions=Contributions(
+            main_contribution=long_text,
+            novelty=long_text,
+            problem_solved=long_text,
+        ),
+        technical=TechnicalSection(
+            details=[TechnicalPoint(name="Method", explanation=long_text)]
+        ),
+    )
+    assert report.reading_time_min() > 1
+
+
+def test_reading_time_appears_in_html_and_markdown():
+    report = Report(paper=PaperMeta(title="T"))
+    html = report.to_html()
+    md = report.to_markdown()
+    assert "分钟阅读" in html
+    assert "分钟阅读" in md

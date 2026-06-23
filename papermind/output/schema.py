@@ -233,6 +233,30 @@ class Report(BaseModel):
     # Runtime token usage for this analysis; not part of the exported JSON artifact.
     usage: Optional["Usage"] = None
 
+    # -- reading time ------------------------------------------------------- #
+    def reading_time_min(self) -> int:
+        """Estimate reading time in minutes (~400 chars/min for mixed Chinese/English content)."""
+        parts: List[str] = []
+        if self.contributions:
+            c = self.contributions
+            parts += [c.main_contribution, c.novelty, c.problem_solved]
+            parts += [s.text for s in c.sources]
+        for detail in self.technical.details:
+            parts += [detail.name, detail.explanation, detail.analogy or ""]
+        for conn in self.connections.related_works:
+            parts += [conn.concept, conn.relationship]
+        if self.reproduction:
+            r = self.reproduction
+            if r.requirements:
+                parts.append(r.requirements)
+            for step in r.env_setup_steps:
+                parts += [step.title, step.desc]
+            for err in r.common_errors:
+                parts += [err.error, err.cause]
+            parts += list(r.gotchas)
+        total_chars = sum(len(t) for t in parts if t)
+        return max(1, round(total_chars / 400))
+
     # -- serialization ------------------------------------------------------ #
     def to_dict(self) -> dict:
         """Flatten to the documented JSON shape (technical_details / connections as lists)."""
