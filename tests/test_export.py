@@ -1,12 +1,23 @@
-"""Tests for reproduction export (setup.sh / notebook) and BibTeX citation."""
+"""Tests for reproduction export (setup.sh / notebook), BibTeX, and reading-time estimate."""
 
 from __future__ import annotations
 
 import json
 
 from papermind.output.cite import to_bibtex
+from papermind.output.html import to_html
+from papermind.output.markdown import to_markdown
 from papermind.output.reproduce_export import to_notebook, to_setup_script
-from papermind.output.schema import CommonError, PaperMeta, Reproduction, Report, SetupStep
+from papermind.output.schema import (
+    CommonError,
+    Contributions,
+    PaperMeta,
+    Reproduction,
+    Report,
+    SetupStep,
+    TechnicalPoint,
+    TechnicalSection,
+)
 
 
 def _report():
@@ -68,3 +79,44 @@ def test_bibtex_without_arxiv_is_misc():
     meta = PaperMeta(title="Some Local Paper", authors=["Jane Doe"], year=2020)
     bib = to_bibtex(meta)
     assert bib.startswith("@misc{doe2020some,")
+
+
+def _rich_report():
+    long_text = "这是一段很长的中文说明文字，用于测试阅读时长估算。" * 20
+    return Report(
+        paper=PaperMeta(title="Test Paper", arxiv_id="2401.00001", authors=["Alice"], year=2024),
+        contributions=Contributions(
+            main_contribution=long_text,
+            novelty="提出了一种新方法",
+            problem_solved="解决了效率问题",
+        ),
+        technical=TechnicalSection(details=[
+            TechnicalPoint(
+                name="核心模块",
+                explanation=long_text,
+                difficulty="mid",
+            )
+        ]),
+    )
+
+
+def test_reading_time_shown_in_html():
+    html = to_html(_rich_report())
+    assert "分钟阅读" in html
+
+
+def test_reading_time_shown_in_markdown():
+    md = to_markdown(_rich_report())
+    assert "分钟阅读" in md
+
+
+def test_reading_time_absent_for_empty_report():
+    report = Report(paper=PaperMeta(title="Empty"))
+    assert "分钟阅读" not in to_html(report)
+    assert "分钟阅读" not in to_markdown(report)
+
+
+def test_reading_time_is_positive_int():
+    from papermind.output.html import _reading_minutes
+    mins = _reading_minutes(_rich_report())
+    assert isinstance(mins, int) and mins >= 1

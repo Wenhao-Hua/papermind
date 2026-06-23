@@ -210,6 +210,32 @@ def _toc(report: Report) -> str:
     return f'<nav class="toc">{links}</nav>'
 
 
+def _reading_minutes(report: Report) -> int:
+    """Estimate reading time from report text content at 250 chars/min."""
+    parts = []
+    c = report.contributions
+    if c:
+        parts += [c.main_contribution, c.novelty, c.problem_solved]
+        for s in c.sources:
+            parts.append(s.text)
+    for d in report.technical.details:
+        parts += [d.name, d.explanation, d.analogy or "", d.formula or ""]
+        if d.figure and d.figure.caption:
+            parts.append(d.figure.caption)
+    for w in report.connections.related_works:
+        parts += [w.concept, w.relationship]
+    r = report.reproduction
+    if r:
+        parts += [r.requirements or "", r.recommended_hardware or ""]
+        for step in r.env_setup_steps:
+            parts += [step.title, step.desc or ""]
+        for g in r.gotchas:
+            parts.append(g)
+    total_chars = sum(len(p) for p in parts if p)
+    minutes = max(1, round(total_chars / 250))
+    return minutes
+
+
 def _meta(report: Report) -> str:
     paper = report.paper
     bits = []
@@ -222,6 +248,15 @@ def _meta(report: Report) -> str:
         bits.append(f'<b>arXiv:</b> <a href="https://arxiv.org/abs/{esc(paper.arxiv_id)}">{esc(paper.arxiv_id)}</a>')
     if paper.pdf_url:
         bits.append(f'<a href="{esc(paper.pdf_url)}">PDF</a>')
+    has_content = (
+        report.contributions is not None
+        or report.technical.details
+        or report.connections.related_works
+        or report.reproduction is not None
+    )
+    if has_content:
+        mins = _reading_minutes(report)
+        bits.append(f"约 {mins} 分钟阅读")
     return " &nbsp;•&nbsp; ".join(bits)
 
 
