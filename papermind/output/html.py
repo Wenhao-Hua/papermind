@@ -211,6 +211,8 @@ def _toc(report: Report) -> str:
 
 
 def _meta(report: Report) -> str:
+    from papermind.output.markdown import _reading_time_min
+
     paper = report.paper
     bits = []
     if paper.authors:
@@ -222,6 +224,8 @@ def _meta(report: Report) -> str:
         bits.append(f'<b>arXiv:</b> <a href="https://arxiv.org/abs/{esc(paper.arxiv_id)}">{esc(paper.arxiv_id)}</a>')
     if paper.pdf_url:
         bits.append(f'<a href="{esc(paper.pdf_url)}">PDF</a>')
+    mins = _reading_time_min(report)
+    bits.append(f"约 {mins} 分钟阅读")
     return " &nbsp;•&nbsp; ".join(bits)
 
 
