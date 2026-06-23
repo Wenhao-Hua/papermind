@@ -2,9 +2,12 @@
 
 from __future__ import annotations
 
+import csv
+import io
+
 import papermind.compare as compare_mod
 from papermind.compare import build_comparison
-from papermind.output.compare_render import to_html, to_markdown
+from papermind.output.compare_render import to_csv, to_html, to_markdown
 from papermind.output.schema import (
     Benchmark,
     Contributions,
@@ -93,3 +96,52 @@ def test_compare_orchestration_reuses_mocked_analyze(monkeypatch):
     assert [p.title for p in comp.papers] == ["FlashAttention-2", "Transformer"]
     assert comp.synthesis == ""  # synthesis skipped -> no LLM call
     assert comp.usage is not None
+
+
+def test_comparison_csv_structure():
+    comp = _comparison()
+    text = to_csv(comp)
+    rows = list(csv.reader(io.StringIO(text)))
+    # header row: 维度 + one column per paper
+    assert rows[0] == ["维度", "2307.08691", "1706.03762"]
+    # each dimension produces a row
+    labels = [r[0] for r in rows[1:]]
+    assert "标题" in labels
+    assert "核心贡献" in labels
+    assert "关键方法" in labels
+    # values are present for both papers
+    contrib_row = next(r for r in rows if r[0] == "核心贡献")
+    assert contrib_row[1] == "faster attention"
+    assert contrib_row[2] == "attention-only arch"
+
+
+def test_comparison_csv_synthesis_appended():
+    comp = _comparison()
+    comp.synthesis = "Paper A is faster; Paper B is seminal."
+    text = to_csv(comp)
+    rows = list(csv.reader(io.StringIO(text)))
+    synth_row = next((r for r in rows if r[0] == "对比小结"), None)
+    assert synth_row is not None
+    assert synth_row[1] == "Paper A is faster; Paper B is seminal."
+    assert synth_row[2] == ""  # empty cell for second paper
+
+
+def test_comparison_csv_no_synthesis_no_extra_row():
+    comp = _comparison()
+    assert comp.synthesis == ""
+    text = to_csv(comp)
+    rows = list(csv.reader(io.StringIO(text)))
+    assert all(r[0] != "对比小结" for r in rows)
+
+
+def test_comparison_to_csv_method_matches_renderer():
+    comp = _comparison()
+    assert comp.to_csv() == to_csv(comp)
+
+
+def test_comparison_to_csv_writes_file(tmp_path):
+    comp = _comparison()
+    out = str(tmp_path / "result.csv")
+    returned = comp.to_csv(out)
+    from pathlib import Path
+    assert Path(out).read_text(encoding="utf-8") == returned
