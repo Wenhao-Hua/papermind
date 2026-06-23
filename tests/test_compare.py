@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import papermind.compare as compare_mod
 from papermind.compare import build_comparison
-from papermind.output.compare_render import to_html, to_markdown
+from papermind.output.compare_render import to_csv, to_html, to_markdown
 from papermind.output.schema import (
     Benchmark,
     Contributions,
@@ -93,3 +93,28 @@ def test_compare_orchestration_reuses_mocked_analyze(monkeypatch):
     assert [p.title for p in comp.papers] == ["FlashAttention-2", "Transformer"]
     assert comp.synthesis == ""  # synthesis skipped -> no LLM call
     assert comp.usage is not None
+
+
+def test_comparison_csv_structure():
+    comp = _comparison()
+    csv_text = to_csv(comp)
+    lines = csv_text.strip().splitlines()
+    # header row contains field names
+    assert "标题" in lines[0]
+    assert "arXiv" in lines[0]
+    assert "核心贡献" in lines[0]
+    # one data row per paper
+    assert len(lines) == len(comp.papers) + 1  # header + N papers
+    # first paper's contribution appears in its row
+    assert "faster attention" in lines[1]
+    assert "attention-only arch" in lines[2]
+
+
+def test_comparison_csv_file_write(tmp_path):
+    comp = _comparison()
+    out = str(tmp_path / "compare.csv")
+    result = comp.to_csv(out)
+    import pathlib
+    written = pathlib.Path(out).read_text(encoding="utf-8")
+    assert written == result
+    assert "标题" in written
