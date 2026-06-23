@@ -2,9 +2,12 @@
 
 from __future__ import annotations
 
+import csv
+import io
+
 import papermind.compare as compare_mod
 from papermind.compare import build_comparison
-from papermind.output.compare_render import to_html, to_markdown
+from papermind.output.compare_render import to_csv, to_html, to_markdown
 from papermind.output.schema import (
     Benchmark,
     Contributions,
@@ -76,6 +79,44 @@ def test_has_compare_modules_rejects_partial_report():
     partial = Report(paper=PaperMeta(title="P", arxiv_id="2"),
                      contributions=Contributions(main_contribution="c", novelty="n"))
     assert compare_mod._has_compare_modules(partial) is False
+
+
+def test_comparison_csv_columns_and_rows():
+    comp = _comparison()
+    text = to_csv(comp)
+    rows = list(csv.reader(io.StringIO(text)))
+    # Header row: 维度 + one column per paper
+    assert rows[0] == ["维度", "2307.08691", "1706.03762"]
+    # Every dimension from _rows should appear as the first cell of a data row
+    labels = [r[0] for r in rows[1:] if r]
+    assert "标题" in labels
+    assert "核心贡献" in labels
+    assert "关键方法" in labels
+    # Values for paper 0 should appear in the correct columns
+    contrib_row = next(r for r in rows if r and r[0] == "核心贡献")
+    assert contrib_row[1] == "faster attention"
+    assert contrib_row[2] == "attention-only arch"
+
+
+def test_comparison_csv_synthesis_appended():
+    comp = _comparison()
+    comp.synthesis = "Paper A is faster; Paper B is seminal."
+    text = to_csv(comp)
+    rows = list(csv.reader(io.StringIO(text)))
+    # The synthesis block is an empty separator row followed by a labelled row
+    assert any(r and r[0] == "对比小结" for r in rows)
+    synth_row = next(r for r in rows if r and r[0] == "对比小结")
+    assert synth_row[1] == "Paper A is faster; Paper B is seminal."
+
+
+def test_comparison_to_csv_method_and_file(tmp_path):
+    comp = _comparison()
+    text = comp.to_csv()
+    assert "维度" in text
+    path = str(tmp_path / "out.csv")
+    returned = comp.to_csv(path)
+    import pathlib
+    assert pathlib.Path(path).read_text(encoding="utf-8") == returned
 
 
 def test_compare_orchestration_reuses_mocked_analyze(monkeypatch):
