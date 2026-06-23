@@ -2,9 +2,12 @@
 
 from __future__ import annotations
 
+import csv
+import io
+
 import papermind.compare as compare_mod
 from papermind.compare import build_comparison
-from papermind.output.compare_render import to_html, to_markdown
+from papermind.output.compare_render import to_csv, to_html, to_markdown
 from papermind.output.schema import (
     Benchmark,
     Contributions,
@@ -76,6 +79,47 @@ def test_has_compare_modules_rejects_partial_report():
     partial = Report(paper=PaperMeta(title="P", arxiv_id="2"),
                      contributions=Contributions(main_contribution="c", novelty="n"))
     assert compare_mod._has_compare_modules(partial) is False
+
+
+def test_comparison_csv_structure():
+    comp = _comparison()
+    text = to_csv(comp)
+    rows = list(csv.reader(io.StringIO(text)))
+    # header row: ["维度", "2307.08691", "1706.03762"]
+    assert rows[0] == ["维度", "2307.08691", "1706.03762"]
+    # 9 dimension rows follow the header
+    assert len(rows) == 10
+    labels = [r[0] for r in rows[1:]]
+    assert "核心贡献" in labels
+    assert "关键方法" in labels
+
+
+def test_comparison_csv_values():
+    comp = _comparison()
+    rows = list(csv.reader(io.StringIO(to_csv(comp))))
+    contrib_row = next(r for r in rows if r[0] == "核心贡献")
+    assert contrib_row[1] == "faster attention"
+    assert contrib_row[2] == "attention-only arch"
+
+
+def test_comparison_csv_with_synthesis():
+    comp = _comparison()
+    comp.synthesis = "Both papers tackle transformers."
+    rows = list(csv.reader(io.StringIO(to_csv(comp))))
+    # blank separator row + synthesis row appended after the 9 dimension rows
+    assert len(rows) == 12
+    synth_row = rows[-1]
+    assert synth_row[0] == "对比小结"
+    assert synth_row[1] == "Both papers tackle transformers."
+
+
+def test_comparison_to_csv_method_and_file(tmp_path):
+    comp = _comparison()
+    text = comp.to_csv()
+    assert "维度" in text
+    out = tmp_path / "out.csv"
+    comp.to_csv(str(out))
+    assert out.read_text(encoding="utf-8") == text
 
 
 def test_compare_orchestration_reuses_mocked_analyze(monkeypatch):
