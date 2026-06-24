@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import papermind.compare as compare_mod
 from papermind.compare import build_comparison
-from papermind.output.compare_render import to_html, to_markdown
+from papermind.output.compare_render import to_csv, to_html, to_markdown
 from papermind.output.schema import (
     Benchmark,
     Contributions,
@@ -67,6 +67,38 @@ def test_comparison_json_round_trip():
     data = comp.to_dict()
     assert data["papers"][0]["arxiv_id"] == "2307.08691"
     assert "usage" not in data  # usage excluded from export
+
+
+def test_comparison_csv_structure():
+    csv_text = to_csv(_comparison())
+    lines = csv_text.strip().splitlines()
+    # Header row must contain expected column names
+    assert lines[0].startswith("标题,arXiv,年份")
+    assert "官方代码" in lines[0]
+    # Two data rows — one per paper
+    assert len(lines) == 3
+    # First paper row contains its known values
+    assert "FlashAttention-2" in lines[1]
+    assert "2307.08691" in lines[1]
+    assert "2023" in lines[1]
+    assert "Tiling" in lines[1]
+    # No pipe characters (differs from markdown render)
+    assert "|" not in csv_text
+
+
+def test_comparison_csv_via_schema_method():
+    comp = _comparison()
+    csv_text = comp.to_csv()
+    assert "FlashAttention-2" in csv_text
+    assert "Transformer" in csv_text
+
+
+def test_comparison_csv_file_write(tmp_path):
+    comp = _comparison()
+    out = tmp_path / "compare.csv"
+    comp.to_csv(str(out))
+    content = out.read_text(encoding="utf-8")
+    assert "标题" in content and "FlashAttention-2" in content
 
 
 def test_has_compare_modules_rejects_partial_report():
