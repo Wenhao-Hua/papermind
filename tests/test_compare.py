@@ -2,9 +2,12 @@
 
 from __future__ import annotations
 
+import csv
+import io
+
 import papermind.compare as compare_mod
 from papermind.compare import build_comparison
-from papermind.output.compare_render import to_html, to_markdown
+from papermind.output.compare_render import to_csv, to_html, to_markdown
 from papermind.output.schema import (
     Benchmark,
     Contributions,
@@ -76,6 +79,55 @@ def test_has_compare_modules_rejects_partial_report():
     partial = Report(paper=PaperMeta(title="P", arxiv_id="2"),
                      contributions=Contributions(main_contribution="c", novelty="n"))
     assert compare_mod._has_compare_modules(partial) is False
+
+
+def test_comparison_csv_structure():
+    comp = _comparison()
+    text = to_csv(comp)
+    reader = csv.reader(io.StringIO(text))
+    rows = list(reader)
+    # First row is the header with dimension names
+    assert rows[0][0] == "标题"
+    assert rows[0][1] == "arXiv"
+    assert rows[0][2] == "年份"
+    assert "核心贡献" in rows[0]
+    # One data row per paper
+    assert len(rows) == 3  # header + 2 papers
+    assert rows[1][0] == "FlashAttention-2"
+    assert rows[2][0] == "Transformer"
+
+
+def test_comparison_csv_values():
+    comp = _comparison()
+    text = to_csv(comp)
+    reader = csv.reader(io.StringIO(text))
+    rows = list(reader)
+    headers = rows[0]
+    contrib_idx = headers.index("核心贡献")
+    method_idx = headers.index("关键方法")
+    assert rows[1][contrib_idx] == "faster attention"
+    assert rows[1][method_idx] == "Tiling"
+    assert rows[2][contrib_idx] == "attention-only arch"
+    assert rows[2][method_idx] == "Self-Attention"
+
+
+def test_comparison_csv_with_synthesis():
+    comp = _comparison()
+    comp.synthesis = "FlashAttention-2 outperforms Transformer on long sequences."
+    text = to_csv(comp)
+    assert "对比小结" in text
+    assert "FlashAttention-2 outperforms" in text
+
+
+def test_comparison_csv_file_write(tmp_path):
+    comp = _comparison()
+    out = str(tmp_path / "compare.csv")
+    returned = comp.to_csv(out)
+    import pathlib
+    written = pathlib.Path(out).read_text(encoding="utf-8")
+    assert written == returned
+    assert "标题" in written
+    assert "FlashAttention-2" in written
 
 
 def test_compare_orchestration_reuses_mocked_analyze(monkeypatch):
