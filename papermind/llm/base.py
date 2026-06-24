@@ -29,6 +29,12 @@ _KEYLESS_PREFIXES = ("ollama/", "ollama_chat/", "local/")
 
 _JSON_OBJECT_RE = re.compile(r"\{.*\}", re.DOTALL)
 _JSON_ARRAY_RE = re.compile(r"\[.*\]", re.DOTALL)
+# litellm's cost_per_token lazily imports cffi/cryptography whose C extensions
+# are not safe to call concurrently from threads.  _COST_LOCK serialises the
+# call; _cost_estimation_available is set to False on first failure so
+# subsequent calls skip litellm entirely rather than retrying a broken path.
+_COST_LOCK = threading.Lock()
+_cost_estimation_available = True
 
 
 class LLMClient:
@@ -327,15 +333,19 @@ class LLMClient:
         return text
 
     def _record_usage(self, model: str, prompt_tokens: int, completion_tokens: int) -> None:
+        global _cost_estimation_available
         cost = 0.0
-        try:
-            litellm = _import_litellm()
-            prompt_cost, completion_cost = litellm.cost_per_token(
-                model=model, prompt_tokens=prompt_tokens, completion_tokens=completion_tokens
-            )
-            cost = float(prompt_cost) + float(completion_cost)
-        except Exception:  # noqa: BLE001 - cost is best-effort; many models lack pricing
-            cost = 0.0
+        if _cost_estimation_available:
+            try:
+                litellm = _import_litellm()
+                with _COST_LOCK:
+                    prompt_cost, completion_cost = litellm.cost_per_token(
+                        model=model, prompt_tokens=prompt_tokens, completion_tokens=completion_tokens
+                    )
+                cost = float(prompt_cost) + float(completion_cost)
+            except BaseException:  # noqa: BLE001 - cost best-effort; pyo3 panics are BaseException
+                _cost_estimation_available = False
+                cost = 0.0
         with self._usage_lock:
             self.usage.record(prompt_tokens, completion_tokens, cost)
 
