@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import papermind.compare as compare_mod
 from papermind.compare import build_comparison
-from papermind.output.compare_render import to_html, to_markdown
+from papermind.output.compare_render import to_csv, to_html, to_markdown
 from papermind.output.schema import (
     Benchmark,
     Contributions,
@@ -46,6 +46,22 @@ def test_build_comparison_extracts_fields():
     assert p0.methods == ["Tiling"]
     assert p0.benchmark == "seq=2k: 2.0x"
     assert comp.papers[1].benchmark == "seq=2k"  # no speedup/result -> setting only
+
+
+def test_comparison_csv():
+    import csv
+    import io
+
+    csv_text = to_csv(_comparison())
+    rows = list(csv.reader(io.StringIO(csv_text)))
+    # header row: 维度, paper1_id, paper2_id
+    assert rows[0] == ["维度", "2307.08691", "1706.03762"]
+    # find the 核心贡献 row
+    contrib_row = next(r for r in rows if r[0] == "核心贡献")
+    assert contrib_row[1] == "faster attention"
+    assert contrib_row[2] == "attention-only arch"
+    # verify to_csv via Comparison method returns the same content
+    assert _comparison().to_csv() == csv_text
 
 
 def test_comparison_markdown_table():
