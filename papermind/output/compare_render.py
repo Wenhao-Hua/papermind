@@ -87,3 +87,30 @@ def _html_cell(label: str, value: str) -> str:
 
 def _e(text) -> str:
     return _html.escape(str(text)) if text is not None else ""
+
+
+def to_csv(comparison: Comparison) -> str:
+    """Return a CSV with one row per paper and one column per comparison field."""
+    import csv
+    import io
+
+    headers = ["标题", "arXiv", "年份", "核心贡献", "新颖之处", "关键方法", "性能/基准", "推荐硬件", "官方代码"]
+    buf = io.StringIO()
+    writer = csv.writer(buf, lineterminator="\n")
+    writer.writerow(headers)
+    for p in comparison.papers:
+        writer.writerow([
+            p.title or "",
+            p.arxiv_id or "",
+            str(p.year) if p.year else "",
+            p.main_contribution or "",
+            p.novelty or "",
+            "; ".join(p.methods) if p.methods else "",
+            p.benchmark or "",
+            p.hardware or "",
+            p.official_code or "",
+        ])
+    if comparison.synthesis:
+        writer.writerow([])
+        writer.writerow(["# 对比小结", comparison.synthesis])
+    return buf.getvalue()
