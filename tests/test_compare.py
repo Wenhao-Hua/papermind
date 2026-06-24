@@ -2,9 +2,12 @@
 
 from __future__ import annotations
 
+import csv
+import io
+
 import papermind.compare as compare_mod
 from papermind.compare import build_comparison
-from papermind.output.compare_render import to_html, to_markdown
+from papermind.output.compare_render import to_csv, to_html, to_markdown
 from papermind.output.schema import (
     Benchmark,
     Contributions,
@@ -76,6 +79,51 @@ def test_has_compare_modules_rejects_partial_report():
     partial = Report(paper=PaperMeta(title="P", arxiv_id="2"),
                      contributions=Contributions(main_contribution="c", novelty="n"))
     assert compare_mod._has_compare_modules(partial) is False
+
+
+def test_comparison_csv_structure():
+    comp = _comparison()
+    text = to_csv(comp)
+    rows = list(csv.reader(io.StringIO(text)))
+    # Header: 维度 + one column per paper
+    assert rows[0] == ["维度", "2307.08691", "1706.03762"]
+    # One data row per dimension
+    labels = [r[0] for r in rows[1:]]
+    assert "标题" in labels
+    assert "核心贡献" in labels
+    assert "关键方法" in labels
+    # Correct cell values
+    contrib_row = next(r for r in rows if r[0] == "核心贡献")
+    assert contrib_row[1] == "faster attention"
+    assert contrib_row[2] == "attention-only arch"
+
+
+def test_comparison_csv_synthesis_row():
+    comp = _comparison()
+    comp.synthesis = "FlashAttention is faster."
+    text = to_csv(comp)
+    rows = list(csv.reader(io.StringIO(text)))
+    last = rows[-1]
+    assert last[0] == "对比小结"
+    assert last[1] == "FlashAttention is faster."
+
+
+def test_comparison_csv_no_synthesis():
+    comp = _comparison()
+    comp.synthesis = ""
+    text = to_csv(comp)
+    rows = list(csv.reader(io.StringIO(text)))
+    assert all(r[0] != "对比小结" for r in rows)
+
+
+def test_comparison_to_csv_method_writes_file(tmp_path):
+    comp = _comparison()
+    out = str(tmp_path / "result.csv")
+    returned = comp.to_csv(out)
+    assert (tmp_path / "result.csv").exists()
+    content = (tmp_path / "result.csv").read_text(encoding="utf-8")
+    assert content == returned
+    assert "维度" in content
 
 
 def test_compare_orchestration_reuses_mocked_analyze(monkeypatch):
