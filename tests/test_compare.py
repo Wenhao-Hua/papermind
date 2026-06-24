@@ -2,9 +2,12 @@
 
 from __future__ import annotations
 
+import csv
+import io
+
 import papermind.compare as compare_mod
 from papermind.compare import build_comparison
-from papermind.output.compare_render import to_html, to_markdown
+from papermind.output.compare_render import to_csv, to_html, to_markdown
 from papermind.output.schema import (
     Benchmark,
     Contributions,
@@ -76,6 +79,46 @@ def test_has_compare_modules_rejects_partial_report():
     partial = Report(paper=PaperMeta(title="P", arxiv_id="2"),
                      contributions=Contributions(main_contribution="c", novelty="n"))
     assert compare_mod._has_compare_modules(partial) is False
+
+
+def test_comparison_csv_headers_and_rows():
+    csv_text = to_csv(_comparison())
+    reader = csv.reader(io.StringIO(csv_text))
+    rows = list(reader)
+    # First row: "维度" + paper headers
+    assert rows[0] == ["维度", "2307.08691", "1706.03762"]
+    # Rows should contain each dimension label
+    labels = [r[0] for r in rows[1:] if r]
+    assert "核心贡献" in labels
+    assert "关键方法" in labels
+    assert "年份" in labels
+
+
+def test_comparison_csv_values():
+    csv_text = to_csv(_comparison())
+    reader = csv.reader(io.StringIO(csv_text))
+    rows = {r[0]: r[1:] for r in reader if r}
+    assert rows["核心贡献"] == ["faster attention", "attention-only arch"]
+    assert rows["关键方法"] == ["Tiling", "Self-Attention"]
+
+
+def test_comparison_csv_with_synthesis():
+    comp = _comparison()
+    comp.synthesis = "FlashAttention-2 is more efficient."
+    csv_text = to_csv(comp)
+    assert "对比小结" in csv_text
+    assert "FlashAttention-2 is more efficient." in csv_text
+
+
+def test_comparison_to_csv_method_and_file(tmp_path):
+    comp = _comparison()
+    csv_text = comp.to_csv()
+    assert "维度" in csv_text
+    # also write to file
+    out = tmp_path / "compare.csv"
+    returned = comp.to_csv(str(out))
+    assert out.exists()
+    assert out.read_text(encoding="utf-8") == returned
 
 
 def test_compare_orchestration_reuses_mocked_analyze(monkeypatch):
