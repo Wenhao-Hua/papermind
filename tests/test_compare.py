@@ -2,9 +2,12 @@
 
 from __future__ import annotations
 
+import csv
+import io
+
 import papermind.compare as compare_mod
 from papermind.compare import build_comparison
-from papermind.output.compare_render import to_html, to_markdown
+from papermind.output.compare_render import to_csv, to_html, to_markdown
 from papermind.output.schema import (
     Benchmark,
     Contributions,
@@ -76,6 +79,41 @@ def test_has_compare_modules_rejects_partial_report():
     partial = Report(paper=PaperMeta(title="P", arxiv_id="2"),
                      contributions=Contributions(main_contribution="c", novelty="n"))
     assert compare_mod._has_compare_modules(partial) is False
+
+
+def test_comparison_csv_structure():
+    comp = _comparison()
+    text = to_csv(comp)
+    reader = csv.reader(io.StringIO(text))
+    rows = list(reader)
+    # header row: 维度 + one column per paper
+    assert rows[0] == ["维度", "2307.08691", "1706.03762"]
+    # each data row starts with the dimension label
+    labels = [r[0] for r in rows[1:] if r]
+    assert "标题" in labels
+    assert "核心贡献" in labels
+    assert "关键方法" in labels
+    # values are present
+    contrib_row = next(r for r in rows if r and r[0] == "核心贡献")
+    assert contrib_row[1] == "faster attention"
+    assert contrib_row[2] == "attention-only arch"
+
+
+def test_comparison_csv_synthesis_appended():
+    comp = _comparison()
+    comp.synthesis = "Both papers improve attention."
+    text = to_csv(comp)
+    assert "对比小结" in text
+    assert "Both papers improve attention." in text
+
+
+def test_comparison_csv_via_schema_method(tmp_path):
+    comp = _comparison()
+    out = tmp_path / "compare.csv"
+    text = comp.to_csv(str(out))
+    assert out.exists()
+    assert out.read_text(encoding="utf-8") == text
+    assert "维度" in text
 
 
 def test_compare_orchestration_reuses_mocked_analyze(monkeypatch):
