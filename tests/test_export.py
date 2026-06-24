@@ -5,8 +5,19 @@ from __future__ import annotations
 import json
 
 from papermind.output.cite import to_bibtex
+from papermind.output.html import to_html
+from papermind.output.markdown import _reading_minutes, to_markdown
 from papermind.output.reproduce_export import to_notebook, to_setup_script
-from papermind.output.schema import CommonError, PaperMeta, Reproduction, Report, SetupStep
+from papermind.output.schema import (
+    CommonError,
+    Contributions,
+    PaperMeta,
+    Reproduction,
+    Report,
+    SetupStep,
+    TechnicalPoint,
+    TechnicalSection,
+)
 
 
 def _report():
@@ -68,3 +79,33 @@ def test_bibtex_without_arxiv_is_misc():
     meta = PaperMeta(title="Some Local Paper", authors=["Jane Doe"], year=2020)
     bib = to_bibtex(meta)
     assert bib.startswith("@misc{doe2020some,")
+
+
+def _rich_report():
+    """A report with enough text to give a non-trivial reading-time estimate."""
+    words = " ".join(["word"] * 400)  # 400 words → 2 min at 200 wpm
+    return Report(
+        paper=PaperMeta(title="Test Paper", arxiv_id="0000.00000", authors=["A. Author"], year=2024),
+        contributions=Contributions(main_contribution=words, novelty="novel", problem_solved="problem"),
+        technical=TechnicalSection(details=[TechnicalPoint(name="Method", explanation="detail")]),
+    )
+
+
+def test_reading_minutes_minimum_one():
+    empty = Report(paper=PaperMeta(title="Tiny"))
+    assert _reading_minutes(empty) >= 1
+
+
+def test_reading_minutes_scales_with_content():
+    mins = _reading_minutes(_rich_report())
+    assert mins >= 2  # 400 words ÷ 200 wpm = 2 min
+
+
+def test_markdown_meta_includes_reading_time():
+    md = to_markdown(_rich_report())
+    assert "min read" in md
+
+
+def test_html_meta_includes_reading_time():
+    h = to_html(_rich_report())
+    assert "min read" in h
