@@ -30,6 +30,9 @@ _KEYLESS_PREFIXES = ("ollama/", "ollama_chat/", "local/")
 _JSON_OBJECT_RE = re.compile(r"\{.*\}", re.DOTALL)
 _JSON_ARRAY_RE = re.compile(r"\[.*\]", re.DOTALL)
 
+_litellm_cache: object = None  # cached module or _LITELLM_FAILED sentinel
+_LITELLM_FAILED = object()  # sentinel: import was tried and failed
+
 
 class LLMClient:
     """Stateless-ish wrapper around litellm bound to a model + config."""
@@ -446,13 +449,23 @@ def _get_local_encoder(model_name: str, cls):
 
 
 def _import_litellm():
+    global _litellm_cache
+    if _litellm_cache is _LITELLM_FAILED:
+        raise LLMError("litellm failed to import (cached failure)")
+    if _litellm_cache is not None:
+        return _litellm_cache
     try:
         import litellm
 
         litellm.drop_params = True  # silently drop unsupported params per provider
+        _litellm_cache = litellm
         return litellm
     except ImportError as exc:  # pragma: no cover
+        _litellm_cache = _LITELLM_FAILED
         raise LLMError("litellm is required. Install with: pip install litellm") from exc
+    except BaseException as exc:  # noqa: BLE001 - pyo3 PanicException is BaseException not Exception
+        _litellm_cache = _LITELLM_FAILED
+        raise LLMError(f"litellm failed to import: {type(exc).__name__}") from exc
 
 
 def _supports_json_mode(model: str) -> bool:
