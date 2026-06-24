@@ -348,6 +348,14 @@ class Comparison(BaseModel):
             _write_text(path, text)
         return text
 
+    def to_csv(self, path: Optional[str] = None) -> str:
+        from papermind.output.compare_render import to_csv as _csv
+
+        text = _csv(self)
+        if path:
+            _write_text(path, text)
+        return text
+
 
 class AnswerSegment(BaseModel):
     kind: SegmentKind
