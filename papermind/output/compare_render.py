@@ -1,8 +1,10 @@
-"""Render a Comparison as a side-by-side Markdown or HTML table."""
+"""Render a Comparison as a side-by-side Markdown, HTML, or CSV table."""
 
 from __future__ import annotations
 
+import csv
 import html as _html
+import io
 from typing import Callable, List, Tuple
 
 from papermind.output.schema import ComparedPaper, Comparison
@@ -83,6 +85,34 @@ def _html_cell(label: str, value: str) -> str:
     if label == "官方代码" and value.startswith("http"):
         return f"<a href='{_e(value)}'>{_e(value)}</a>"
     return _e(value)
+
+
+def to_csv(comparison: Comparison) -> str:
+    """Return a CSV where each row is one paper and columns are comparison fields.
+
+    This orientation (paper-per-row) is most useful for spreadsheet analysis and
+    downstream data processing, as opposed to the transposed display-table used in
+    the Markdown/HTML renderers.
+    """
+    buf = io.StringIO()
+    fieldnames = ["arxiv_id", "title", "year", "main_contribution", "novelty", "methods", "benchmark", "hardware", "official_code"]
+    writer = csv.DictWriter(buf, fieldnames=fieldnames, lineterminator="\n")
+    writer.writeheader()
+    for p in comparison.papers:
+        writer.writerow({
+            "arxiv_id": p.arxiv_id or "",
+            "title": p.title or "",
+            "year": str(p.year) if p.year else "",
+            "main_contribution": p.main_contribution or "",
+            "novelty": p.novelty or "",
+            "methods": "; ".join(p.methods) if p.methods else "",
+            "benchmark": p.benchmark or "",
+            "hardware": p.hardware or "",
+            "official_code": p.official_code or "",
+        })
+    if comparison.synthesis:
+        buf.write(f"\n# synthesis: {comparison.synthesis.replace(chr(10), ' ')}\n")
+    return buf.getvalue()
 
 
 def _e(text) -> str:
