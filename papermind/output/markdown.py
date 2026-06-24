@@ -8,6 +8,7 @@ Reproduction details use tables/code blocks.
 
 from __future__ import annotations
 
+import re
 from pathlib import Path
 from typing import List, Optional
 
@@ -20,6 +21,29 @@ from papermind.output.schema import (
 )
 
 _DIFFICULTY_BADGE = {"high": "🔴 high", "mid": "🟡 mid", "low": "🟢 low"}
+_WORDS_PER_MIN = 200
+
+
+def estimate_reading_min(report: Report) -> int:
+    """Estimate reading time in minutes for the full report (assumes ~200 WPM)."""
+    parts: List[str] = []
+    if report.contributions:
+        c = report.contributions
+        parts += [c.main_contribution, c.novelty, c.problem_solved]
+    for tp in report.technical.details:
+        parts += [tp.name, tp.explanation, tp.analogy]
+    for w in report.connections.related_works:
+        parts += [w.concept, w.relationship]
+    if report.reproduction:
+        r = report.reproduction
+        parts += [r.requirements or "", r.recommended_hardware or ""]
+        for s in r.env_setup_steps:
+            parts += [s.title, s.desc or ""]
+    text = " ".join(p for p in parts if p)
+    zh_chars = len(re.findall(r"[一-鿿]", text))
+    other_words = len(re.sub(r"[一-鿿]", " ", text).split())
+    total_words = other_words + int(zh_chars * 0.4)
+    return max(1, round(total_words / _WORDS_PER_MIN))
 
 
 def _mathjax(formula: str) -> str:
@@ -96,6 +120,7 @@ def _meta_line(report: Report) -> str:
         bits.append(f"**arXiv:** [{paper.arxiv_id}](https://arxiv.org/abs/{paper.arxiv_id})")
     if paper.pdf_url:
         bits.append(f"[PDF]({paper.pdf_url})")
+    bits.append(f"**阅读时长:** ~{estimate_reading_min(report)} 分钟")
     return "  •  ".join(bits)
 
 
