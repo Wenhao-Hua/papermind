@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import papermind.compare as compare_mod
 from papermind.compare import build_comparison
-from papermind.output.compare_render import to_html, to_markdown
+from papermind.output.compare_render import to_csv, to_html, to_markdown
 from papermind.output.schema import (
     Benchmark,
     Contributions,
@@ -60,6 +60,40 @@ def test_comparison_html_table_and_links():
     assert html.startswith("<!DOCTYPE html>")
     assert "<th>2307.08691</th>" in html
     assert "<a href='https://github.com/x/y'>" in html  # official code linked
+
+
+def test_comparison_csv_structure():
+    import csv
+    import io
+
+    csv_text = to_csv(_comparison())
+    rows = list(csv.reader(io.StringIO(csv_text)))
+    # header row: 维度, then one column per paper
+    assert rows[0] == ["维度", "2307.08691", "1706.03762"]
+    # data rows include core dimensions
+    labels = [r[0] for r in rows[1:] if r]
+    assert "核心贡献" in labels and "关键方法" in labels
+    # values present for both papers
+    contrib_row = next(r for r in rows if r and r[0] == "核心贡献")
+    assert contrib_row[1] == "faster attention" and contrib_row[2] == "attention-only arch"
+
+
+def test_comparison_csv_via_schema_method(tmp_path):
+    comp = _comparison()
+    # in-memory
+    text = comp.to_csv()
+    assert "维度" in text and "2307.08691" in text
+    # written to disk
+    out = tmp_path / "compare.csv"
+    comp.to_csv(str(out))
+    assert out.exists() and "faster attention" in out.read_text(encoding="utf-8")
+
+
+def test_comparison_csv_synthesis_appended():
+    comp = _comparison()
+    comp.synthesis = "Both papers improve attention."
+    text = to_csv(comp)
+    assert "对比小结" in text and "Both papers improve attention." in text
 
 
 def test_comparison_json_round_trip():
