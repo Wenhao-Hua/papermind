@@ -706,8 +706,8 @@ def compare(
         raise _fail("compare 需要至少 2 篇论文。")
     if len(sources) > 4:
         raise _fail("一次最多对比 4 篇论文。")
-    if fmt not in ("md", "json", "html", "all"):
-        raise _fail("--format must be one of: md, json, html, all")
+    if fmt not in ("md", "json", "html", "csv", "all"):
+        raise _fail("--format must be one of: md, json, html, csv, all")
     model = _apply_local(local, model)
 
     from papermind.compare import compare as run_compare
@@ -729,7 +729,7 @@ def compare(
 
 def _write_comparison_outputs(comparison, fmt: str, output: str) -> None:
     base = output
-    for ext in (".md", ".json", ".html"):
+    for ext in (".md", ".json", ".html", ".csv"):
         if base.lower().endswith(ext):
             base = base[: -len(ext)]
     written = []
@@ -742,6 +742,9 @@ def _write_comparison_outputs(comparison, fmt: str, output: str) -> None:
     if fmt in ("html", "all"):
         comparison.to_html(f"{base}.html")
         written.append(f"{base}.html")
+    if fmt in ("csv", "all"):
+        comparison.to_csv(f"{base}.csv")
+        written.append(f"{base}.csv")
     console.print(f"[green]✓[/green] Wrote: {', '.join(written)}")
 
 

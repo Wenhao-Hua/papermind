@@ -87,3 +87,19 @@ def _html_cell(label: str, value: str) -> str:
 
 def _e(text) -> str:
     return _html.escape(str(text)) if text is not None else ""
+
+
+def to_csv(comparison: Comparison) -> str:
+    import csv
+    import io
+
+    headers = ["维度"] + _headers(comparison)
+    buf = io.StringIO()
+    writer = csv.writer(buf)
+    writer.writerow(headers)
+    for label, values in _rows(comparison):
+        writer.writerow([label] + values)
+    if comparison.synthesis:
+        writer.writerow([])
+        writer.writerow(["对比小结", comparison.synthesis])
+    return buf.getvalue()
