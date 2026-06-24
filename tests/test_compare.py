@@ -2,9 +2,12 @@
 
 from __future__ import annotations
 
+import csv
+import io
+
 import papermind.compare as compare_mod
 from papermind.compare import build_comparison
-from papermind.output.compare_render import to_html, to_markdown
+from papermind.output.compare_render import to_csv, to_html, to_markdown
 from papermind.output.schema import (
     Benchmark,
     Contributions,
@@ -67,6 +70,28 @@ def test_comparison_json_round_trip():
     data = comp.to_dict()
     assert data["papers"][0]["arxiv_id"] == "2307.08691"
     assert "usage" not in data  # usage excluded from export
+
+
+def test_comparison_csv_export():
+    comp = _comparison()
+    text = to_csv(comp)
+    rows = list(csv.reader(io.StringIO(text)))
+    # header row: 维度, then one column per paper (arxiv_id)
+    assert rows[0] == ["维度", "2307.08691", "1706.03762"]
+    # find the 核心贡献 row
+    contrib_row = next(r for r in rows if r[0] == "核心贡献")
+    assert contrib_row[1] == "faster attention"
+    assert contrib_row[2] == "attention-only arch"
+
+
+def test_comparison_csv_write_to_file(tmp_path):
+    comp = _comparison()
+    path = str(tmp_path / "out.csv")
+    comp.to_csv(path)
+    with open(path, encoding="utf-8") as f:
+        content = f.read()
+    assert "维度" in content
+    assert "2307.08691" in content
 
 
 def test_has_compare_modules_rejects_partial_report():
