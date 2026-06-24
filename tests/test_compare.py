@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import papermind.compare as compare_mod
 from papermind.compare import build_comparison
-from papermind.output.compare_render import to_html, to_markdown
+from papermind.output.compare_render import to_csv, to_html, to_markdown
 from papermind.output.schema import (
     Benchmark,
     Contributions,
@@ -76,6 +76,57 @@ def test_has_compare_modules_rejects_partial_report():
     partial = Report(paper=PaperMeta(title="P", arxiv_id="2"),
                      contributions=Contributions(main_contribution="c", novelty="n"))
     assert compare_mod._has_compare_modules(partial) is False
+
+
+def test_comparison_csv_export():
+    import csv
+    import io
+
+    comp = _comparison()
+    text = to_csv(comp)
+    reader = csv.reader(io.StringIO(text))
+    rows = list(reader)
+    # header row: 维度, arxiv_id_1, arxiv_id_2
+    assert rows[0] == ["维度", "2307.08691", "1706.03762"]
+    # all 9 dimension rows present
+    labels = [r[0] for r in rows[1:]]
+    assert "核心贡献" in labels
+    assert "关键方法" in labels
+    assert len(rows) == 10  # header + 9 dimension rows (no synthesis)
+
+
+def test_comparison_csv_with_synthesis():
+    import csv
+    import io
+
+    from papermind.output.schema import Comparison, ComparedPaper
+
+    comp = Comparison(
+        papers=[
+            ComparedPaper(title="A", arxiv_id="1111.1111", year=2023, main_contribution="c1"),
+            ComparedPaper(title="B", arxiv_id="2222.2222", year=2024, main_contribution="c2"),
+        ],
+        synthesis="Paper A focuses on X, Paper B on Y.",
+    )
+    text = to_csv(comp)
+    reader = csv.reader(io.StringIO(text))
+    rows = list(reader)
+    # synthesis appears after a blank row
+    non_empty = [r for r in rows if r]
+    assert non_empty[-1][0] == "对比小结"
+    assert "Paper A focuses on X" in non_empty[-1][1]
+
+
+def test_comparison_csv_round_trip_via_schema(tmp_path):
+    import csv
+
+    comp = _comparison()
+    out = str(tmp_path / "compare.csv")
+    comp.to_csv(out)
+    with open(out, encoding="utf-8", newline="") as f:
+        rows = list(csv.reader(f))
+    assert rows[0][0] == "维度"
+    assert rows[0][1] == "2307.08691"
 
 
 def test_compare_orchestration_reuses_mocked_analyze(monkeypatch):
