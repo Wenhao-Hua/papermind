@@ -2,9 +2,12 @@
 
 from __future__ import annotations
 
+import csv
+import io
+
 import papermind.compare as compare_mod
 from papermind.compare import build_comparison
-from papermind.output.compare_render import to_html, to_markdown
+from papermind.output.compare_render import to_csv, to_html, to_markdown
 from papermind.output.schema import (
     Benchmark,
     Contributions,
@@ -62,11 +65,68 @@ def test_comparison_html_table_and_links():
     assert "<a href='https://github.com/x/y'>" in html  # official code linked
 
 
+def test_comparison_csv_table():
+    comp = _comparison()
+    text = to_csv(comp)
+    rows = list(csv.reader(io.StringIO(text)))
+    # header row: 维度 + one column per paper (arxiv id)
+    assert rows[0] == ["维度", "2307.08691", "1706.03762"]
+    # each dimension appears as a row label
+    labels = [r[0] for r in rows[1:] if r]
+    assert "核心贡献" in labels
+    assert "关键方法" in labels
+    # cell values present
+    contrib_row = next(r for r in rows if r and r[0] == "核心贡献")
+    assert contrib_row[1] == "faster attention"
+    assert contrib_row[2] == "attention-only arch"
+
+
+def test_comparison_csv_with_synthesis():
+    comp = _comparison()
+    comp.synthesis = "Both papers improve attention."
+    text = to_csv(comp)
+    assert "对比小结" in text
+    assert "Both papers improve attention." in text
+
+
+def test_comparison_csv_file_write(tmp_path):
+    path = str(tmp_path / "compare.csv")
+    _comparison().to_csv(path)
+    content = open(path, encoding="utf-8").read()
+    assert "维度" in content and "2307.08691" in content
+
+
 def test_comparison_json_round_trip():
     comp = _comparison()
     data = comp.to_dict()
     assert data["papers"][0]["arxiv_id"] == "2307.08691"
     assert "usage" not in data  # usage excluded from export
+
+
+def test_compare_cli_csv_format(monkeypatch, tmp_path):
+    from typer.testing import CliRunner
+
+    from papermind.cli import app
+
+    reports = {
+        "arxiv:2307.08691": _report("FlashAttention-2", "2307.08691", "faster", "Tiling", "2.0x"),
+        "arxiv:1706.03762": _report("Transformer", "1706.03762", "attention", "MHA", None),
+    }
+
+    def fake_report_for(source, model, refresh, console, config):
+        return reports[source]
+
+    monkeypatch.setattr(compare_mod, "_report_for", fake_report_for)
+    out = str(tmp_path / "result")
+    result = CliRunner().invoke(
+        app, ["compare", "arxiv:2307.08691", "arxiv:1706.03762",
+              "--format", "csv", "--output", out, "--no-synthesis"]
+    )
+    assert result.exit_code == 0
+    csv_path = tmp_path / "result.csv"
+    assert csv_path.exists()
+    content = csv_path.read_text(encoding="utf-8")
+    assert "维度" in content and "2307.08691" in content
 
 
 def test_has_compare_modules_rejects_partial_report():
