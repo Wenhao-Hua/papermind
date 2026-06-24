@@ -11,6 +11,7 @@ from __future__ import annotations
 import json
 import os
 import re
+import sys
 import threading
 from typing import TYPE_CHECKING, Callable, List, Optional
 
@@ -328,14 +329,18 @@ class LLMClient:
 
     def _record_usage(self, model: str, prompt_tokens: int, completion_tokens: int) -> None:
         cost = 0.0
-        try:
-            litellm = _import_litellm()
-            prompt_cost, completion_cost = litellm.cost_per_token(
-                model=model, prompt_tokens=prompt_tokens, completion_tokens=completion_tokens
-            )
-            cost = float(prompt_cost) + float(completion_cost)
-        except Exception:  # noqa: BLE001 - cost is best-effort; many models lack pricing
-            cost = 0.0
+        # Use only the already-cached module; never trigger the first import from a worker
+        # thread.  litellm's OCI module imports cryptography (a pyo3 Rust extension) whose
+        # per-thread initialisation panics with BaseException, bypassing except Exception.
+        litellm = sys.modules.get("litellm")
+        if litellm is not None:
+            try:
+                prompt_cost, completion_cost = litellm.cost_per_token(
+                    model=model, prompt_tokens=prompt_tokens, completion_tokens=completion_tokens
+                )
+                cost = float(prompt_cost) + float(completion_cost)
+            except Exception:  # noqa: BLE001 - cost is best-effort; many models lack pricing
+                cost = 0.0
         with self._usage_lock:
             self.usage.record(prompt_tokens, completion_tokens, cost)
 
