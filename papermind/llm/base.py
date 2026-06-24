@@ -30,6 +30,10 @@ _KEYLESS_PREFIXES = ("ollama/", "ollama_chat/", "local/")
 _JSON_OBJECT_RE = re.compile(r"\{.*\}", re.DOTALL)
 _JSON_ARRAY_RE = re.compile(r"\[.*\]", re.DOTALL)
 
+_LITELLM_LOCK = threading.Lock()
+_LITELLM_MODULE = None  # cached module after successful import
+_LITELLM_ERROR = None  # cached LLMError after failed import
+
 
 class LLMClient:
     """Stateless-ish wrapper around litellm bound to a model + config."""
@@ -446,13 +450,33 @@ def _get_local_encoder(model_name: str, cls):
 
 
 def _import_litellm():
-    try:
-        import litellm
+    global _LITELLM_MODULE, _LITELLM_ERROR
+    # Fast paths avoid the lock on the common case.
+    if _LITELLM_MODULE is not None:
+        return _LITELLM_MODULE
+    if _LITELLM_ERROR is not None:
+        raise _LITELLM_ERROR
+    with _LITELLM_LOCK:
+        # Re-check under the lock so only one thread attempts the import.
+        if _LITELLM_MODULE is not None:
+            return _LITELLM_MODULE
+        if _LITELLM_ERROR is not None:
+            raise _LITELLM_ERROR
+        os.environ.setdefault("LITELLM_LOCAL_MODEL_COST_MAP", "True")
+        try:
+            import litellm
 
-        litellm.drop_params = True  # silently drop unsupported params per provider
-        return litellm
-    except ImportError as exc:  # pragma: no cover
-        raise LLMError("litellm is required. Install with: pip install litellm") from exc
+            litellm.drop_params = True  # silently drop unsupported params per provider
+            _LITELLM_MODULE = litellm
+            return litellm
+        except ImportError as exc:  # pragma: no cover
+            err = LLMError("litellm is required. Install with: pip install litellm")
+            _LITELLM_ERROR = err
+            raise err from exc
+        except BaseException as exc:  # C-extension / Rust panics during import become a regular error
+            err = LLMError(f"litellm failed to load: {exc}")
+            _LITELLM_ERROR = err
+            raise err from exc
 
 
 def _supports_json_mode(model: str) -> bool:
