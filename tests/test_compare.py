@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import papermind.compare as compare_mod
 from papermind.compare import build_comparison
-from papermind.output.compare_render import to_html, to_markdown
+from papermind.output.compare_render import to_csv, to_html, to_markdown
 from papermind.output.schema import (
     Benchmark,
     Contributions,
@@ -93,3 +93,47 @@ def test_compare_orchestration_reuses_mocked_analyze(monkeypatch):
     assert [p.title for p in comp.papers] == ["FlashAttention-2", "Transformer"]
     assert comp.synthesis == ""  # synthesis skipped -> no LLM call
     assert comp.usage is not None
+
+
+def test_comparison_csv_header_and_rows():
+    import csv
+    import io
+
+    csv_text = to_csv(_comparison())
+    rows = list(csv.reader(io.StringIO(csv_text)))
+    # Header: 维度, paper1_id, paper2_id
+    assert rows[0] == ["维度", "2307.08691", "1706.03762"]
+    # Every dimension label appears as the first cell of its row
+    labels = [r[0] for r in rows[1:] if r]
+    assert "标题" in labels
+    assert "核心贡献" in labels
+    assert "关键方法" in labels
+    # Cell content matches expected values
+    contrib_row = next(r for r in rows if r and r[0] == "核心贡献")
+    assert contrib_row[1] == "faster attention"
+    assert contrib_row[2] == "attention-only arch"
+
+
+def test_comparison_csv_via_schema_method(tmp_path):
+    comp = _comparison()
+    csv_text = comp.to_csv()
+    assert "维度" in csv_text
+    assert "2307.08691" in csv_text
+
+    out = tmp_path / "compare.csv"
+    comp.to_csv(str(out))
+    assert out.exists()
+    assert "标题" in out.read_text(encoding="utf-8")
+
+
+def test_comparison_csv_includes_synthesis():
+    import csv
+    import io
+
+    comp = _comparison()
+    comp.synthesis = "FlashAttention-2 在计算效率上有明显优势。"
+    csv_text = to_csv(comp)
+    rows = list(csv.reader(io.StringIO(csv_text)))
+    flat = " ".join(" ".join(r) for r in rows)
+    assert "对比小结" in flat
+    assert "FlashAttention-2" in flat
