@@ -30,6 +30,11 @@ _KEYLESS_PREFIXES = ("ollama/", "ollama_chat/", "local/")
 _JSON_OBJECT_RE = re.compile(r"\{.*\}", re.DOTALL)
 _JSON_ARRAY_RE = re.compile(r"\[.*\]", re.DOTALL)
 
+# Per-model cost rates, fetched once from litellm and reused for all subsequent calls.
+# None means the rate could not be determined; cost will be reported as 0.0.
+_MODEL_COST_RATES: dict[str, tuple[float, float] | None] = {}
+_MODEL_COST_RATES_LOCK = threading.Lock()
+
 
 class LLMClient:
     """Stateless-ish wrapper around litellm bound to a model + config."""
@@ -327,15 +332,7 @@ class LLMClient:
         return text
 
     def _record_usage(self, model: str, prompt_tokens: int, completion_tokens: int) -> None:
-        cost = 0.0
-        try:
-            litellm = _import_litellm()
-            prompt_cost, completion_cost = litellm.cost_per_token(
-                model=model, prompt_tokens=prompt_tokens, completion_tokens=completion_tokens
-            )
-            cost = float(prompt_cost) + float(completion_cost)
-        except Exception:  # noqa: BLE001 - cost is best-effort; many models lack pricing
-            cost = 0.0
+        cost = _compute_cost_usd(model, prompt_tokens, completion_tokens)
         with self._usage_lock:
             self.usage.record(prompt_tokens, completion_tokens, cost)
 
@@ -453,6 +450,34 @@ def _import_litellm():
         return litellm
     except ImportError as exc:  # pragma: no cover
         raise LLMError("litellm is required. Install with: pip install litellm") from exc
+
+
+def _compute_cost_usd(model: str, prompt_tokens: int, completion_tokens: int) -> float:
+    """Return cost in USD using cached per-token rates.
+
+    litellm.cost_per_token is called at most once per model; the per-token rates
+    are stored in _MODEL_COST_RATES.  If cost data is unavailable (unknown model,
+    network failure, or C-extension panic) the cost is reported as 0.0 without
+    raising so that usage counters are always incremented correctly.
+    """
+    if model not in _MODEL_COST_RATES:
+        with _MODEL_COST_RATES_LOCK:
+            if model not in _MODEL_COST_RATES:
+                rates: tuple[float, float] | None = None
+                try:
+                    litellm = _import_litellm()
+                    pc, cc = litellm.cost_per_token(
+                        model=model, prompt_tokens=1000, completion_tokens=1000
+                    )
+                    rates = (float(pc) / 1000, float(cc) / 1000)
+                except BaseException as exc:  # noqa: BLE001
+                    if isinstance(exc, (KeyboardInterrupt, SystemExit)):
+                        raise
+                _MODEL_COST_RATES[model] = rates
+    rates = _MODEL_COST_RATES[model]
+    if rates is None:
+        return 0.0
+    return rates[0] * prompt_tokens + rates[1] * completion_tokens
 
 
 def _supports_json_mode(model: str) -> bool:
