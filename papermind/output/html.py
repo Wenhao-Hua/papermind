@@ -210,6 +210,30 @@ def _toc(report: Report) -> str:
     return f'<nav class="toc">{links}</nav>'
 
 
+def _reading_time(report: Report) -> Optional[str]:
+    """Estimate reading time (in minutes) from the report's text content."""
+    parts: List[str] = []
+    if report.contributions:
+        c = report.contributions
+        parts += [c.main_contribution, c.novelty, c.problem_solved]
+    for tp in report.technical.details:
+        parts.append(tp.explanation)
+        if tp.analogy:
+            parts.append(tp.analogy)
+    for conn in report.connections.related_works:
+        parts.append(conn.relationship)
+    if report.reproduction:
+        for step in report.reproduction.env_setup_steps:
+            parts.append(step.desc)
+        for err in report.reproduction.common_errors:
+            parts.append(err.cause)
+    words = len(" ".join(p for p in parts if p).split())
+    if words == 0:
+        return None
+    minutes = max(1, round(words / 200))
+    return f"约 {minutes} 分钟"
+
+
 def _meta(report: Report) -> str:
     paper = report.paper
     bits = []
@@ -222,6 +246,9 @@ def _meta(report: Report) -> str:
         bits.append(f'<b>arXiv:</b> <a href="https://arxiv.org/abs/{esc(paper.arxiv_id)}">{esc(paper.arxiv_id)}</a>')
     if paper.pdf_url:
         bits.append(f'<a href="{esc(paper.pdf_url)}">PDF</a>')
+    rt = _reading_time(report)
+    if rt:
+        bits.append(f"<b>阅读时长:</b> {esc(rt)}")
     return " &nbsp;•&nbsp; ".join(bits)
 
 

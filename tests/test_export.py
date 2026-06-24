@@ -68,3 +68,72 @@ def test_bibtex_without_arxiv_is_misc():
     meta = PaperMeta(title="Some Local Paper", authors=["Jane Doe"], year=2020)
     bib = to_bibtex(meta)
     assert bib.startswith("@misc{doe2020some,")
+
+
+# --------------------------------------------------------------------------- #
+# Reading-time estimate in markdown and HTML exports
+# --------------------------------------------------------------------------- #
+
+def _report_with_content():
+    from papermind.output.schema import Contributions, TechnicalSection, TechnicalPoint
+    return Report(
+        paper=PaperMeta(title="Attention Is All You Need", authors=["Vaswani"], year=2017),
+        contributions=Contributions(
+            main_contribution=" ".join(["word"] * 100),
+            novelty=" ".join(["word"] * 100),
+            problem_solved=" ".join(["word"] * 100),
+        ),
+        technical=TechnicalSection(details=[
+            TechnicalPoint(name="Self-Attention", explanation=" ".join(["word"] * 100)),
+        ]),
+    )
+
+
+def test_reading_time_in_markdown():
+    from papermind.output.markdown import to_markdown, _reading_time
+
+    report = _report_with_content()
+    rt = _reading_time(report)
+    assert rt is not None
+    assert "分钟" in rt
+    md = to_markdown(report)
+    assert "阅读时长" in md
+    assert "分钟" in md
+
+
+def test_reading_time_in_html():
+    from papermind.output.html import to_html, _reading_time
+
+    report = _report_with_content()
+    rt = _reading_time(report)
+    assert rt is not None
+    assert "分钟" in rt
+    html_out = to_html(report)
+    assert "阅读时长" in html_out
+    assert "分钟" in html_out
+
+
+def test_reading_time_absent_when_no_content():
+    from papermind.output.markdown import to_markdown, _reading_time
+    from papermind.output.html import to_html
+
+    report = Report(paper=PaperMeta(title="Empty Paper"))
+    assert _reading_time(report) is None
+    assert "阅读时长" not in to_markdown(report)
+    assert "阅读时长" not in to_html(report)
+
+
+def test_reading_time_rounds_correctly():
+    from papermind.output.markdown import _reading_time
+    from papermind.output.schema import Contributions
+
+    report = Report(
+        paper=PaperMeta(title="X"),
+        contributions=Contributions(
+            main_contribution=" ".join(["w"] * 400),
+            novelty="",
+            problem_solved="",
+        ),
+    )
+    rt = _reading_time(report)
+    assert rt == "约 2 分钟"
