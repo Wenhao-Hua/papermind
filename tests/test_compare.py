@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import papermind.compare as compare_mod
 from papermind.compare import build_comparison
-from papermind.output.compare_render import to_html, to_markdown
+from papermind.output.compare_render import to_csv, to_html, to_markdown
 from papermind.output.schema import (
     Benchmark,
     Contributions,
@@ -67,6 +67,37 @@ def test_comparison_json_round_trip():
     data = comp.to_dict()
     assert data["papers"][0]["arxiv_id"] == "2307.08691"
     assert "usage" not in data  # usage excluded from export
+
+
+def test_comparison_csv_export():
+    comp = _comparison()
+    csv_text = to_csv(comp)
+    lines = [l for l in csv_text.split("\n") if l]
+    # header row has paper_id plus all dimension columns
+    assert lines[0].startswith("paper_id,")
+    assert "核心贡献" in lines[0]
+    assert "关键方法" in lines[0]
+    # one data row per paper
+    assert "2307.08691" in lines[1]
+    assert "faster attention" in lines[1]
+    assert "1706.03762" in lines[2]
+    assert "attention-only arch" in lines[2]
+
+
+def test_comparison_csv_via_model_method():
+    comp = _comparison()
+    csv_text = comp.to_csv()
+    assert csv_text.startswith("paper_id,")
+    lines = csv_text.strip().split("\n")
+    assert len(lines) == 3  # header + 2 papers (no synthesis in this comparison)
+
+
+def test_comparison_csv_with_synthesis():
+    comp = _comparison()
+    comp.synthesis = "Both papers advance attention mechanisms."
+    csv_text = to_csv(comp)
+    assert "对比小结" in csv_text
+    assert "Both papers advance attention mechanisms." in csv_text
 
 
 def test_has_compare_modules_rejects_partial_report():
