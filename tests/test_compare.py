@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import papermind.compare as compare_mod
 from papermind.compare import build_comparison
-from papermind.output.compare_render import to_html, to_markdown
+from papermind.output.compare_render import to_csv, to_html, to_markdown
 from papermind.output.schema import (
     Benchmark,
     Contributions,
@@ -76,6 +76,27 @@ def test_has_compare_modules_rejects_partial_report():
     partial = Report(paper=PaperMeta(title="P", arxiv_id="2"),
                      contributions=Contributions(main_contribution="c", novelty="n"))
     assert compare_mod._has_compare_modules(partial) is False
+
+
+def test_comparison_csv_export():
+    comp = _comparison()
+    csv_text = to_csv(comp)
+    lines = csv_text.strip().splitlines()
+    assert lines[0] == "title,arxiv_id,year,main_contribution,novelty,methods,benchmark,hardware,official_code"
+    assert "FlashAttention-2" in lines[1]
+    assert "2307.08691" in lines[1]
+    assert "faster attention" in lines[1]
+    assert "Tiling" in lines[1]
+    assert "Transformer" in lines[2]
+    assert "1706.03762" in lines[2]
+
+
+def test_comparison_csv_via_schema_method():
+    comp = _comparison()
+    csv_text = comp.to_csv()
+    assert "arxiv_id" in csv_text.splitlines()[0]
+    assert "2307.08691" in csv_text
+    assert "1706.03762" in csv_text
 
 
 def test_compare_orchestration_reuses_mocked_analyze(monkeypatch):
