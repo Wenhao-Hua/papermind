@@ -58,6 +58,7 @@ class LLMClient:
             if self.config.embedding_provider == "openai" and not self.config.embedding_model:
                 self.config.embedding_provider = "local"
 
+
     # -- preflight ---------------------------------------------------------- #
     def ensure_ready(self) -> None:
         """Fail fast — before any download / parse / indexing — if this client's
@@ -438,6 +439,10 @@ def _count_tokens(litellm, model: str, messages=None, text: str = "") -> int:
 
 _LOCAL_ENCODERS: dict = {}
 
+_litellm_cache = None
+_litellm_import_lock = threading.Lock()
+_LITELLM_UNAVAILABLE = object()  # sentinel: import was attempted and failed
+
 
 def _get_local_encoder(model_name: str, cls):
     if model_name not in _LOCAL_ENCODERS:
@@ -446,13 +451,37 @@ def _get_local_encoder(model_name: str, cls):
 
 
 def _import_litellm():
-    try:
-        import litellm
+    """Return the litellm module, importing it at most once (thread-safe).
 
-        litellm.drop_params = True  # silently drop unsupported params per provider
-        return litellm
-    except ImportError as exc:  # pragma: no cover
-        raise LLMError("litellm is required. Install with: pip install litellm") from exc
+    Converts all import failures — including pyo3/Rust PanicExceptions
+    (BaseException subclasses) — to LLMError so callers can rely on a single
+    ``except Exception`` handler rather than needing ``except BaseException``.
+    """
+    global _litellm_cache
+    if _litellm_cache is _LITELLM_UNAVAILABLE:
+        raise LLMError("litellm is required. Install with: pip install litellm")
+    if _litellm_cache is not None:
+        return _litellm_cache
+    with _litellm_import_lock:
+        # Re-check under the lock (another thread may have imported it already).
+        if _litellm_cache is _LITELLM_UNAVAILABLE:
+            raise LLMError("litellm is required. Install with: pip install litellm")
+        if _litellm_cache is not None:
+            return _litellm_cache
+        try:
+            import litellm
+
+            litellm.drop_params = True  # silently drop unsupported params per provider
+            _litellm_cache = litellm
+            return _litellm_cache
+        except (KeyboardInterrupt, SystemExit):
+            raise  # always let the user interrupt or the process exit
+        except BaseException as exc:  # noqa: BLE001 - pyo3 PanicException is BaseException
+            # Catches ImportError and Rust-extension panics alike; store the
+            # sentinel so every subsequent call immediately raises LLMError
+            # instead of retrying a broken import inside the lock.
+            _litellm_cache = _LITELLM_UNAVAILABLE
+            raise LLMError("litellm is required. Install with: pip install litellm") from exc
 
 
 def _supports_json_mode(model: str) -> bool:
