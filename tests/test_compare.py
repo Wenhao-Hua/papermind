@@ -2,9 +2,12 @@
 
 from __future__ import annotations
 
+import csv
+import io
+
 import papermind.compare as compare_mod
 from papermind.compare import build_comparison
-from papermind.output.compare_render import to_html, to_markdown
+from papermind.output.compare_render import to_csv, to_html, to_markdown
 from papermind.output.schema import (
     Benchmark,
     Contributions,
@@ -76,6 +79,48 @@ def test_has_compare_modules_rejects_partial_report():
     partial = Report(paper=PaperMeta(title="P", arxiv_id="2"),
                      contributions=Contributions(main_contribution="c", novelty="n"))
     assert compare_mod._has_compare_modules(partial) is False
+
+
+def test_comparison_csv_columns_and_rows():
+    csv_text = to_csv(_comparison())
+    reader = csv.reader(io.StringIO(csv_text))
+    rows = list(reader)
+    # header row: 维度, paper1_id, paper2_id
+    assert rows[0] == ["维度", "2307.08691", "1706.03762"]
+    # find the 核心贡献 row
+    contrib_row = next(r for r in rows if r[0] == "核心贡献")
+    assert contrib_row[1] == "faster attention"
+    assert contrib_row[2] == "attention-only arch"
+    # find the 关键方法 row
+    method_row = next(r for r in rows if r[0] == "关键方法")
+    assert method_row[1] == "Tiling"
+    assert method_row[2] == "Self-Attention"
+    # all rows have the same number of columns
+    assert all(len(r) == len(rows[0]) for r in rows if r)
+
+
+def test_comparison_csv_synthesis_appended():
+    comp = _comparison()
+    comp.synthesis = "Both papers advance attention efficiency."
+    csv_text = to_csv(comp)
+    assert "对比小结" in csv_text
+    assert "Both papers advance attention efficiency." in csv_text
+
+
+def test_comparison_csv_to_file(tmp_path):
+    path = str(tmp_path / "compare.csv")
+    comp = _comparison()
+    comp.to_csv(path)
+    content = open(path, encoding="utf-8").read()
+    assert "维度" in content
+    assert "2307.08691" in content
+
+
+def test_comparison_csv_no_synthesis():
+    comp = _comparison()
+    comp.synthesis = ""
+    csv_text = to_csv(comp)
+    assert "对比小结" not in csv_text
 
 
 def test_compare_orchestration_reuses_mocked_analyze(monkeypatch):
