@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import papermind.compare as compare_mod
 from papermind.compare import build_comparison
-from papermind.output.compare_render import to_html, to_markdown
+from papermind.output.compare_render import to_csv, to_html, to_markdown
 from papermind.output.schema import (
     Benchmark,
     Contributions,
@@ -67,6 +67,25 @@ def test_comparison_json_round_trip():
     data = comp.to_dict()
     assert data["papers"][0]["arxiv_id"] == "2307.08691"
     assert "usage" not in data  # usage excluded from export
+
+
+def test_comparison_csv_export():
+    csv_text = to_csv(_comparison())
+    lines = csv_text.splitlines()
+    # Header row has dimension column + one column per paper
+    assert lines[0] == "维度,2307.08691,1706.03762"
+    # Check a data row is present
+    assert any("核心贡献" in line for line in lines)
+    assert any("faster attention" in line for line in lines)
+
+
+def test_comparison_csv_via_schema_method(tmp_path):
+    comp = _comparison()
+    out = tmp_path / "result.csv"
+    comp.to_csv(str(out))
+    content = out.read_text(encoding="utf-8")
+    assert "维度" in content
+    assert "2307.08691" in content
 
 
 def test_has_compare_modules_rejects_partial_report():
