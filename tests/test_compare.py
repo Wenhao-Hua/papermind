@@ -2,9 +2,12 @@
 
 from __future__ import annotations
 
+import csv
+import io
+
 import papermind.compare as compare_mod
 from papermind.compare import build_comparison
-from papermind.output.compare_render import to_html, to_markdown
+from papermind.output.compare_render import to_csv, to_html, to_markdown
 from papermind.output.schema import (
     Benchmark,
     Contributions,
@@ -67,6 +70,50 @@ def test_comparison_json_round_trip():
     data = comp.to_dict()
     assert data["papers"][0]["arxiv_id"] == "2307.08691"
     assert "usage" not in data  # usage excluded from export
+
+
+def test_comparison_csv_structure():
+    comp = _comparison()
+    text = to_csv(comp)
+    reader = csv.reader(io.StringIO(text))
+    rows = [row for row in reader if row]  # skip blank separator rows
+    header = rows[0]
+    assert header[0] == "arXiv ID"
+    assert "标题" in header
+    assert "核心贡献" in header
+    assert "关键方法" in header
+    # first data row should match paper 0
+    assert rows[1][0] == "2307.08691"
+    assert "faster attention" in rows[1]
+    # second data row should match paper 1
+    assert rows[2][0] == "1706.03762"
+    assert "attention-only arch" in rows[2]
+
+
+def test_comparison_csv_via_schema_method():
+    comp = _comparison()
+    text = comp.to_csv()
+    assert "2307.08691" in text
+    assert "1706.03762" in text
+    assert "faster attention" in text
+
+
+def test_comparison_csv_file_write(tmp_path):
+    comp = _comparison()
+    out = tmp_path / "compare.csv"
+    comp.to_csv(str(out))
+    assert out.exists()
+    content = out.read_text(encoding="utf-8")
+    assert "arXiv ID" in content
+    assert "2307.08691" in content
+
+
+def test_comparison_csv_with_synthesis():
+    comp = _comparison()
+    comp.synthesis = "Flash is faster."
+    text = to_csv(comp)
+    assert "对比小结" in text
+    assert "Flash is faster." in text
 
 
 def test_has_compare_modules_rejects_partial_report():
