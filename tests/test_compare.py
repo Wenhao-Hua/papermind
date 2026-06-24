@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import papermind.compare as compare_mod
 from papermind.compare import build_comparison
-from papermind.output.compare_render import to_html, to_markdown
+from papermind.output.compare_render import to_csv, to_html, to_markdown
 from papermind.output.schema import (
     Benchmark,
     Contributions,
@@ -93,3 +93,39 @@ def test_compare_orchestration_reuses_mocked_analyze(monkeypatch):
     assert [p.title for p in comp.papers] == ["FlashAttention-2", "Transformer"]
     assert comp.synthesis == ""  # synthesis skipped -> no LLM call
     assert comp.usage is not None
+
+
+def test_comparison_csv_structure():
+    comp = _comparison()
+    csv_text = to_csv(comp)
+    lines = csv_text.strip().splitlines()
+    # header row
+    assert lines[0].startswith("标题,arXiv,年份")
+    # one data row per paper
+    assert len(lines) == 3  # header + 2 papers
+    assert "FlashAttention-2" in lines[1]
+    assert "2307.08691" in lines[1]
+    assert "Transformer" in lines[2]
+    assert "1706.03762" in lines[2]
+
+
+def test_comparison_csv_via_method(tmp_path):
+    comp = _comparison()
+    out = tmp_path / "compare.csv"
+    text = comp.to_csv(str(out))
+    assert out.exists()
+    assert out.read_text(encoding="utf-8") == text
+    # methods list joined with "; "
+    assert "Tiling" in text
+
+
+def test_comparison_csv_missing_fields():
+    from papermind.output.schema import ComparedPaper, Comparison
+    comp = Comparison(papers=[
+        ComparedPaper(title="Minimal", arxiv_id=None, year=None),
+    ])
+    csv_text = to_csv(comp)
+    lines = csv_text.strip().splitlines()
+    assert len(lines) == 2
+    # missing optional fields should be empty strings, not "None"
+    assert "None" not in csv_text
