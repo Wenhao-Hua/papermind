@@ -1,8 +1,10 @@
-"""Render a Comparison as a side-by-side Markdown or HTML table."""
+"""Render a Comparison as a side-by-side Markdown or HTML table, or wide-format CSV."""
 
 from __future__ import annotations
 
+import csv
 import html as _html
+import io
 from typing import Callable, List, Tuple
 
 from papermind.output.schema import ComparedPaper, Comparison
@@ -77,6 +79,27 @@ def to_html(comparison: Comparison) -> str:
         "<a href='https://github.com/Wenhao-Hua/papermind'>PaperMind</a>.</p>"
         "</body></html>"
     )
+
+
+def to_csv(comparison: Comparison) -> str:
+    """Return a wide-format CSV: one row per paper, one column per comparison dimension."""
+    buf = io.StringIO()
+    writer = csv.writer(buf, lineterminator="\n")
+    writer.writerow(["title", "arxiv_id", "year", "main_contribution", "novelty",
+                     "methods", "benchmark", "hardware", "official_code"])
+    for p in comparison.papers:
+        writer.writerow([
+            p.title or "",
+            p.arxiv_id or "",
+            str(p.year) if p.year else "",
+            p.main_contribution or "",
+            p.novelty or "",
+            "; ".join(p.methods) if p.methods else "",
+            p.benchmark or "",
+            p.hardware or "",
+            p.official_code or "",
+        ])
+    return buf.getvalue()
 
 
 def _html_cell(label: str, value: str) -> str:
