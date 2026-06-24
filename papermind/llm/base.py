@@ -30,6 +30,11 @@ _KEYLESS_PREFIXES = ("ollama/", "ollama_chat/", "local/")
 _JSON_OBJECT_RE = re.compile(r"\{.*\}", re.DOTALL)
 _JSON_ARRAY_RE = re.compile(r"\[.*\]", re.DOTALL)
 
+# Set to True the first time cost_per_token raises a BaseException (e.g.
+# pyo3_runtime.PanicException from broken litellm Rust internals).  Avoids
+# repeating an expensive panic on every subsequent LLM call.
+_COST_COMPUTATION_BROKEN: bool = False
+
 
 class LLMClient:
     """Stateless-ish wrapper around litellm bound to a model + config."""
@@ -327,6 +332,15 @@ class LLMClient:
         return text
 
     def _record_usage(self, model: str, prompt_tokens: int, completion_tokens: int) -> None:
+        global _COST_COMPUTATION_BROKEN  # noqa: PLW0603
+        # Record call/token counts first so they are never lost, even if cost
+        # computation raises a BaseException (e.g. pyo3_runtime.PanicException
+        # from broken litellm Rust internals – a BaseException subclass that
+        # `except Exception` cannot catch).
+        with self._usage_lock:
+            self.usage.record(prompt_tokens, completion_tokens, cost_usd=0.0)
+        if _COST_COMPUTATION_BROKEN:
+            return
         cost = 0.0
         try:
             litellm = _import_litellm()
@@ -335,9 +349,12 @@ class LLMClient:
             )
             cost = float(prompt_cost) + float(completion_cost)
         except Exception:  # noqa: BLE001 - cost is best-effort; many models lack pricing
-            cost = 0.0
-        with self._usage_lock:
-            self.usage.record(prompt_tokens, completion_tokens, cost)
+            pass
+        except BaseException:  # absorb pyo3 panics from broken litellm builds
+            _COST_COMPUTATION_BROKEN = True
+        if cost:
+            with self._usage_lock:
+                self.usage.cost_usd += cost
 
 
 # --------------------------------------------------------------------------- #
