@@ -1,8 +1,10 @@
-"""Render a Comparison as a side-by-side Markdown or HTML table."""
+"""Render a Comparison as a side-by-side Markdown, HTML, or CSV table."""
 
 from __future__ import annotations
 
+import csv
 import html as _html
+import io
 from typing import Callable, List, Tuple
 
 from papermind.output.schema import ComparedPaper, Comparison
@@ -46,6 +48,30 @@ def to_markdown(comparison: Comparison) -> str:
 
 def _md_cell(value: str) -> str:
     return value.replace("\n", " ").replace("|", "\\|")
+
+
+# CSV header labels (one row per paper, one column per field)
+_CSV_FIELDS = [
+    ("标题", lambda p: p.title or ""),
+    ("arXiv", lambda p: p.arxiv_id or ""),
+    ("年份", lambda p: str(p.year) if p.year else ""),
+    ("核心贡献", lambda p: p.main_contribution or ""),
+    ("新颖之处", lambda p: p.novelty or ""),
+    ("关键方法", lambda p: "; ".join(p.methods) if p.methods else ""),
+    ("性能/基准", lambda p: p.benchmark or ""),
+    ("推荐硬件", lambda p: p.hardware or ""),
+    ("官方代码", lambda p: p.official_code or ""),
+]
+
+
+def to_csv(comparison: Comparison) -> str:
+    """Export comparison as CSV (one row per paper, one column per field)."""
+    buf = io.StringIO()
+    writer = csv.writer(buf, lineterminator="\n")
+    writer.writerow([label for label, _ in _CSV_FIELDS])
+    for paper in comparison.papers:
+        writer.writerow([fn(paper) for _, fn in _CSV_FIELDS])
+    return buf.getvalue()
 
 
 _CSS = (
