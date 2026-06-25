@@ -1,8 +1,10 @@
-"""Render a Comparison as a side-by-side Markdown or HTML table."""
+"""Render a Comparison as a side-by-side Markdown, HTML, or CSV table."""
 
 from __future__ import annotations
 
+import csv
 import html as _html
+import io
 from typing import Callable, List, Tuple
 
 from papermind.output.schema import ComparedPaper, Comparison
@@ -83,6 +85,25 @@ def _html_cell(label: str, value: str) -> str:
     if label == "官方代码" and value.startswith("http"):
         return f"<a href='{_e(value)}'>{_e(value)}</a>"
     return _e(value)
+
+
+def to_csv(comparison: Comparison) -> str:
+    """Return a CSV where each row is one dimension and each column is one paper.
+
+    Layout mirrors the markdown/HTML table: dimension label in column A,
+    then one column per paper (header = arXiv ID or sequential #).
+    A trailing synthesis row is appended when present.
+    """
+    buf = io.StringIO()
+    writer = csv.writer(buf)
+    headers = ["dimension"] + _headers(comparison)
+    writer.writerow(headers)
+    for label, values in _rows(comparison):
+        writer.writerow([label] + values)
+    if comparison.synthesis:
+        writer.writerow(["synthesis"] + [""] * len(comparison.papers))
+        writer.writerow([""] + [comparison.synthesis] + [""] * (len(comparison.papers) - 1))
+    return buf.getvalue()
 
 
 def _e(text) -> str:
