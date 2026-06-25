@@ -2,9 +2,12 @@
 
 from __future__ import annotations
 
+import csv
+import io
+
 import papermind.compare as compare_mod
 from papermind.compare import build_comparison
-from papermind.output.compare_render import to_html, to_markdown
+from papermind.output.compare_render import to_csv, to_html, to_markdown
 from papermind.output.schema import (
     Benchmark,
     Contributions,
@@ -93,3 +96,42 @@ def test_compare_orchestration_reuses_mocked_analyze(monkeypatch):
     assert [p.title for p in comp.papers] == ["FlashAttention-2", "Transformer"]
     assert comp.synthesis == ""  # synthesis skipped -> no LLM call
     assert comp.usage is not None
+
+
+def test_comparison_csv_headers_and_rows():
+    csv_text = to_csv(_comparison())
+    reader = csv.DictReader(io.StringIO(csv_text))
+    rows = list(reader)
+    assert len(rows) == 2
+    assert rows[0]["arxiv_id"] == "2307.08691"
+    assert rows[0]["title"] == "FlashAttention-2"
+    assert rows[0]["year"] == "2023"
+    assert rows[0]["main_contribution"] == "faster attention"
+    assert rows[0]["methods"] == "Tiling"
+    assert rows[1]["arxiv_id"] == "1706.03762"
+    assert rows[1]["benchmark"] == "seq=2k"  # no speedup -> setting only
+
+
+def test_comparison_csv_schema_method(tmp_path):
+    comp = _comparison()
+    csv_text = comp.to_csv()
+    assert "FlashAttention-2" in csv_text
+    # write to file
+    out = str(tmp_path / "compare.csv")
+    comp.to_csv(out)
+    written = (tmp_path / "compare.csv").read_text(encoding="utf-8")
+    assert written == csv_text
+
+
+def test_comparison_csv_missing_fields():
+    from papermind.output.schema import ComparedPaper, Comparison
+
+    comp = Comparison(papers=[
+        ComparedPaper(title="No Year Paper", arxiv_id="0000.0000"),
+    ])
+    csv_text = to_csv(comp)
+    reader = csv.DictReader(io.StringIO(csv_text))
+    rows = list(reader)
+    assert rows[0]["year"] == ""
+    assert rows[0]["benchmark"] == ""
+    assert rows[0]["methods"] == ""
