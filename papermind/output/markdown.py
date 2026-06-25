@@ -22,6 +22,20 @@ from papermind.output.schema import (
 _DIFFICULTY_BADGE = {"high": "🔴 high", "mid": "🟡 mid", "low": "🟢 low"}
 
 
+def _reading_minutes(report: Report) -> int:
+    """Estimate reading time in minutes at 200 words/minute across all text sections."""
+    texts: List[str] = []
+    c = report.contributions
+    if c:
+        texts += [c.main_contribution, c.novelty, c.problem_solved]
+    for p in report.technical.details:
+        texts += [p.explanation, p.analogy]
+    for w in report.connections.related_works:
+        texts.append(w.relationship)
+    words = sum(len(t.split()) for t in texts if t)
+    return max(1, round(words / 200))
+
+
 def _mathjax(formula: str) -> str:
     """A multi-line formula uses ``\\\\`` line breaks, which MathJax rejects outside an
     alignment environment ("Misplaced \\"). Wrap such formulas in ``aligned`` so they render."""
@@ -96,6 +110,7 @@ def _meta_line(report: Report) -> str:
         bits.append(f"**arXiv:** [{paper.arxiv_id}](https://arxiv.org/abs/{paper.arxiv_id})")
     if paper.pdf_url:
         bits.append(f"[PDF]({paper.pdf_url})")
+    bits.append(f"**阅读时间:** ~{_reading_minutes(report)} 分钟")
     return "  •  ".join(bits)
 
 

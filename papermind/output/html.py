@@ -17,6 +17,21 @@ from papermind.output.schema import Connection, Reproduction, Report, Source, Te
 
 _DIFFICULTY = {"high": ("high", "#e5484d"), "mid": ("mid", "#f5a623"), "low": ("low", "#30a46c")}
 
+
+def _reading_minutes(report: Report) -> int:
+    """Estimate reading time in minutes at 200 words/minute across all text sections."""
+    texts: List[str] = []
+    c = report.contributions
+    if c:
+        texts += [c.main_contribution, c.novelty, c.problem_solved]
+    for p in report.technical.details:
+        texts += [p.explanation, p.analogy]
+    for w in report.connections.related_works:
+        texts.append(w.relationship)
+    words = sum(len(t.split()) for t in texts if t)
+    return max(1, round(words / 200))
+
+
 _CSS = """
 :root { --fg:#0f172a; --muted:#475569; --faint:#94a3b8; --accent:#2563eb; --accent-press:#1d4ed8;
   --border:#e8edf3; --border-strong:#d4dbe4; --bg:#f5f7fa; --card:#ffffff; --soft:#f1f5f9; --accent-soft:#eff5ff;
@@ -222,6 +237,7 @@ def _meta(report: Report) -> str:
         bits.append(f'<b>arXiv:</b> <a href="https://arxiv.org/abs/{esc(paper.arxiv_id)}">{esc(paper.arxiv_id)}</a>')
     if paper.pdf_url:
         bits.append(f'<a href="{esc(paper.pdf_url)}">PDF</a>')
+    bits.append(f"<b>阅读时间:</b> ~{_reading_minutes(report)} 分钟")
     return " &nbsp;•&nbsp; ".join(bits)
 
 
