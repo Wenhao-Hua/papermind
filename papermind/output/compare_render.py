@@ -2,7 +2,9 @@
 
 from __future__ import annotations
 
+import csv
 import html as _html
+import io
 from typing import Callable, List, Tuple
 
 from papermind.output.schema import ComparedPaper, Comparison
@@ -46,6 +48,22 @@ def to_markdown(comparison: Comparison) -> str:
 
 def _md_cell(value: str) -> str:
     return value.replace("\n", " ").replace("|", "\\|")
+
+
+def to_csv(comparison: Comparison) -> str:
+    """Render comparison as CSV with papers as rows and fields as columns."""
+    buf = io.StringIO()
+    writer = csv.writer(buf, lineterminator="\n")
+    rows = _rows(comparison)
+    # Header row: "field" label column + one column per paper ID
+    headers = ["field"] + _headers(comparison)
+    writer.writerow(headers)
+    for label, values in rows:
+        writer.writerow([label] + values)
+    if comparison.synthesis:
+        writer.writerow([])
+        writer.writerow(["synthesis", comparison.synthesis])
+    return buf.getvalue()
 
 
 _CSS = (
