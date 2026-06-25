@@ -289,6 +289,34 @@ class Report(BaseModel):
         return write_notebook(self, path) if path else to_notebook(self)
 
 
+def reading_time_min(report: "Report") -> int:
+    """Estimate reading time in minutes for the generated report content.
+
+    Counts words across the main analysis sections (contributions, technical
+    details, connections, reproduction) and divides by 200 wpm — a reasonable
+    pace for technical material.  Returns 0 when the report has no content so
+    callers can skip the badge entirely on skeleton reports.
+    """
+    parts: List[str] = []
+    if report.contributions:
+        c = report.contributions
+        parts += [c.main_contribution, c.novelty, c.problem_solved]
+    for pt in report.technical.details:
+        parts += [pt.explanation, pt.analogy]
+    for conn in report.connections.related_works:
+        parts.append(conn.relationship)
+    if report.reproduction:
+        r = report.reproduction
+        parts += [r.requirements or "", r.recommended_hardware or ""]
+        for step in r.env_setup_steps:
+            parts.append(step.desc)
+        parts += list(r.gotchas)
+    words = sum(len(p.split()) for p in parts if p)
+    if not words:
+        return 0
+    return max(1, round(words / 200))
+
+
 # --------------------------------------------------------------------------- #
 # Q&A / reasoning / tutoring
 # --------------------------------------------------------------------------- #

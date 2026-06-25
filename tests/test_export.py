@@ -6,7 +6,19 @@ import json
 
 from papermind.output.cite import to_bibtex
 from papermind.output.reproduce_export import to_notebook, to_setup_script
-from papermind.output.schema import CommonError, PaperMeta, Reproduction, Report, SetupStep
+from papermind.output.schema import (
+    CommonError,
+    Contributions,
+    Connection,
+    ConnectionsSection,
+    PaperMeta,
+    Reproduction,
+    Report,
+    SetupStep,
+    TechnicalPoint,
+    TechnicalSection,
+    reading_time_min,
+)
 
 
 def _report():
@@ -68,3 +80,38 @@ def test_bibtex_without_arxiv_is_misc():
     meta = PaperMeta(title="Some Local Paper", authors=["Jane Doe"], year=2020)
     bib = to_bibtex(meta)
     assert bib.startswith("@misc{doe2020some,")
+
+
+def test_reading_time_zero_for_empty_report():
+    assert reading_time_min(Report(paper=PaperMeta(title="Empty"))) == 0
+
+
+def test_reading_time_grows_with_content():
+    short = Report(
+        paper=PaperMeta(title="T"),
+        contributions=Contributions(main_contribution="word " * 50, novelty="x", problem_solved="y"),
+    )
+    long_ = Report(
+        paper=PaperMeta(title="T"),
+        contributions=Contributions(main_contribution="word " * 500, novelty="word " * 300, problem_solved="word " * 200),
+        technical=TechnicalSection(details=[TechnicalPoint(name="N", explanation="word " * 200) for _ in range(3)]),
+        connections=ConnectionsSection(related_works=[Connection(concept="C", relationship="word " * 50) for _ in range(4)]),
+    )
+    assert reading_time_min(short) >= 1
+    assert reading_time_min(long_) > reading_time_min(short)
+
+
+def test_reading_time_appears_in_html_and_markdown():
+    report = Report(
+        paper=PaperMeta(title="Attention Is All You Need", arxiv_id="1706.03762", year=2017),
+        contributions=Contributions(
+            main_contribution="word " * 300,
+            novelty="word " * 200,
+            problem_solved="word " * 100,
+        ),
+    )
+    html = report.to_html()
+    assert "分钟阅读" in html
+
+    md = report.to_markdown()
+    assert "分钟阅读" in md
