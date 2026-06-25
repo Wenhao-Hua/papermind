@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import papermind.compare as compare_mod
 from papermind.compare import build_comparison
-from papermind.output.compare_render import to_html, to_markdown
+from papermind.output.compare_render import to_csv, to_html, to_markdown
 from papermind.output.schema import (
     Benchmark,
     Contributions,
@@ -67,6 +67,55 @@ def test_comparison_json_round_trip():
     data = comp.to_dict()
     assert data["papers"][0]["arxiv_id"] == "2307.08691"
     assert "usage" not in data  # usage excluded from export
+
+
+def test_comparison_csv_structure():
+    import csv
+    import io
+
+    comp = _comparison()
+    text = to_csv(comp)
+    rows = list(csv.reader(io.StringIO(text)))
+    assert rows[0][0] == "标题"
+    assert rows[0][1] == "arXiv"
+    assert rows[0][2] == "年份"
+    assert len(rows) == 3  # header + 2 papers
+    assert rows[1][1] == "2307.08691"
+    assert rows[2][1] == "1706.03762"
+    assert rows[1][2] == "2023"
+
+
+def test_comparison_csv_methods_semicolon_joined():
+    import csv
+    import io
+
+    comp = _comparison()
+    text = to_csv(comp)
+    rows = list(csv.reader(io.StringIO(text)))
+    # methods are list -> semicolon joined
+    assert rows[1][5] == "Tiling"
+    assert rows[2][5] == "Self-Attention"
+
+
+def test_comparison_csv_synthesis_column():
+    import csv
+    import io
+
+    comp = _comparison()
+    comp.synthesis = "Both papers improve attention."
+    text = to_csv(comp)
+    rows = list(csv.reader(io.StringIO(text)))
+    assert rows[0][-1] == "对比小结"
+    assert rows[1][-1] == "Both papers improve attention."
+
+
+def test_comparison_to_csv_writes_file(tmp_path):
+    comp = _comparison()
+    out = str(tmp_path / "cmp.csv")
+    comp.to_csv(out)
+    content = open(out, encoding="utf-8").read()
+    assert "标题" in content
+    assert "2307.08691" in content
 
 
 def test_has_compare_modules_rejects_partial_report():
