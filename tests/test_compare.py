@@ -4,7 +4,12 @@ from __future__ import annotations
 
 import papermind.compare as compare_mod
 from papermind.compare import build_comparison
-from papermind.output.compare_render import to_html, to_markdown
+import csv
+import io
+import tempfile
+from pathlib import Path
+
+from papermind.output.compare_render import to_csv, to_html, to_markdown
 from papermind.output.schema import (
     Benchmark,
     Contributions,
@@ -76,6 +81,45 @@ def test_has_compare_modules_rejects_partial_report():
     partial = Report(paper=PaperMeta(title="P", arxiv_id="2"),
                      contributions=Contributions(main_contribution="c", novelty="n"))
     assert compare_mod._has_compare_modules(partial) is False
+
+
+def test_comparison_csv_headers_and_rows():
+    csv_text = to_csv(_comparison())
+    reader = csv.reader(io.StringIO(csv_text))
+    rows = list(reader)
+    assert rows[0] == ["维度", "2307.08691", "1706.03762"]
+    labels = [r[0] for r in rows[1:] if r]
+    assert "核心贡献" in labels
+    assert "关键方法" in labels
+    contrib_row = next(r for r in rows if r and r[0] == "核心贡献")
+    assert contrib_row[1] == "faster attention"
+    assert contrib_row[2] == "attention-only arch"
+
+
+def test_comparison_csv_synthesis_appended():
+    comp = _comparison()
+    comp.synthesis = "Both papers improve transformer efficiency."
+    csv_text = to_csv(comp)
+    assert "对比小结" in csv_text
+    assert "Both papers improve transformer efficiency." in csv_text
+
+
+def test_comparison_to_csv_method_round_trip():
+    comp = _comparison()
+    csv_text = comp.to_csv()
+    assert "2307.08691" in csv_text
+    assert "1706.03762" in csv_text
+
+
+def test_comparison_to_csv_writes_file():
+    comp = _comparison()
+    with tempfile.TemporaryDirectory() as tmp:
+        path = str(Path(tmp) / "compare.csv")
+        result = comp.to_csv(path)
+        assert Path(path).exists()
+        content = Path(path).read_text(encoding="utf-8")
+        assert content == result
+        assert "2307.08691" in content
 
 
 def test_compare_orchestration_reuses_mocked_analyze(monkeypatch):
