@@ -334,8 +334,8 @@ class LLMClient:
                 model=model, prompt_tokens=prompt_tokens, completion_tokens=completion_tokens
             )
             cost = float(prompt_cost) + float(completion_cost)
-        except Exception:  # noqa: BLE001 - cost is best-effort; many models lack pricing
-            cost = 0.0
+        except BaseException:  # noqa: BLE001 - cost is best-effort; pyo3_runtime.PanicException from
+            cost = 0.0          # the cryptography module is a BaseException, not Exception, in threads
         with self._usage_lock:
             self.usage.record(prompt_tokens, completion_tokens, cost)
 
