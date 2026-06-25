@@ -5,8 +5,19 @@ from __future__ import annotations
 import json
 
 from papermind.output.cite import to_bibtex
+from papermind.output.markdown import to_markdown
+from papermind.output.html import to_html
 from papermind.output.reproduce_export import to_notebook, to_setup_script
-from papermind.output.schema import CommonError, PaperMeta, Reproduction, Report, SetupStep
+from papermind.output.schema import (
+    CommonError,
+    Contributions,
+    PaperMeta,
+    Reproduction,
+    Report,
+    SetupStep,
+    TechnicalPoint,
+    TechnicalSection,
+)
 
 
 def _report():
@@ -68,3 +79,44 @@ def test_bibtex_without_arxiv_is_misc():
     meta = PaperMeta(title="Some Local Paper", authors=["Jane Doe"], year=2020)
     bib = to_bibtex(meta)
     assert bib.startswith("@misc{doe2020some,")
+
+
+def _report_with_content():
+    return Report(
+        paper=PaperMeta(title="Attention Is All You Need", arxiv_id="1706.03762", year=2017),
+        contributions=Contributions(
+            main_contribution="Introduces the Transformer architecture.",
+            novelty="Purely attention-based; eliminates recurrence.",
+            problem_solved="Slow sequential training in RNNs.",
+        ),
+        technical=TechnicalSection(
+            details=[
+                TechnicalPoint(
+                    name="Scaled Dot-Product Attention",
+                    explanation="Queries, keys and values are linearly projected and attention weights computed via softmax of scaled dot products.",
+                    difficulty="mid",
+                )
+            ]
+        ),
+    )
+
+
+def test_reading_time_minimum_one():
+    empty = Report(paper=PaperMeta(title="T"))
+    assert empty.reading_time_minutes() == 1
+
+
+def test_word_count_includes_contributions_and_technical():
+    r = _report_with_content()
+    wc = r.word_count()
+    assert wc > 20
+
+
+def test_reading_time_in_markdown():
+    md = to_markdown(_report_with_content())
+    assert "min read" in md
+
+
+def test_reading_time_in_html():
+    doc = to_html(_report_with_content())
+    assert "min read" in doc

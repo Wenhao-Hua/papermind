@@ -222,6 +222,7 @@ def _meta(report: Report) -> str:
         bits.append(f'<b>arXiv:</b> <a href="https://arxiv.org/abs/{esc(paper.arxiv_id)}">{esc(paper.arxiv_id)}</a>')
     if paper.pdf_url:
         bits.append(f'<a href="{esc(paper.pdf_url)}">PDF</a>')
+    bits.append(f"⏱ {report.reading_time_minutes()} min read")
     return " &nbsp;•&nbsp; ".join(bits)
 
 
