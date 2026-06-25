@@ -224,3 +224,23 @@ def test_demo_plays_offline_instantly():
     assert "Attention Is All You Need" in out
     assert "论文事实" in out and "基于论文的推理" in out  # layered answer shown
     assert "原文依据" in out and "Section 3.2.1" in out
+
+
+def test_reading_time_appears_in_html_and_markdown():
+    long_text = "word " * 300  # 300 words -> ~1.5 minutes -> rounds to 2
+    report = Report(
+        paper=PaperMeta(title="T"),
+        contributions=Contributions(main_contribution=long_text, novelty="n", problem_solved="p"),
+    )
+    md = report.to_markdown()
+    html = report.to_html()
+    assert "分钟阅读" in md
+    assert "分钟阅读" in html
+
+
+def test_reading_time_minimum_one_minute():
+    report = Report(paper=PaperMeta(title="Empty"))
+    md = report.to_markdown()
+    html = report.to_html()
+    assert "1 分钟阅读" in md
+    assert "1 分钟阅读" in html
