@@ -224,3 +224,33 @@ def test_demo_plays_offline_instantly():
     assert "Attention Is All You Need" in out
     assert "论文事实" in out and "基于论文的推理" in out  # layered answer shown
     assert "原文依据" in out and "Section 3.2.1" in out
+
+
+def test_reading_time_minimum_one():
+    report = Report(paper=PaperMeta(title="X"))
+    assert report.reading_time_min() >= 1
+
+
+def test_reading_time_scales_with_content():
+    short = Report(paper=PaperMeta(title="X"))
+    long_report = Report(
+        paper=PaperMeta(title="X"),
+        contributions=Contributions(
+            main_contribution=" ".join(["word"] * 400),
+            novelty=" ".join(["word"] * 400),
+            problem_solved=" ".join(["word"] * 400),
+        ),
+    )
+    assert long_report.reading_time_min() > short.reading_time_min()
+
+
+def test_reading_time_in_markdown():
+    report = Report(paper=PaperMeta(title="T", year=2023))
+    md = report.to_markdown()
+    assert "min read" in md
+
+
+def test_reading_time_in_html():
+    report = Report(paper=PaperMeta(title="T", year=2023))
+    doc = report.to_html()
+    assert "min read" in doc
