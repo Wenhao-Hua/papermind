@@ -28,6 +28,10 @@ OLLAMA_DEFAULT_MODEL = "ollama/llama3.1"
 _KEYLESS_PREFIXES = ("ollama/", "ollama_chat/", "local/")
 
 _JSON_OBJECT_RE = re.compile(r"\{.*\}", re.DOTALL)
+
+# Set to True if litellm failed to import (e.g. missing native extension).
+# Prevents repeated slow import retries on every call.
+_litellm_import_failed: bool = False
 _JSON_ARRAY_RE = re.compile(r"\[.*\]", re.DOTALL)
 
 
@@ -446,13 +450,22 @@ def _get_local_encoder(model_name: str, cls):
 
 
 def _import_litellm():
+    global _litellm_import_failed
+    if _litellm_import_failed:
+        raise LLMError("litellm is unavailable (import previously failed)")
     try:
         import litellm
 
         litellm.drop_params = True  # silently drop unsupported params per provider
         return litellm
     except ImportError as exc:  # pragma: no cover
+        _litellm_import_failed = True
         raise LLMError("litellm is required. Install with: pip install litellm") from exc
+    except BaseException as exc:  # pyo3 native extensions raise PanicException(BaseException)
+        if isinstance(exc, (SystemExit, KeyboardInterrupt)):
+            raise
+        _litellm_import_failed = True
+        raise LLMError("litellm import failed due to native extension error") from exc
 
 
 def _supports_json_mode(model: str) -> bool:
