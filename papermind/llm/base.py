@@ -438,6 +438,10 @@ def _count_tokens(litellm, model: str, messages=None, text: str = "") -> int:
 
 _LOCAL_ENCODERS: dict = {}
 
+_LITELLM_IMPORT_LOCK = threading.Lock()
+_litellm_module = None
+_litellm_import_error: "Exception | None" = None
+
 
 def _get_local_encoder(model_name: str, cls):
     if model_name not in _LOCAL_ENCODERS:
@@ -446,13 +450,38 @@ def _get_local_encoder(model_name: str, cls):
 
 
 def _import_litellm():
-    try:
-        import litellm
+    """Return the litellm module, importing it at most once across all threads.
 
-        litellm.drop_params = True  # silently drop unsupported params per provider
-        return litellm
-    except ImportError as exc:  # pragma: no cover
-        raise LLMError("litellm is required. Install with: pip install litellm") from exc
+    Thread-safe via double-checked locking.  Any import failure (including
+    BaseException from Rust/pyo3 native extensions) is cached and converted to
+    LLMError so callers that treat cost as best-effort can use a plain
+    ``except Exception`` guard.
+    """
+    global _litellm_module, _litellm_import_error
+    if _litellm_module is not None:
+        return _litellm_module
+    if _litellm_import_error is not None:
+        raise _litellm_import_error
+    with _LITELLM_IMPORT_LOCK:
+        if _litellm_module is None and _litellm_import_error is None:
+            try:
+                import litellm as _ll
+
+                _ll.drop_params = True  # silently drop unsupported params per provider
+                _litellm_module = _ll
+            except ImportError as exc:  # pragma: no cover
+                _litellm_import_error = LLMError(
+                    "litellm is required. Install with: pip install litellm"
+                )
+                raise _litellm_import_error from exc
+            except BaseException as exc:  # e.g. pyo3 PanicException from native extensions
+                _litellm_import_error = LLMError(
+                    f"litellm import failed ({type(exc).__name__}): {exc}"
+                )
+                raise _litellm_import_error from exc
+        if _litellm_import_error is not None:
+            raise _litellm_import_error
+    return _litellm_module
 
 
 def _supports_json_mode(model: str) -> bool:
