@@ -438,6 +438,12 @@ def _count_tokens(litellm, model: str, messages=None, text: str = "") -> int:
 
 _LOCAL_ENCODERS: dict = {}
 
+# Module-level cache for litellm import result so concurrent threads skip the heavy
+# import machinery after the first attempt (success or failure).
+_litellm_module = None  # type: ignore[var-annotated]
+_litellm_import_error: Optional[Exception] = None
+_litellm_import_lock = threading.Lock()
+
 
 def _get_local_encoder(model_name: str, cls):
     if model_name not in _LOCAL_ENCODERS:
@@ -446,13 +452,32 @@ def _get_local_encoder(model_name: str, cls):
 
 
 def _import_litellm():
-    try:
-        import litellm
+    global _litellm_module, _litellm_import_error
+    # Fast path — most calls hit this after the first import.
+    if _litellm_module is not None:
+        return _litellm_module
+    if _litellm_import_error is not None:
+        raise _litellm_import_error
+    with _litellm_import_lock:
+        # Re-check inside the lock to avoid a double-import race.
+        if _litellm_module is not None:
+            return _litellm_module
+        if _litellm_import_error is not None:
+            raise _litellm_import_error
+        try:
+            import litellm
 
-        litellm.drop_params = True  # silently drop unsupported params per provider
-        return litellm
-    except ImportError as exc:  # pragma: no cover
-        raise LLMError("litellm is required. Install with: pip install litellm") from exc
+            litellm.drop_params = True  # silently drop unsupported params per provider
+            _litellm_module = litellm
+        except ImportError as exc:  # pragma: no cover
+            err = LLMError("litellm is required. Install with: pip install litellm")
+            _litellm_import_error = err
+            raise err from exc
+        except BaseException as exc:  # noqa: BLE001 - native-ext panics become a cacheable LLMError
+            err = LLMError("litellm failed to load")
+            _litellm_import_error = err
+            raise err from exc
+    return _litellm_module
 
 
 def _supports_json_mode(model: str) -> bool:
