@@ -334,7 +334,9 @@ class LLMClient:
                 model=model, prompt_tokens=prompt_tokens, completion_tokens=completion_tokens
             )
             cost = float(prompt_cost) + float(completion_cost)
-        except Exception:  # noqa: BLE001 - cost is best-effort; many models lack pricing
+        except (KeyboardInterrupt, SystemExit):  # never swallow program-exit signals
+            raise
+        except BaseException:  # noqa: BLE001 - cost is best-effort; pyo3 PanicException is BaseException
             cost = 0.0
         with self._usage_lock:
             self.usage.record(prompt_tokens, completion_tokens, cost)
@@ -445,12 +447,19 @@ def _get_local_encoder(model_name: str, cls):
     return _LOCAL_ENCODERS[model_name]
 
 
+_litellm_cache: object = None  # module reference; None until first import
+
+
 def _import_litellm():
+    global _litellm_cache
+    if _litellm_cache is not None:
+        return _litellm_cache
     try:
         import litellm
 
         litellm.drop_params = True  # silently drop unsupported params per provider
-        return litellm
+        _litellm_cache = litellm
+        return _litellm_cache
     except ImportError as exc:  # pragma: no cover
         raise LLMError("litellm is required. Install with: pip install litellm") from exc
 
