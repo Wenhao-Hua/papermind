@@ -2,9 +2,12 @@
 
 from __future__ import annotations
 
+import csv
+import io
+
 import papermind.compare as compare_mod
 from papermind.compare import build_comparison
-from papermind.output.compare_render import to_html, to_markdown
+from papermind.output.compare_render import to_csv, to_html, to_markdown
 from papermind.output.schema import (
     Benchmark,
     Contributions,
@@ -60,6 +63,53 @@ def test_comparison_html_table_and_links():
     assert html.startswith("<!DOCTYPE html>")
     assert "<th>2307.08691</th>" in html
     assert "<a href='https://github.com/x/y'>" in html  # official code linked
+
+
+def test_comparison_csv_structure():
+    comp = _comparison()
+    text = to_csv(comp)
+    reader = csv.reader(io.StringIO(text))
+    rows = list(reader)
+    # header row: ["维度", paper1_id, paper2_id]
+    assert rows[0] == ["维度", "2307.08691", "1706.03762"]
+    # data rows contain expected dimension labels
+    labels = [r[0] for r in rows if r]
+    assert "核心贡献" in labels
+    assert "关键方法" in labels
+    # content check
+    contrib_row = next(r for r in rows if r and r[0] == "核心贡献")
+    assert contrib_row[1] == "faster attention"
+    assert contrib_row[2] == "attention-only arch"
+
+
+def test_comparison_csv_via_schema_method():
+    comp = _comparison()
+    text = comp.to_csv()
+    assert "维度" in text
+    assert "2307.08691" in text
+
+
+def test_comparison_csv_synthesis_appended():
+    from papermind.output.schema import Comparison, ComparedPaper
+    comp = Comparison(
+        papers=[
+            ComparedPaper(title="A", arxiv_id="1", year=2020, main_contribution="c1"),
+            ComparedPaper(title="B", arxiv_id="2", year=2021, main_contribution="c2"),
+        ],
+        synthesis="Paper A is better.",
+    )
+    text = to_csv(comp)
+    assert "对比小结" in text
+    assert "Paper A is better." in text
+
+
+def test_comparison_csv_write_to_file(tmp_path):
+    comp = _comparison()
+    out = str(tmp_path / "compare.csv")
+    comp.to_csv(out)
+    content = (tmp_path / "compare.csv").read_text(encoding="utf-8")
+    assert "维度" in content
+    assert "2307.08691" in content
 
 
 def test_comparison_json_round_trip():
