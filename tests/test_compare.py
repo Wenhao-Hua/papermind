@@ -2,9 +2,12 @@
 
 from __future__ import annotations
 
+import csv
+import io
+
 import papermind.compare as compare_mod
 from papermind.compare import build_comparison
-from papermind.output.compare_render import to_html, to_markdown
+from papermind.output.compare_render import to_csv, to_html, to_markdown
 from papermind.output.schema import (
     Benchmark,
     Contributions,
@@ -93,3 +96,43 @@ def test_compare_orchestration_reuses_mocked_analyze(monkeypatch):
     assert [p.title for p in comp.papers] == ["FlashAttention-2", "Transformer"]
     assert comp.synthesis == ""  # synthesis skipped -> no LLM call
     assert comp.usage is not None
+
+
+def test_comparison_csv_header_and_rows():
+    csv_text = to_csv(_comparison())
+    rows = list(csv.reader(io.StringIO(csv_text)))
+    # header: dimension + one column per paper
+    assert rows[0] == ["维度", "2307.08691", "1706.03762"]
+    # find the contribution row
+    contrib_row = next(r for r in rows if r[0] == "核心贡献")
+    assert contrib_row[1] == "faster attention"
+    assert contrib_row[2] == "attention-only arch"
+    # year row
+    year_row = next(r for r in rows if r[0] == "年份")
+    assert year_row[1] == "2023"
+
+
+def test_comparison_csv_synthesis_appended():
+    comp = _comparison()
+    comp.synthesis = "两者均采用注意力机制，FlashAttention 更快。"
+    csv_text = to_csv(comp)
+    rows = list(csv.reader(io.StringIO(csv_text)))
+    synth_row = next(r for r in rows if r and r[0] == "对比小结")
+    assert "FlashAttention" in synth_row[1]
+
+
+def test_comparison_csv_no_synthesis_no_extra_rows():
+    comp = _comparison()
+    comp.synthesis = ""
+    csv_text = to_csv(comp)
+    rows = list(csv.reader(io.StringIO(csv_text)))
+    labels = [r[0] for r in rows if r]
+    assert "对比小结" not in labels
+
+
+def test_comparison_to_csv_writes_file(tmp_path):
+    out = str(tmp_path / "compare.csv")
+    comp = _comparison()
+    text = comp.to_csv(out)
+    assert (tmp_path / "compare.csv").read_text(encoding="utf-8") == text
+    assert "维度" in text
