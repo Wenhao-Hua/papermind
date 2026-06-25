@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import papermind.compare as compare_mod
 from papermind.compare import build_comparison
-from papermind.output.compare_render import to_html, to_markdown
+from papermind.output.compare_render import to_csv, to_html, to_markdown
 from papermind.output.schema import (
     Benchmark,
     Contributions,
@@ -93,3 +93,40 @@ def test_compare_orchestration_reuses_mocked_analyze(monkeypatch):
     assert [p.title for p in comp.papers] == ["FlashAttention-2", "Transformer"]
     assert comp.synthesis == ""  # synthesis skipped -> no LLM call
     assert comp.usage is not None
+
+
+def test_comparison_csv_format():
+    comp = _comparison()
+    csv_text = to_csv(comp)
+    lines = csv_text.splitlines()
+    assert lines[0] == "标题,arXiv,年份,核心贡献,新颖之处,关键方法,性能/基准,推荐硬件,官方代码"
+    assert len(lines) == 3  # header + 2 papers
+    assert "FlashAttention-2" in lines[1]
+    assert "2307.08691" in lines[1]
+    assert "Transformer" in lines[2]
+    assert "1706.03762" in lines[2]
+
+
+def test_comparison_csv_via_method(tmp_path):
+    comp = _comparison()
+    out = tmp_path / "compare.csv"
+    comp.to_csv(str(out))
+    content = out.read_text(encoding="utf-8")
+    assert "标题" in content
+    assert "FlashAttention-2" in content
+    assert content.splitlines()[0] == "标题,arXiv,年份,核心贡献,新颖之处,关键方法,性能/基准,推荐硬件,官方代码"
+
+
+def test_comparison_csv_special_chars():
+    from papermind.output.schema import ComparedPaper, Comparison
+
+    comp = Comparison(papers=[
+        ComparedPaper(title="A, B and C", arxiv_id="1111.1111", main_contribution='uses "quotes"'),
+        ComparedPaper(title="D | E", arxiv_id="2222.2222", main_contribution="line\nbreak"),
+    ])
+    csv_text = to_csv(comp)
+    import csv, io
+    rows = list(csv.reader(io.StringIO(csv_text)))
+    assert rows[1][0] == "A, B and C"
+    assert rows[1][3] == 'uses "quotes"'
+    assert "D | E" in rows[2][0]
