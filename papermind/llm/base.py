@@ -30,6 +30,10 @@ _KEYLESS_PREFIXES = ("ollama/", "ollama_chat/", "local/")
 _JSON_OBJECT_RE = re.compile(r"\{.*\}", re.DOTALL)
 _JSON_ARRAY_RE = re.compile(r"\[.*\]", re.DOTALL)
 
+_litellm_import_lock = threading.Lock()
+_litellm_module = None
+_litellm_unavailable = False
+
 
 class LLMClient:
     """Stateless-ish wrapper around litellm bound to a model + config."""
@@ -446,13 +450,28 @@ def _get_local_encoder(model_name: str, cls):
 
 
 def _import_litellm():
-    try:
-        import litellm
+    global _litellm_module, _litellm_unavailable
+    if _litellm_module is not None:
+        return _litellm_module
+    if _litellm_unavailable:
+        raise LLMError("litellm is required. Install with: pip install litellm")
+    with _litellm_import_lock:
+        if _litellm_module is not None:
+            return _litellm_module
+        if _litellm_unavailable:
+            raise LLMError("litellm is required. Install with: pip install litellm")
+        try:
+            import litellm
 
-        litellm.drop_params = True  # silently drop unsupported params per provider
-        return litellm
-    except ImportError as exc:  # pragma: no cover
-        raise LLMError("litellm is required. Install with: pip install litellm") from exc
+            litellm.drop_params = True  # silently drop unsupported params per provider
+            _litellm_module = litellm
+        except ImportError as exc:  # pragma: no cover
+            _litellm_unavailable = True
+            raise LLMError("litellm is required. Install with: pip install litellm") from exc
+        except BaseException:  # pyo3_runtime.PanicException from Rust extensions is BaseException
+            _litellm_unavailable = True
+            raise LLMError("litellm is required. Install with: pip install litellm") from None
+    return _litellm_module
 
 
 def _supports_json_mode(model: str) -> bool:
