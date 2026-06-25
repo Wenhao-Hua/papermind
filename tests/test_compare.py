@@ -2,9 +2,12 @@
 
 from __future__ import annotations
 
+import csv
+import io
+
 import papermind.compare as compare_mod
 from papermind.compare import build_comparison
-from papermind.output.compare_render import to_html, to_markdown
+from papermind.output.compare_render import to_csv, to_html, to_markdown
 from papermind.output.schema import (
     Benchmark,
     Contributions,
@@ -93,3 +96,46 @@ def test_compare_orchestration_reuses_mocked_analyze(monkeypatch):
     assert [p.title for p in comp.papers] == ["FlashAttention-2", "Transformer"]
     assert comp.synthesis == ""  # synthesis skipped -> no LLM call
     assert comp.usage is not None
+
+
+def test_comparison_csv_columns_and_rows():
+    comp = _comparison()
+    text = to_csv(comp)
+    rows = list(csv.reader(io.StringIO(text)))
+    header = rows[0]
+    assert header == ["title", "arxiv_id", "year", "main_contribution", "novelty", "methods", "benchmark", "hardware", "official_code"]
+    assert len(rows) == 3  # header + 2 paper rows (no synthesis)
+    assert rows[1][0] == "FlashAttention-2"
+    assert rows[1][1] == "2307.08691"
+    assert rows[1][2] == "2023"
+    assert rows[1][3] == "faster attention"
+    assert rows[1][5] == "Tiling"
+    assert rows[2][0] == "Transformer"
+
+
+def test_comparison_csv_synthesis_appended():
+    comp = _comparison()
+    comp.synthesis = "Both papers use transformers; FlashAttention-2 is faster."
+    text = to_csv(comp)
+    rows = list(csv.reader(io.StringIO(text)))
+    assert any(r and r[0] == "# synthesis" for r in rows)
+    synth_row = next(r for r in rows if r and r[0] == "# synthesis")
+    assert "FlashAttention-2 is faster" in synth_row[1]
+
+
+def test_comparison_csv_empty_fields_use_empty_string():
+    comp = _comparison()
+    text = to_csv(comp)
+    rows = list(csv.reader(io.StringIO(text)))
+    # hardware is None for these test papers — should be empty string, not "-"
+    hardware_col = rows[0].index("hardware")
+    assert rows[1][hardware_col] == "A100"
+
+
+def test_comparison_to_csv_method_writes_file(tmp_path):
+    comp = _comparison()
+    out = str(tmp_path / "compare.csv")
+    result = comp.to_csv(out)
+    import pathlib
+    assert pathlib.Path(out).read_text(encoding="utf-8") == result
+    assert "FlashAttention-2" in result
