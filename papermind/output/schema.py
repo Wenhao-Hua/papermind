@@ -381,3 +381,26 @@ class Answer(BaseModel):
     def text(self) -> str:
         """Plain concatenation of all segment texts."""
         return "\n\n".join(seg.text for seg in self.segments)
+
+
+def estimate_reading_minutes(report: "Report") -> int:
+    """Estimate how many minutes it takes to read the generated report (200 WPM)."""
+    texts: List[str] = []
+    c = report.contributions
+    if c:
+        texts += [c.main_contribution, c.novelty, c.problem_solved]
+    for p in report.technical.details:
+        texts.append(p.explanation)
+        if p.analogy:
+            texts.append(p.analogy)
+    for w in report.connections.related_works:
+        texts.append(w.relationship)
+    if report.reproduction:
+        r = report.reproduction
+        for step in r.env_setup_steps:
+            if step.desc:
+                texts.append(step.desc)
+        for g in r.gotchas:
+            texts.append(g)
+    word_count = sum(len(t.split()) for t in texts if t)
+    return max(1, round(word_count / 200))

@@ -5,8 +5,20 @@ from __future__ import annotations
 import json
 
 from papermind.output.cite import to_bibtex
+from papermind.output.html import to_html
+from papermind.output.markdown import to_markdown
 from papermind.output.reproduce_export import to_notebook, to_setup_script
-from papermind.output.schema import CommonError, PaperMeta, Reproduction, Report, SetupStep
+from papermind.output.schema import (
+    CommonError,
+    Contributions,
+    PaperMeta,
+    Reproduction,
+    Report,
+    SetupStep,
+    TechnicalSection,
+    TechnicalPoint,
+    estimate_reading_minutes,
+)
 
 
 def _report():
@@ -68,3 +80,52 @@ def test_bibtex_without_arxiv_is_misc():
     meta = PaperMeta(title="Some Local Paper", authors=["Jane Doe"], year=2020)
     bib = to_bibtex(meta)
     assert bib.startswith("@misc{doe2020some,")
+
+
+def _rich_report():
+    """A report with substantial content to make reading-time estimates non-trivial."""
+    return Report(
+        paper=PaperMeta(title="Attention Is All You Need", arxiv_id="1706.03762", year=2017),
+        contributions=Contributions(
+            main_contribution="A " * 50 + "transformer architecture.",
+            novelty="Self-attention " * 20 + "enables parallelism.",
+            problem_solved="Removes " * 30 + "recurrence entirely.",
+        ),
+        technical=TechnicalSection(
+            details=[
+                TechnicalPoint(
+                    name="Multi-Head Attention",
+                    difficulty="high",
+                    explanation="Each head " * 40 + "learns different relationships.",
+                    analogy="Like " * 20 + "multiple perspectives.",
+                )
+            ]
+        ),
+    )
+
+
+def test_estimate_reading_minutes_returns_positive_int():
+    mins = estimate_reading_minutes(_rich_report())
+    assert isinstance(mins, int)
+    assert mins >= 1
+
+
+def test_estimate_reading_minutes_empty_report_returns_one():
+    report = Report(paper=PaperMeta(title="Empty"))
+    assert estimate_reading_minutes(report) == 1
+
+
+def test_reading_time_in_markdown_output():
+    md = to_markdown(_rich_report())
+    assert "min read" in md
+
+
+def test_reading_time_in_html_output():
+    doc = to_html(_rich_report())
+    assert "min read" in doc
+
+
+def test_reading_time_in_markdown_minimal_report():
+    report = Report(paper=PaperMeta(title="Minimal Paper", year=2024))
+    md = to_markdown(report)
+    assert "min read" in md
