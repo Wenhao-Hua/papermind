@@ -2,9 +2,12 @@
 
 from __future__ import annotations
 
+import csv
+import io
+
 import papermind.compare as compare_mod
 from papermind.compare import build_comparison
-from papermind.output.compare_render import to_html, to_markdown
+from papermind.output.compare_render import to_csv, to_html, to_markdown
 from papermind.output.schema import (
     Benchmark,
     Contributions,
@@ -93,3 +96,35 @@ def test_compare_orchestration_reuses_mocked_analyze(monkeypatch):
     assert [p.title for p in comp.papers] == ["FlashAttention-2", "Transformer"]
     assert comp.synthesis == ""  # synthesis skipped -> no LLM call
     assert comp.usage is not None
+
+
+def test_comparison_csv_structure():
+    comp = _comparison()
+    text = to_csv(comp)
+    reader = csv.DictReader(io.StringIO(text))
+    rows = list(reader)
+    labels = [r["Dimension"] for r in rows]
+    assert "标题" in labels
+    assert "年份" in labels
+    assert "核心贡献" in labels
+    # values for each paper column are present
+    title_row = next(r for r in rows if r["Dimension"] == "标题")
+    assert title_row["2307.08691"] == "FlashAttention-2"
+    assert title_row["1706.03762"] == "Transformer"
+
+
+def test_comparison_csv_file_write(tmp_path):
+    comp = _comparison()
+    out = str(tmp_path / "cmp.csv")
+    comp.to_csv(out)
+    content = (tmp_path / "cmp.csv").read_text(encoding="utf-8")
+    assert "Dimension,2307.08691,1706.03762" in content
+    assert "faster attention" in content
+
+
+def test_comparison_csv_with_synthesis():
+    comp = _comparison()
+    comp.synthesis = "Both papers address attention efficiency."
+    text = to_csv(comp)
+    assert "Synthesis" in text
+    assert "Both papers address attention efficiency." in text
