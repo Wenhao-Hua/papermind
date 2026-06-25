@@ -224,3 +224,34 @@ def test_demo_plays_offline_instantly():
     assert "Attention Is All You Need" in out
     assert "论文事实" in out and "基于论文的推理" in out  # layered answer shown
     assert "原文依据" in out and "Section 3.2.1" in out
+
+
+def test_reading_time_appears_in_markdown_and_html():
+    from papermind.output.html import _reading_time_min as html_rt
+    from papermind.output.markdown import _reading_time_min as md_rt
+
+    report = Report(
+        paper=PaperMeta(title="T", arxiv_id="1706.03762", year=2017),
+        contributions=Contributions(
+            main_contribution=" ".join(["word"] * 100),
+            novelty=" ".join(["word"] * 50),
+            problem_solved="something",
+        ),
+        technical=TechnicalSection(
+            details=[TechnicalPoint(name="N", explanation=" ".join(["word"] * 100))]
+        ),
+    )
+
+    assert html_rt(report) == md_rt(report)  # same logic in both modules
+
+    md = report.to_markdown()
+    assert "min read" in md
+
+    doc = report.to_html()
+    assert "min read" in doc
+
+    # empty report still shows at least 1 min
+    empty = Report(paper=PaperMeta(title="X"))
+    assert md_rt(empty) >= 1
+    assert "min read" in empty.to_markdown()
+    assert "min read" in empty.to_html()

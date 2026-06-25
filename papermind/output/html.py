@@ -17,6 +17,31 @@ from papermind.output.schema import Connection, Reproduction, Report, Source, Te
 
 _DIFFICULTY = {"high": ("high", "#e5484d"), "mid": ("mid", "#f5a623"), "low": ("low", "#30a46c")}
 
+
+def _word_count(report: Report) -> int:
+    texts: List[str] = []
+    if report.contributions:
+        c = report.contributions
+        texts += [c.main_contribution, c.novelty, c.problem_solved]
+        texts += [s.text for s in c.sources]
+    for p in report.technical.details:
+        texts += [p.name, p.explanation, p.analogy or ""]
+        if p.figure and p.figure.caption:
+            texts.append(p.figure.caption)
+    for w in report.connections.related_works:
+        texts += [w.concept, w.paper, w.relationship]
+    if report.reproduction:
+        r = report.reproduction
+        texts += [r.requirements or "", r.recommended_hardware or ""]
+        texts += r.gotchas
+        texts += [s.desc for s in r.env_setup_steps if s.desc]
+        texts += [d.purpose for d in r.datasets]
+    return sum(len(t.split()) for t in texts if t)
+
+
+def _reading_time_min(report: Report) -> int:
+    return max(1, round(_word_count(report) / 200))
+
 _CSS = """
 :root { --fg:#0f172a; --muted:#475569; --faint:#94a3b8; --accent:#2563eb; --accent-press:#1d4ed8;
   --border:#e8edf3; --border-strong:#d4dbe4; --bg:#f5f7fa; --card:#ffffff; --soft:#f1f5f9; --accent-soft:#eff5ff;
@@ -222,6 +247,7 @@ def _meta(report: Report) -> str:
         bits.append(f'<b>arXiv:</b> <a href="https://arxiv.org/abs/{esc(paper.arxiv_id)}">{esc(paper.arxiv_id)}</a>')
     if paper.pdf_url:
         bits.append(f'<a href="{esc(paper.pdf_url)}">PDF</a>')
+    bits.append(f"~{_reading_time_min(report)}&thinsp;min read")
     return " &nbsp;•&nbsp; ".join(bits)
 
 
