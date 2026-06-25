@@ -30,6 +30,11 @@ _KEYLESS_PREFIXES = ("ollama/", "ollama_chat/", "local/")
 _JSON_OBJECT_RE = re.compile(r"\{.*\}", re.DOTALL)
 _JSON_ARRAY_RE = re.compile(r"\[.*\]", re.DOTALL)
 
+# Thread-local flag: once a thread discovers that litellm cost lookup is
+# unavailable (pyo3/native panic, import failure), it sets this to True so
+# subsequent calls in the same thread skip the expensive retry and use cost=0.0.
+_cost_state = threading.local()
+
 
 class LLMClient:
     """Stateless-ish wrapper around litellm bound to a model + config."""
@@ -328,14 +333,17 @@ class LLMClient:
 
     def _record_usage(self, model: str, prompt_tokens: int, completion_tokens: int) -> None:
         cost = 0.0
-        try:
-            litellm = _import_litellm()
-            prompt_cost, completion_cost = litellm.cost_per_token(
-                model=model, prompt_tokens=prompt_tokens, completion_tokens=completion_tokens
-            )
-            cost = float(prompt_cost) + float(completion_cost)
-        except Exception:  # noqa: BLE001 - cost is best-effort; many models lack pricing
-            cost = 0.0
+        if not getattr(_cost_state, "unavailable", False):
+            try:
+                litellm = _import_litellm()
+                prompt_cost, completion_cost = litellm.cost_per_token(
+                    model=model, prompt_tokens=prompt_tokens, completion_tokens=completion_tokens
+                )
+                cost = float(prompt_cost) + float(completion_cost)
+            except (SystemExit, KeyboardInterrupt):
+                raise
+            except BaseException:  # noqa: BLE001 - cost is best-effort; guards pyo3/native panics in worker threads
+                _cost_state.unavailable = True
         with self._usage_lock:
             self.usage.record(prompt_tokens, completion_tokens, cost)
 
