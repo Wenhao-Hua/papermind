@@ -5,8 +5,10 @@ from __future__ import annotations
 import json
 
 from papermind.output.cite import to_bibtex
+from papermind.output.html import to_html
+from papermind.output.markdown import to_markdown
 from papermind.output.reproduce_export import to_notebook, to_setup_script
-from papermind.output.schema import CommonError, PaperMeta, Reproduction, Report, SetupStep
+from papermind.output.schema import CommonError, Contributions, PaperMeta, Reproduction, Report, SetupStep
 
 
 def _report():
@@ -68,3 +70,34 @@ def test_bibtex_without_arxiv_is_misc():
     meta = PaperMeta(title="Some Local Paper", authors=["Jane Doe"], year=2020)
     bib = to_bibtex(meta)
     assert bib.startswith("@misc{doe2020some,")
+
+
+def test_reading_time_minimum_one_minute():
+    report = Report(paper=PaperMeta(title="X"))
+    assert report.reading_time_minutes >= 1
+
+
+def test_reading_time_grows_with_content():
+    short = Report(paper=PaperMeta(title="Short"))
+    long_text = " ".join(["word"] * 800)
+    rich = Report(
+        paper=PaperMeta(title="Rich Paper", abstract=long_text),
+        contributions=Contributions(
+            main_contribution=long_text,
+            novelty="Novel approach.",
+            problem_solved="Important problem.",
+        ),
+    )
+    assert rich.reading_time_minutes > short.reading_time_minutes
+
+
+def test_reading_time_appears_in_markdown():
+    report = Report(paper=PaperMeta(title="Test Paper", authors=["A. Author"], year=2024))
+    md = to_markdown(report)
+    assert "min read" in md
+
+
+def test_reading_time_appears_in_html():
+    report = Report(paper=PaperMeta(title="Test Paper", authors=["A. Author"], year=2024))
+    doc = to_html(report)
+    assert "min read" in doc

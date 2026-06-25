@@ -233,6 +233,35 @@ class Report(BaseModel):
     # Runtime token usage for this analysis; not part of the exported JSON artifact.
     usage: Optional["Usage"] = None
 
+    @property
+    def reading_time_minutes(self) -> int:
+        """Estimated minutes to read this report at 200 WPM (technical content)."""
+        parts: List[str] = [self.paper.title or ""]
+        if self.paper.abstract:
+            parts.append(self.paper.abstract)
+        if self.contributions:
+            c = self.contributions
+            parts += [c.main_contribution, c.novelty, c.problem_solved]
+            for s in c.sources:
+                parts.append(s.text)
+        for point in self.technical.details:
+            parts += [point.name, point.explanation, point.analogy or ""]
+        for conn in self.connections.related_works:
+            parts += [conn.concept, conn.relationship]
+        if self.reproduction:
+            r = self.reproduction
+            if r.requirements:
+                parts.append(r.requirements)
+            if r.recommended_hardware:
+                parts.append(r.recommended_hardware)
+            for step in r.env_setup_steps:
+                parts += [step.title, step.desc]
+            for err in r.common_errors:
+                parts += [err.error, err.cause]
+            parts += r.gotchas
+        words = sum(len(p.split()) for p in parts if p)
+        return max(1, round(words / 200))
+
     # -- serialization ------------------------------------------------------ #
     def to_dict(self) -> dict:
         """Flatten to the documented JSON shape (technical_details / connections as lists)."""
