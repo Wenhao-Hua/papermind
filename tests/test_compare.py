@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import papermind.compare as compare_mod
 from papermind.compare import build_comparison
-from papermind.output.compare_render import to_html, to_markdown
+from papermind.output.compare_render import to_csv, to_html, to_markdown
 from papermind.output.schema import (
     Benchmark,
     Contributions,
@@ -93,3 +93,46 @@ def test_compare_orchestration_reuses_mocked_analyze(monkeypatch):
     assert [p.title for p in comp.papers] == ["FlashAttention-2", "Transformer"]
     assert comp.synthesis == ""  # synthesis skipped -> no LLM call
     assert comp.usage is not None
+
+
+def test_comparison_csv_structure():
+    csv_text = to_csv(_comparison())
+    lines = csv_text.splitlines()
+    # Header row: 维度, then one column per paper
+    assert lines[0].startswith("维度,")
+    assert "2307.08691" in lines[0]
+    assert "1706.03762" in lines[0]
+    # Data rows contain expected labels
+    labels = [line.split(",")[0] for line in lines[1:] if line]
+    assert "标题" in labels
+    assert "核心贡献" in labels
+    assert "关键方法" in labels
+
+
+def test_comparison_csv_values():
+    csv_text = to_csv(_comparison())
+    assert "faster attention" in csv_text
+    assert "FlashAttention-2" in csv_text
+
+
+def test_comparison_csv_synthesis():
+    import io
+    import csv as _csv_mod
+    comp = _comparison()
+    comp.synthesis = "Paper A is faster; Paper B is classic."
+    csv_text = to_csv(comp)
+    reader = _csv_mod.reader(io.StringIO(csv_text))
+    rows = list(reader)
+    # synthesis row should appear after a blank row
+    synth_rows = [r for r in rows if r and r[0] == "对比小结"]
+    assert len(synth_rows) == 1
+    assert "faster" in synth_rows[0][1]
+
+
+def test_comparison_to_csv_method_and_file(tmp_path):
+    comp = _comparison()
+    out = tmp_path / "result.csv"
+    text = comp.to_csv(str(out))
+    assert out.exists()
+    assert out.read_text(encoding="utf-8") == text
+    assert "标题" in text
