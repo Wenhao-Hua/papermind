@@ -1,12 +1,24 @@
-"""Tests for reproduction export (setup.sh / notebook) and BibTeX citation."""
+"""Tests for reproduction export (setup.sh / notebook), BibTeX citation, and reading time."""
 
 from __future__ import annotations
 
 import json
 
 from papermind.output.cite import to_bibtex
+from papermind.output.html import to_html
+from papermind.output.markdown import to_markdown
 from papermind.output.reproduce_export import to_notebook, to_setup_script
-from papermind.output.schema import CommonError, PaperMeta, Reproduction, Report, SetupStep
+from papermind.output.schema import (
+    CommonError,
+    Contributions,
+    PaperMeta,
+    Reproduction,
+    Report,
+    SetupStep,
+    TechnicalPoint,
+    TechnicalSection,
+    estimate_reading_minutes,
+)
 
 
 def _report():
@@ -68,3 +80,53 @@ def test_bibtex_without_arxiv_is_misc():
     meta = PaperMeta(title="Some Local Paper", authors=["Jane Doe"], year=2020)
     bib = to_bibtex(meta)
     assert bib.startswith("@misc{doe2020some,")
+
+
+# --------------------------------------------------------------------------- #
+# Reading-time estimate
+# --------------------------------------------------------------------------- #
+
+def test_reading_time_empty_report_is_one_minute():
+    report = Report(paper=PaperMeta(title="X"))
+    assert estimate_reading_minutes(report) == 1
+
+
+def test_reading_time_scales_with_content():
+    # 400 words across two technical points → ~2 min at 200 wpm
+    long_text = " ".join(["word"] * 200)
+    report = Report(
+        paper=PaperMeta(title="Y"),
+        technical=TechnicalSection(
+            details=[
+                TechnicalPoint(name="A", explanation=long_text, analogy=""),
+                TechnicalPoint(name="B", explanation=long_text, analogy=""),
+            ]
+        ),
+    )
+    assert estimate_reading_minutes(report) == 2
+
+
+def test_reading_time_appears_in_markdown():
+    report = Report(
+        paper=PaperMeta(title="Z", authors=["Alice"], year=2024),
+        contributions=Contributions(
+            main_contribution="foo bar baz",
+            novelty="foo bar",
+            problem_solved="baz",
+        ),
+    )
+    md = to_markdown(report)
+    assert "min read" in md
+
+
+def test_reading_time_appears_in_html():
+    report = Report(
+        paper=PaperMeta(title="Z", authors=["Alice"], year=2024),
+        contributions=Contributions(
+            main_contribution="foo bar baz",
+            novelty="foo bar",
+            problem_solved="baz",
+        ),
+    )
+    out = to_html(report)
+    assert "min read" in out
