@@ -2,9 +2,12 @@
 
 from __future__ import annotations
 
+import csv
+import io
+
 import papermind.compare as compare_mod
 from papermind.compare import build_comparison
-from papermind.output.compare_render import to_html, to_markdown
+from papermind.output.compare_render import to_csv, to_html, to_markdown
 from papermind.output.schema import (
     Benchmark,
     Contributions,
@@ -93,3 +96,49 @@ def test_compare_orchestration_reuses_mocked_analyze(monkeypatch):
     assert [p.title for p in comp.papers] == ["FlashAttention-2", "Transformer"]
     assert comp.synthesis == ""  # synthesis skipped -> no LLM call
     assert comp.usage is not None
+
+
+def test_comparison_csv_columns_and_rows():
+    comp = _comparison()
+    text = to_csv(comp)
+    rows = list(csv.reader(io.StringIO(text)))
+    # header row present
+    assert rows[0] == ["title", "arxiv_id", "year", "main_contribution", "novelty",
+                       "methods", "benchmark", "hardware", "official_code"]
+    # one row per paper
+    assert len(rows) == 3  # header + 2 papers
+    assert rows[1][0] == "FlashAttention-2"
+    assert rows[1][1] == "2307.08691"
+    assert rows[2][1] == "1706.03762"
+
+
+def test_comparison_csv_via_schema_method(tmp_path):
+    comp = _comparison()
+    text = comp.to_csv()
+    assert "FlashAttention-2" in text
+    assert "faster attention" in text
+    # path-based write
+    out = tmp_path / "compare.csv"
+    comp.to_csv(str(out))
+    assert out.read_text(encoding="utf-8") == text
+
+
+def test_comparison_csv_with_synthesis():
+    from papermind.output.schema import Comparison, ComparedPaper
+    comp = Comparison(
+        papers=[ComparedPaper(title="A", arxiv_id="1234.56789", year=2023)],
+        synthesis="Both papers improve efficiency.",
+    )
+    text = to_csv(comp)
+    assert "synthesis" in text
+    assert "Both papers improve efficiency." in text
+
+
+def test_comparison_csv_special_chars():
+    from papermind.output.schema import Comparison, ComparedPaper
+    comp = Comparison(
+        papers=[ComparedPaper(title='Title with "quotes" and, commas', arxiv_id="1")],
+    )
+    text = to_csv(comp)
+    rows = list(csv.reader(io.StringIO(text)))
+    assert rows[1][0] == 'Title with "quotes" and, commas'
