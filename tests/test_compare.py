@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import papermind.compare as compare_mod
 from papermind.compare import build_comparison
-from papermind.output.compare_render import to_html, to_markdown
+from papermind.output.compare_render import to_csv, to_html, to_markdown
 from papermind.output.schema import (
     Benchmark,
     Contributions,
@@ -67,6 +67,29 @@ def test_comparison_json_round_trip():
     data = comp.to_dict()
     assert data["papers"][0]["arxiv_id"] == "2307.08691"
     assert "usage" not in data  # usage excluded from export
+
+
+def test_comparison_csv_format():
+    csv_text = to_csv(_comparison())
+    assert csv_text.startswith("﻿")  # UTF-8 BOM for Excel
+    lines = csv_text.splitlines()
+    # Header row: "维度,<id1>,<id2>"
+    assert "2307.08691" in lines[0]
+    assert "1706.03762" in lines[0]
+    # Data rows contain expected labels and values
+    assert any("核心贡献" in ln for ln in lines)
+    assert any("faster attention" in ln for ln in lines)
+    assert any("attention-only arch" in ln for ln in lines)
+    assert any("关键方法" in ln for ln in lines)
+
+
+def test_comparison_csv_via_schema_method(tmp_path):
+    comp = _comparison()
+    out = tmp_path / "compare.csv"
+    comp.to_csv(str(out))
+    content = out.read_text(encoding="utf-8")
+    assert "2307.08691" in content
+    assert "核心贡献" in content
 
 
 def test_has_compare_modules_rejects_partial_report():
