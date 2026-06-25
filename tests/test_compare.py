@@ -2,9 +2,12 @@
 
 from __future__ import annotations
 
+import csv
+import io
+
 import papermind.compare as compare_mod
 from papermind.compare import build_comparison
-from papermind.output.compare_render import to_html, to_markdown
+from papermind.output.compare_render import to_csv, to_html, to_markdown
 from papermind.output.schema import (
     Benchmark,
     Contributions,
@@ -76,6 +79,50 @@ def test_has_compare_modules_rejects_partial_report():
     partial = Report(paper=PaperMeta(title="P", arxiv_id="2"),
                      contributions=Contributions(main_contribution="c", novelty="n"))
     assert compare_mod._has_compare_modules(partial) is False
+
+
+def test_comparison_csv_structure():
+    comp = _comparison()
+    text = to_csv(comp)
+    rows = list(csv.reader(io.StringIO(text)))
+    # Header: 维度 + one column per paper
+    assert rows[0] == ["维度", "2307.08691", "1706.03762"]
+    # At least one data row per dimension (9 dimensions defined in _rows)
+    labels = [r[0] for r in rows[1:]]
+    assert "核心贡献" in labels
+    assert "关键方法" in labels
+    # Value cells present for both papers
+    contrib_row = next(r for r in rows if r[0] == "核心贡献")
+    assert contrib_row[1] == "faster attention"
+    assert contrib_row[2] == "attention-only arch"
+
+
+def test_comparison_csv_no_synthesis():
+    comp = _comparison()
+    comp.synthesis = ""
+    text = to_csv(comp)
+    rows = list(csv.reader(io.StringIO(text)))
+    row_labels = [r[0] for r in rows]
+    assert "对比小结" not in row_labels
+
+
+def test_comparison_csv_with_synthesis():
+    comp = _comparison()
+    comp.synthesis = "FlashAttention-2 is faster"
+    text = to_csv(comp)
+    rows = list(csv.reader(io.StringIO(text)))
+    summary_row = next((r for r in rows if r[0] == "对比小结"), None)
+    assert summary_row is not None
+    assert "FlashAttention-2 is faster" in summary_row[1]
+
+
+def test_comparison_to_csv_via_schema(tmp_path):
+    comp = _comparison()
+    out_file = str(tmp_path / "compare.csv")
+    text = comp.to_csv(path=out_file)
+    assert "维度" in text
+    import pathlib
+    assert pathlib.Path(out_file).read_text(encoding="utf-8") == text
 
 
 def test_compare_orchestration_reuses_mocked_analyze(monkeypatch):
