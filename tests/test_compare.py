@@ -2,9 +2,11 @@
 
 from __future__ import annotations
 
+import csv
+import io
 import papermind.compare as compare_mod
 from papermind.compare import build_comparison
-from papermind.output.compare_render import to_html, to_markdown
+from papermind.output.compare_render import to_csv, to_html, to_markdown
 from papermind.output.schema import (
     Benchmark,
     Contributions,
@@ -93,3 +95,53 @@ def test_compare_orchestration_reuses_mocked_analyze(monkeypatch):
     assert [p.title for p in comp.papers] == ["FlashAttention-2", "Transformer"]
     assert comp.synthesis == ""  # synthesis skipped -> no LLM call
     assert comp.usage is not None
+
+
+def test_comparison_csv_headers_and_rows():
+    comp = _comparison()
+    text = to_csv(comp)
+    rows = list(csv.reader(io.StringIO(text)))
+    # Header row: 维度, paper1_id, paper2_id
+    assert rows[0] == ["维度", "2307.08691", "1706.03762"]
+    # First data row is 标题
+    assert rows[1][0] == "标题"
+    assert rows[1][1] == "FlashAttention-2"
+    assert rows[1][2] == "Transformer"
+    # One row per dimension (9 total)
+    assert len(rows) == 10  # 1 header + 9 dimension rows
+
+
+def test_comparison_csv_via_method(tmp_path):
+    comp = _comparison()
+    out = tmp_path / "compare.csv"
+    text = comp.to_csv(str(out))
+    assert out.exists()
+    assert out.read_text(encoding="utf-8") == text
+    rows = list(csv.reader(io.StringIO(text)))
+    assert rows[0][0] == "维度"
+
+
+def test_comparison_csv_synthesis_row():
+    from papermind.output.schema import Comparison, ComparedPaper
+
+    comp = Comparison(
+        papers=[
+            ComparedPaper(title="A", arxiv_id="111", main_contribution="c1"),
+            ComparedPaper(title="B", arxiv_id="222", main_contribution="c2"),
+        ],
+        synthesis="Both papers advance the field.",
+    )
+    text = to_csv(comp)
+    rows = list(csv.reader(io.StringIO(text)))
+    last = rows[-1]
+    assert last[0] == "对比小结"
+    assert last[1] == "Both papers advance the field."
+    assert last[2] == ""  # empty for paper 2
+
+
+def test_comparison_csv_no_synthesis_no_extra_row():
+    comp = _comparison()
+    text = to_csv(comp)
+    rows = list(csv.reader(io.StringIO(text)))
+    # No synthesis in _comparison(), so no extra row beyond 1 header + 9 dimensions
+    assert len(rows) == 10
