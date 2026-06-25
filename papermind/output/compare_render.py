@@ -87,3 +87,21 @@ def _html_cell(label: str, value: str) -> str:
 
 def _e(text) -> str:
     return _html.escape(str(text)) if text is not None else ""
+
+
+def to_csv(comparison: Comparison) -> str:
+    """Render comparison as CSV with one row per dimension and one column per paper."""
+    import csv
+    import io
+
+    headers = _headers(comparison)
+    rows = _rows(comparison)
+    out = io.StringIO()
+    writer = csv.writer(out, lineterminator="\n")
+    writer.writerow(["维度"] + headers)
+    for label, values in rows:
+        writer.writerow([label] + values)
+    if comparison.synthesis:
+        writer.writerow([])
+        writer.writerow(["对比小结", comparison.synthesis])
+    return out.getvalue()

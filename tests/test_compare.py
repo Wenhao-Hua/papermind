@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import papermind.compare as compare_mod
 from papermind.compare import build_comparison
-from papermind.output.compare_render import to_html, to_markdown
+from papermind.output.compare_render import to_csv, to_html, to_markdown
 from papermind.output.schema import (
     Benchmark,
     Contributions,
@@ -76,6 +76,36 @@ def test_has_compare_modules_rejects_partial_report():
     partial = Report(paper=PaperMeta(title="P", arxiv_id="2"),
                      contributions=Contributions(main_contribution="c", novelty="n"))
     assert compare_mod._has_compare_modules(partial) is False
+
+
+def test_comparison_csv_structure():
+    comp = _comparison()
+    csv_text = to_csv(comp)
+    lines = csv_text.strip().splitlines()
+    # Header row: 维度 + two paper ids
+    assert lines[0] == "维度,2307.08691,1706.03762"
+    # All dimension rows present
+    labels = [line.split(",")[0] for line in lines[1:]]
+    assert "核心贡献" in labels
+    assert "关键方法" in labels
+    assert "年份" in labels
+
+
+def test_comparison_csv_roundtrip_via_schema(tmp_path):
+    comp = _comparison()
+    out = tmp_path / "compare.csv"
+    comp.to_csv(str(out))
+    content = out.read_text(encoding="utf-8")
+    assert "faster attention" in content
+    assert "attention-only arch" in content
+
+
+def test_comparison_csv_synthesis_appended():
+    comp = _comparison()
+    comp.synthesis = "Paper A is faster, Paper B is simpler."
+    csv_text = to_csv(comp)
+    assert "对比小结" in csv_text
+    assert "Paper A is faster" in csv_text
 
 
 def test_compare_orchestration_reuses_mocked_analyze(monkeypatch):
