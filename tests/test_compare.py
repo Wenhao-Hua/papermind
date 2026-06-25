@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import papermind.compare as compare_mod
 from papermind.compare import build_comparison
-from papermind.output.compare_render import to_html, to_markdown
+from papermind.output.compare_render import to_csv, to_html, to_markdown
 from papermind.output.schema import (
     Benchmark,
     Contributions,
@@ -76,6 +76,47 @@ def test_has_compare_modules_rejects_partial_report():
     partial = Report(paper=PaperMeta(title="P", arxiv_id="2"),
                      contributions=Contributions(main_contribution="c", novelty="n"))
     assert compare_mod._has_compare_modules(partial) is False
+
+
+def test_comparison_csv_headers_and_rows():
+    csv_text = to_csv(_comparison())
+    lines = csv_text.splitlines()
+    assert lines[0] == "标题,arXiv,年份,核心贡献,新颖之处,关键方法,性能/基准,推荐硬件,官方代码"
+    # Two data rows (one per paper)
+    assert len([l for l in lines if l.strip()]) == 3  # header + 2 papers
+
+
+def test_comparison_csv_methods_joined():
+    csv_text = to_csv(_comparison())
+    assert "Tiling" in csv_text
+    assert "Self-Attention" in csv_text
+
+
+def test_comparison_csv_empty_fields_blank():
+    from papermind.output.schema import Comparison, ComparedPaper
+
+    comp = Comparison(papers=[ComparedPaper(title="Minimal", arxiv_id=None, year=None)])
+    csv_text = to_csv(comp)
+    lines = csv_text.splitlines()
+    assert lines[1].startswith("Minimal,")
+    # arxiv_id and year are blank (not "-")
+    assert ",,," in lines[1]
+
+
+def test_comparison_csv_synthesis_appended():
+    comp = _comparison()
+    comp.synthesis = "Paper A is better."
+    csv_text = to_csv(comp)
+    assert "对比小结" in csv_text
+    assert "Paper A is better." in csv_text
+
+
+def test_comparison_to_csv_method_writes_file(tmp_path):
+    comp = _comparison()
+    out = str(tmp_path / "compare.csv")
+    result = comp.to_csv(out)
+    assert (tmp_path / "compare.csv").read_text(encoding="utf-8") == result
+    assert "标题" in result
 
 
 def test_compare_orchestration_reuses_mocked_analyze(monkeypatch):
