@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import papermind.compare as compare_mod
 from papermind.compare import build_comparison
-from papermind.output.compare_render import to_html, to_markdown
+from papermind.output.compare_render import to_csv, to_html, to_markdown
 from papermind.output.schema import (
     Benchmark,
     Contributions,
@@ -76,6 +76,43 @@ def test_has_compare_modules_rejects_partial_report():
     partial = Report(paper=PaperMeta(title="P", arxiv_id="2"),
                      contributions=Contributions(main_contribution="c", novelty="n"))
     assert compare_mod._has_compare_modules(partial) is False
+
+
+def test_comparison_csv_one_row_per_paper():
+    import csv
+    import io
+
+    comp = _comparison()
+    text = to_csv(comp)
+    rows = list(csv.reader(io.StringIO(text)))
+    # header + 2 data rows
+    assert len(rows) == 3
+    # first column header
+    assert rows[0][0] == "arXiv ID"
+    # data rows contain arxiv ids and titles
+    assert rows[1][0] == "2307.08691"
+    assert rows[2][0] == "1706.03762"
+    assert "FlashAttention-2" in rows[1]
+    # methods field joined with semicolon
+    methods_col = rows[0].index("关键方法")
+    assert rows[1][methods_col] == "Tiling"
+
+
+def test_comparison_csv_via_model_method(tmp_path):
+    import csv
+    import io
+
+    comp = _comparison()
+    text = comp.to_csv()
+    rows = list(csv.reader(io.StringIO(text)))
+    assert rows[0][0] == "arXiv ID"
+    assert len(rows) == 3
+
+    out = tmp_path / "compare.csv"
+    comp.to_csv(str(out))
+    assert out.exists()
+    saved = list(csv.reader(io.StringIO(out.read_text(encoding="utf-8"))))
+    assert saved == rows
 
 
 def test_compare_orchestration_reuses_mocked_analyze(monkeypatch):
