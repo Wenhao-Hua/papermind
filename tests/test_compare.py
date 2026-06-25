@@ -2,9 +2,12 @@
 
 from __future__ import annotations
 
+import csv
+import io
+
 import papermind.compare as compare_mod
 from papermind.compare import build_comparison
-from papermind.output.compare_render import to_html, to_markdown
+from papermind.output.compare_render import to_csv, to_html, to_markdown
 from papermind.output.schema import (
     Benchmark,
     Contributions,
@@ -76,6 +79,48 @@ def test_has_compare_modules_rejects_partial_report():
     partial = Report(paper=PaperMeta(title="P", arxiv_id="2"),
                      contributions=Contributions(main_contribution="c", novelty="n"))
     assert compare_mod._has_compare_modules(partial) is False
+
+
+def test_comparison_csv_columns_and_rows():
+    comp = _comparison()
+    text = to_csv(comp)
+    reader = csv.DictReader(io.StringIO(text))
+    rows = list(reader)
+    assert len(rows) == 2
+    assert rows[0]["arxiv_id"] == "2307.08691"
+    assert rows[0]["title"] == "FlashAttention-2"
+    assert rows[0]["year"] == "2023"
+    assert rows[0]["main_contribution"] == "faster attention"
+    assert rows[0]["methods"] == "Tiling"
+    assert rows[1]["arxiv_id"] == "1706.03762"
+    assert rows[1]["methods"] == "Self-Attention"
+
+
+def test_comparison_csv_to_method_writes_file(tmp_path):
+    comp = _comparison()
+    out = str(tmp_path / "result.csv")
+    returned = comp.to_csv(out)
+    from pathlib import Path
+    assert Path(out).exists()
+    rows = list(csv.DictReader(io.StringIO(returned)))
+    assert len(rows) == 2
+
+
+def test_comparison_csv_multi_methods_joined():
+    from papermind.output.schema import ComparedPaper, Comparison
+    comp = Comparison(papers=[
+        ComparedPaper(title="A", arxiv_id="1", year=2024, methods=["M1", "M2", "M3"]),
+    ])
+    rows = list(csv.DictReader(io.StringIO(to_csv(comp))))
+    assert rows[0]["methods"] == "M1; M2; M3"
+
+
+def test_comparison_csv_empty_fields_not_dash():
+    from papermind.output.schema import ComparedPaper, Comparison
+    comp = Comparison(papers=[ComparedPaper(title="", arxiv_id=None)])
+    rows = list(csv.DictReader(io.StringIO(to_csv(comp))))
+    assert rows[0]["arxiv_id"] == ""
+    assert rows[0]["title"] == ""
 
 
 def test_compare_orchestration_reuses_mocked_analyze(monkeypatch):
