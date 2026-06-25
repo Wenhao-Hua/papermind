@@ -30,6 +30,11 @@ _KEYLESS_PREFIXES = ("ollama/", "ollama_chat/", "local/")
 _JSON_OBJECT_RE = re.compile(r"\{.*\}", re.DOTALL)
 _JSON_ARRAY_RE = re.compile(r"\[.*\]", re.DOTALL)
 
+# Per-model unit pricing cache: (prompt_price_per_token, completion_price_per_token).
+# Avoids repeated litellm pricing-table lookups inside hot paths and threads.
+_MODEL_UNIT_PRICES: dict = {}
+_MODEL_UNIT_PRICES_LOCK = threading.Lock()
+
 
 class LLMClient:
     """Stateless-ish wrapper around litellm bound to a model + config."""
@@ -327,17 +332,39 @@ class LLMClient:
         return text
 
     def _record_usage(self, model: str, prompt_tokens: int, completion_tokens: int) -> None:
-        cost = 0.0
-        try:
-            litellm = _import_litellm()
-            prompt_cost, completion_cost = litellm.cost_per_token(
-                model=model, prompt_tokens=prompt_tokens, completion_tokens=completion_tokens
-            )
-            cost = float(prompt_cost) + float(completion_cost)
-        except Exception:  # noqa: BLE001 - cost is best-effort; many models lack pricing
-            cost = 0.0
+        pt_price, ct_price = _get_unit_prices(model)
+        cost = pt_price * prompt_tokens + ct_price * completion_tokens
         with self._usage_lock:
             self.usage.record(prompt_tokens, completion_tokens, cost)
+
+
+def _get_unit_prices(model: str) -> tuple:
+    """Return (prompt_price_per_token, completion_price_per_token) for *model*.
+
+    Results are cached per model so the litellm pricing-table lookup runs at
+    most once per process per model, making hot-path calls in threads fast.
+    Failures (including native extension panics from concurrent imports) are
+    silently treated as zero-cost; cost tracking is always best-effort.
+    """
+    with _MODEL_UNIT_PRICES_LOCK:
+        cached = _MODEL_UNIT_PRICES.get(model)
+    if cached is not None:
+        return cached
+    result = (0.0, 0.0)
+    try:
+        litellm = _import_litellm()
+        # cost_per_token is linear: price for N tokens = N * unit_price
+        pt_cost, ct_cost = litellm.cost_per_token(model=model, prompt_tokens=1, completion_tokens=1)
+        result = (float(pt_cost), float(ct_cost))
+    except (KeyboardInterrupt, SystemExit):
+        raise
+    except Exception:  # noqa: BLE001 - pricing is best-effort; many models lack pricing data
+        pass
+    except BaseException:  # noqa: BLE001 - native extension panics (e.g. pyo3 PanicException)
+        pass
+    with _MODEL_UNIT_PRICES_LOCK:
+        _MODEL_UNIT_PRICES.setdefault(model, result)
+    return result
 
 
 # --------------------------------------------------------------------------- #
