@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import papermind.compare as compare_mod
 from papermind.compare import build_comparison
-from papermind.output.compare_render import to_html, to_markdown
+from papermind.output.compare_render import to_csv, to_html, to_markdown
 from papermind.output.schema import (
     Benchmark,
     Contributions,
@@ -53,6 +53,29 @@ def test_comparison_markdown_table():
     assert "| 维度 | 2307.08691 | 1706.03762 |" in md
     assert "| 核心贡献 | faster attention | attention-only arch |" in md
     assert "| 关键方法 | Tiling | Self-Attention |" in md
+
+
+def test_comparison_csv_output():
+    csv_text = to_csv(_comparison())
+    lines = csv_text.strip().splitlines()
+    # Header row: 维度, then one column per paper
+    assert lines[0].startswith("维度,")
+    assert "2307.08691" in lines[0]
+    assert "1706.03762" in lines[0]
+    # Check a data row exists with expected content
+    joined = "\n".join(lines)
+    assert "核心贡献" in joined
+    assert "faster attention" in joined
+    assert "attention-only arch" in joined
+    assert "Tiling" in joined
+
+
+def test_comparison_csv_to_file(tmp_path):
+    path = str(tmp_path / "out.csv")
+    _comparison().to_csv(path)
+    content = (tmp_path / "out.csv").read_text(encoding="utf-8")
+    assert "维度" in content
+    assert "2307.08691" in content
 
 
 def test_comparison_html_table_and_links():
