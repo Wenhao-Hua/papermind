@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import papermind.compare as compare_mod
 from papermind.compare import build_comparison
-from papermind.output.compare_render import to_html, to_markdown
+from papermind.output.compare_render import to_csv, to_html, to_markdown
 from papermind.output.schema import (
     Benchmark,
     Contributions,
@@ -93,3 +93,54 @@ def test_compare_orchestration_reuses_mocked_analyze(monkeypatch):
     assert [p.title for p in comp.papers] == ["FlashAttention-2", "Transformer"]
     assert comp.synthesis == ""  # synthesis skipped -> no LLM call
     assert comp.usage is not None
+
+
+def test_comparison_csv_columns():
+    import csv
+    import io
+
+    comp = _comparison()
+    text = to_csv(comp)
+    rows = list(csv.reader(io.StringIO(text)))
+    # Header row contains all expected dimension labels
+    header = rows[0]
+    assert "标题" in header
+    assert "arXiv" in header
+    assert "年份" in header
+    assert "核心贡献" in header
+    assert "关键方法" in header
+    # Two data rows (one per paper)
+    assert len(rows) == 3  # header + 2 papers (no synthesis)
+
+
+def test_comparison_csv_values():
+    import csv
+    import io
+
+    comp = _comparison()
+    text = to_csv(comp)
+    rows = list(csv.reader(io.StringIO(text)))
+    header = rows[0]
+    title_idx = header.index("标题")
+    arxiv_idx = header.index("arXiv")
+    assert rows[1][title_idx] == "FlashAttention-2"
+    assert rows[1][arxiv_idx] == "2307.08691"
+    assert rows[2][title_idx] == "Transformer"
+
+
+def test_comparison_csv_with_synthesis():
+    comp = _comparison()
+    comp.synthesis = "FlashAttention-2 is faster."
+    text = to_csv(comp)
+    assert "对比小结" in text
+    assert "FlashAttention-2 is faster." in text
+
+
+def test_comparison_to_csv_writes_file(tmp_path):
+    comp = _comparison()
+    out = str(tmp_path / "compare.csv")
+    result = comp.to_csv(out)
+    assert (tmp_path / "compare.csv").exists()
+    content = (tmp_path / "compare.csv").read_text(encoding="utf-8")
+    assert "标题" in content
+    assert result == content
