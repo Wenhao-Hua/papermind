@@ -2,9 +2,12 @@
 
 from __future__ import annotations
 
+import csv
+import io
+
 import papermind.compare as compare_mod
 from papermind.compare import build_comparison
-from papermind.output.compare_render import to_html, to_markdown
+from papermind.output.compare_render import to_csv, to_html, to_markdown
 from papermind.output.schema import (
     Benchmark,
     Contributions,
@@ -76,6 +79,40 @@ def test_has_compare_modules_rejects_partial_report():
     partial = Report(paper=PaperMeta(title="P", arxiv_id="2"),
                      contributions=Contributions(main_contribution="c", novelty="n"))
     assert compare_mod._has_compare_modules(partial) is False
+
+
+def test_comparison_csv_headers_and_rows():
+    comp = _comparison()
+    text = to_csv(comp)
+    reader = csv.DictReader(io.StringIO(text))
+    rows = list(reader)
+    assert len(rows) == 2
+    assert set(reader.fieldnames) >= {"title", "arxiv_id", "year", "main_contribution", "methods", "benchmark"}
+    assert rows[0]["arxiv_id"] == "2307.08691"
+    assert rows[0]["methods"] == "Tiling"
+    assert rows[1]["arxiv_id"] == "1706.03762"
+    assert rows[1]["year"] == "2023"
+
+
+def test_comparison_csv_methods_semicolon_joined():
+    from papermind.output.schema import ComparedPaper, Comparison
+
+    comp = Comparison(papers=[
+        ComparedPaper(title="Multi", arxiv_id="1111", year=2024, methods=["A", "B", "C"]),
+    ])
+    text = to_csv(comp)
+    rows = list(csv.DictReader(io.StringIO(text)))
+    assert rows[0]["methods"] == "A; B; C"
+
+
+def test_comparison_csv_roundtrip_via_schema(tmp_path):
+    comp = _comparison()
+    path = str(tmp_path / "compare.csv")
+    result = comp.to_csv(path)
+    assert (tmp_path / "compare.csv").read_text(encoding="utf-8") == result
+    rows = list(csv.DictReader(io.StringIO(result)))
+    assert rows[0]["title"] == "FlashAttention-2"
+    assert rows[1]["title"] == "Transformer"
 
 
 def test_compare_orchestration_reuses_mocked_analyze(monkeypatch):
