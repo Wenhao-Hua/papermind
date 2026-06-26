@@ -2,9 +2,12 @@
 
 from __future__ import annotations
 
+import csv
+import io
+
 import papermind.compare as compare_mod
 from papermind.compare import build_comparison
-from papermind.output.compare_render import to_html, to_markdown
+from papermind.output.compare_render import to_csv, to_html, to_markdown
 from papermind.output.schema import (
     Benchmark,
     Contributions,
@@ -93,3 +96,37 @@ def test_compare_orchestration_reuses_mocked_analyze(monkeypatch):
     assert [p.title for p in comp.papers] == ["FlashAttention-2", "Transformer"]
     assert comp.synthesis == ""  # synthesis skipped -> no LLM call
     assert comp.usage is not None
+
+
+def test_comparison_csv_has_header_and_rows():
+    comp = _comparison()
+    text = to_csv(comp)
+    rows = list(csv.reader(io.StringIO(text)))
+    assert rows[0][0] == "title"
+    assert "arxiv_id" in rows[0]
+    assert "year" in rows[0]
+    assert "main_contribution" in rows[0]
+    assert len(rows) == 3  # header + 2 papers
+
+
+def test_comparison_csv_values():
+    comp = _comparison()
+    text = to_csv(comp)
+    rows = list(csv.reader(io.StringIO(text)))
+    header = rows[0]
+    paper0 = dict(zip(header, rows[1]))
+    assert paper0["title"] == "FlashAttention-2"
+    assert paper0["arxiv_id"] == "2307.08691"
+    assert paper0["year"] == "2023"
+    assert paper0["main_contribution"] == "faster attention"
+    assert paper0["methods"] == "Tiling"
+
+
+def test_comparison_csv_via_model_method(tmp_path):
+    comp = _comparison()
+    out = tmp_path / "compare.csv"
+    text = comp.to_csv(str(out))
+    assert out.exists()
+    assert out.read_text(encoding="utf-8") == text
+    rows = list(csv.reader(io.StringIO(text)))
+    assert len(rows) == 3  # header + 2 papers
