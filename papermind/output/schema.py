@@ -233,6 +233,30 @@ class Report(BaseModel):
     # Runtime token usage for this analysis; not part of the exported JSON artifact.
     usage: Optional["Usage"] = None
 
+    # -- reading-time estimate --------------------------------------------- #
+    def reading_minutes(self) -> int:
+        """Estimate minutes to read this report at 200 words per minute (academic pace).
+
+        Counts words across all report text fields (contributions, technical details,
+        connections, reproduction) and divides by 200. Minimum 1 minute.
+        """
+        _WPM = 200
+        chunks: List[str] = []
+        if self.contributions:
+            c = self.contributions
+            chunks += [c.main_contribution, c.novelty, c.problem_solved]
+        for p in self.technical.details:
+            chunks += [p.name, p.explanation, p.analogy or ""]
+        for w in self.connections.related_works:
+            chunks.append(w.relationship)
+        if self.reproduction:
+            r = self.reproduction
+            chunks += [r.requirements or "", r.recommended_hardware or ""]
+            chunks += [s.desc or "" for s in r.env_setup_steps]
+            chunks += list(r.gotchas)
+        words = sum(len(t.split()) for t in chunks if t)
+        return max(1, -(-words // _WPM))  # ceiling division
+
     # -- serialization ------------------------------------------------------ #
     def to_dict(self) -> dict:
         """Flatten to the documented JSON shape (technical_details / connections as lists)."""
