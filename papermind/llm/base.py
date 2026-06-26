@@ -336,6 +336,8 @@ class LLMClient:
             cost = float(prompt_cost) + float(completion_cost)
         except Exception:  # noqa: BLE001 - cost is best-effort; many models lack pricing
             cost = 0.0
+        except BaseException:  # noqa: BLE001 - guard against Rust/pyo3 extension panics in worker threads
+            cost = 0.0  # do not re-raise; usage counting must succeed regardless of cost errors
         with self._usage_lock:
             self.usage.record(prompt_tokens, completion_tokens, cost)
 
