@@ -2,9 +2,14 @@
 
 from __future__ import annotations
 
+import csv
+import io
+import tempfile
+from pathlib import Path
+
 import papermind.compare as compare_mod
 from papermind.compare import build_comparison
-from papermind.output.compare_render import to_html, to_markdown
+from papermind.output.compare_render import to_csv, to_html, to_markdown
 from papermind.output.schema import (
     Benchmark,
     Contributions,
@@ -67,6 +72,46 @@ def test_comparison_json_round_trip():
     data = comp.to_dict()
     assert data["papers"][0]["arxiv_id"] == "2307.08691"
     assert "usage" not in data  # usage excluded from export
+
+
+def test_comparison_csv_has_header_and_rows():
+    comp = _comparison()
+    text = to_csv(comp)
+    rows = list(csv.DictReader(io.StringIO(text)))
+    assert len(rows) == 2
+    assert rows[0]["arXiv ID"] == "2307.08691"
+    assert rows[1]["arXiv ID"] == "1706.03762"
+    assert rows[0]["标题"] == "FlashAttention-2"
+    assert rows[0]["核心贡献"] == "faster attention"
+    assert rows[0]["关键方法"] == "Tiling"
+    assert rows[0]["年份"] == "2023"
+
+
+def test_comparison_csv_method_on_schema():
+    comp = _comparison()
+    text = comp.to_csv()
+    assert "FlashAttention-2" in text
+    assert "Transformer" in text
+
+
+def test_comparison_csv_writes_to_file():
+    comp = _comparison()
+    with tempfile.TemporaryDirectory() as tmp:
+        path = str(Path(tmp) / "out.csv")
+        comp.to_csv(path)
+        content = Path(path).read_text(encoding="utf-8")
+    rows = list(csv.DictReader(io.StringIO(content)))
+    assert len(rows) == 2
+    assert rows[0]["官方代码"] == "https://github.com/x/y"
+
+
+def test_comparison_csv_empty_fields_use_empty_string():
+    comp = _comparison()
+    text = to_csv(comp)
+    rows = list(csv.DictReader(io.StringIO(text)))
+    # Transformer has no speedup so benchmark is setting only, hardware should be present
+    assert rows[1]["性能/基准"] == "seq=2k"
+    assert rows[1]["推荐硬件"] == "A100"
 
 
 def test_has_compare_modules_rejects_partial_report():
