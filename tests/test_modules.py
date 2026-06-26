@@ -207,6 +207,45 @@ def test_html_export_self_contained(tmp_path):
     assert "&lt;test&gt;" in doc                      # title HTML-escaped
 
 
+def test_reading_time_estimate_in_html_and_markdown():
+    from papermind.output.schema import Connection, ConnectionsSection
+
+    report = Report(
+        paper=PaperMeta(title="T"),
+        contributions=Contributions(
+            main_contribution="We propose a new attention mechanism that scales linearly.",
+            novelty="Linear complexity instead of quadratic.",
+            problem_solved="High memory cost of standard self-attention.",
+        ),
+        technical=TechnicalSection(
+            details=[
+                TechnicalPoint(
+                    name="Linear Attention",
+                    explanation=" ".join(["token"] * 100),
+                )
+            ]
+        ),
+        connections=ConnectionsSection(
+            related_works=[Connection(concept="Transformers", paper="Vaswani 2017", relationship="extends")]
+        ),
+    )
+    md = report.to_markdown()
+    html = report.to_html()
+    # Both outputs must contain the reading time estimate
+    assert "分钟阅读" in md
+    assert "分钟阅读" in html
+    # The estimate must be a positive integer shown in the text
+    import re
+    md_match = re.search(r"约 (\d+) 分钟阅读", md)
+    html_match = re.search(r"约 (\d+) 分钟阅读", html)
+    assert md_match and int(md_match.group(1)) >= 1
+    assert html_match and int(html_match.group(1)) >= 1
+    # A minimal report (no sections) still shows at least 1 minute
+    empty = Report(paper=PaperMeta(title="Empty"))
+    assert "约 1 分钟阅读" in empty.to_markdown()
+    assert "约 1 分钟阅读" in empty.to_html()
+
+
 def test_demo_plays_offline_instantly():
     import io
 
