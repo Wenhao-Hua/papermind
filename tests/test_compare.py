@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import papermind.compare as compare_mod
 from papermind.compare import build_comparison
-from papermind.output.compare_render import to_html, to_markdown
+from papermind.output.compare_render import to_csv, to_html, to_markdown
 from papermind.output.schema import (
     Benchmark,
     Contributions,
@@ -67,6 +67,43 @@ def test_comparison_json_round_trip():
     data = comp.to_dict()
     assert data["papers"][0]["arxiv_id"] == "2307.08691"
     assert "usage" not in data  # usage excluded from export
+
+
+def test_comparison_csv_structure():
+    comp = _comparison()
+    csv_text = to_csv(comp)
+    lines = csv_text.lstrip("﻿").splitlines()
+    # Header: 维度 + paper ids
+    assert lines[0] == "维度,2307.08691,1706.03762"
+    # Each dimension row is present
+    assert any(line.startswith("标题,") for line in lines)
+    assert any(line.startswith("核心贡献,") for line in lines)
+    assert any(line.startswith("关键方法,") for line in lines)
+    # Correct data in cells
+    assert any("faster attention" in line for line in lines)
+    assert any("Tiling" in line for line in lines)
+
+
+def test_comparison_csv_with_synthesis():
+    comp = _comparison()
+    comp.synthesis = "Paper A is faster; Paper B is foundational."
+    csv_text = to_csv(comp)
+    assert "对比小结" in csv_text
+    assert "Paper A is faster" in csv_text
+
+
+def test_comparison_to_csv_method_matches_render():
+    comp = _comparison()
+    assert comp.to_csv() == to_csv(comp)
+
+
+def test_comparison_to_csv_writes_file(tmp_path):
+    comp = _comparison()
+    out = str(tmp_path / "compare.csv")
+    result = comp.to_csv(path=out)
+    from pathlib import Path
+    assert Path(out).exists()
+    assert Path(out).read_text(encoding="utf-8") == result
 
 
 def test_has_compare_modules_rejects_partial_report():
