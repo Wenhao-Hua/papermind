@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import papermind.compare as compare_mod
 from papermind.compare import build_comparison
-from papermind.output.compare_render import to_html, to_markdown
+from papermind.output.compare_render import to_csv, to_html, to_markdown
 from papermind.output.schema import (
     Benchmark,
     Contributions,
@@ -93,3 +93,44 @@ def test_compare_orchestration_reuses_mocked_analyze(monkeypatch):
     assert [p.title for p in comp.papers] == ["FlashAttention-2", "Transformer"]
     assert comp.synthesis == ""  # synthesis skipped -> no LLM call
     assert comp.usage is not None
+
+
+def test_comparison_csv_headers_and_rows():
+    csv_text = to_csv(_comparison())
+    lines = csv_text.splitlines()
+    # First line: dimension header + one column per paper
+    assert lines[0].startswith("维度,")
+    assert "2307.08691" in lines[0]
+    assert "1706.03762" in lines[0]
+    # Check a data row exists for 核心贡献
+    assert any("核心贡献" in line for line in lines)
+    assert any("faster attention" in line for line in lines)
+
+
+def test_comparison_csv_via_schema_method(tmp_path):
+    comp = _comparison()
+    # in-memory return
+    csv_text = comp.to_csv()
+    assert "维度" in csv_text
+    assert "2307.08691" in csv_text
+    # write to file
+    out = tmp_path / "compare.csv"
+    comp.to_csv(str(out))
+    assert out.exists()
+    content = out.read_text(encoding="utf-8")
+    assert "1706.03762" in content
+
+
+def test_comparison_csv_with_synthesis():
+    from papermind.output.schema import Comparison, ComparedPaper
+
+    comp = Comparison(
+        papers=[
+            ComparedPaper(title="A", arxiv_id="1111.0001", main_contribution="foo"),
+            ComparedPaper(title="B", arxiv_id="2222.0002", main_contribution="bar"),
+        ],
+        synthesis="Both papers advance the field.",
+    )
+    csv_text = to_csv(comp)
+    assert "对比小结" in csv_text
+    assert "Both papers advance the field." in csv_text
