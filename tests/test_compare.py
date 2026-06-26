@@ -4,7 +4,10 @@ from __future__ import annotations
 
 import papermind.compare as compare_mod
 from papermind.compare import build_comparison
-from papermind.output.compare_render import to_html, to_markdown
+import csv
+import io
+
+from papermind.output.compare_render import to_csv, to_html, to_markdown
 from papermind.output.schema import (
     Benchmark,
     Contributions,
@@ -76,6 +79,39 @@ def test_has_compare_modules_rejects_partial_report():
     partial = Report(paper=PaperMeta(title="P", arxiv_id="2"),
                      contributions=Contributions(main_contribution="c", novelty="n"))
     assert compare_mod._has_compare_modules(partial) is False
+
+
+def test_comparison_csv_structure():
+    csv_text = to_csv(_comparison())
+    rows = list(csv.reader(io.StringIO(csv_text)))
+    # header row + 2 paper rows
+    assert len(rows) == 3
+    header = rows[0]
+    assert header[0] == "title"
+    assert "arxiv_id" in header
+    assert "main_contribution" in header
+    assert "methods" in header
+    # first paper values
+    idx_title = header.index("title")
+    idx_arxiv = header.index("arxiv_id")
+    idx_contrib = header.index("main_contribution")
+    idx_methods = header.index("methods")
+    assert rows[1][idx_title] == "FlashAttention-2"
+    assert rows[1][idx_arxiv] == "2307.08691"
+    assert rows[1][idx_contrib] == "faster attention"
+    assert rows[1][idx_methods] == "Tiling"
+    assert rows[2][idx_title] == "Transformer"
+
+
+def test_comparison_csv_via_schema_method(tmp_path):
+    comp = _comparison()
+    # in-memory
+    text = comp.to_csv()
+    assert "FlashAttention-2" in text
+    # write to file
+    out = tmp_path / "compare.csv"
+    comp.to_csv(str(out))
+    assert out.read_text(encoding="utf-8") == text
 
 
 def test_compare_orchestration_reuses_mocked_analyze(monkeypatch):
