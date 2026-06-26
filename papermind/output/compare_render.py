@@ -1,8 +1,10 @@
-"""Render a Comparison as a side-by-side Markdown or HTML table."""
+"""Render a Comparison as a side-by-side Markdown, HTML, or CSV table."""
 
 from __future__ import annotations
 
+import csv
 import html as _html
+import io
 from typing import Callable, List, Tuple
 
 from papermind.output.schema import ComparedPaper, Comparison
@@ -87,3 +89,22 @@ def _html_cell(label: str, value: str) -> str:
 
 def _e(text) -> str:
     return _html.escape(str(text)) if text is not None else ""
+
+
+def to_csv(comparison: Comparison) -> str:
+    """Render the comparison as a pivot-style CSV: one row per paper, one column per dimension."""
+    papers = comparison.papers
+    buf = io.StringIO()
+    writer = csv.writer(buf, lineterminator="\n")
+
+    header = ["维度"] + [p.arxiv_id or f"#{i + 1}" for i, p in enumerate(papers)]
+    writer.writerow(header)
+
+    for label, values in _rows(comparison):
+        writer.writerow([label] + values)
+
+    if comparison.synthesis:
+        writer.writerow([])
+        writer.writerow(["对比小结", comparison.synthesis])
+
+    return buf.getvalue()
