@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import papermind.compare as compare_mod
 from papermind.compare import build_comparison
-from papermind.output.compare_render import to_html, to_markdown
+from papermind.output.compare_render import to_csv, to_html, to_markdown
 from papermind.output.schema import (
     Benchmark,
     Contributions,
@@ -93,3 +93,52 @@ def test_compare_orchestration_reuses_mocked_analyze(monkeypatch):
     assert [p.title for p in comp.papers] == ["FlashAttention-2", "Transformer"]
     assert comp.synthesis == ""  # synthesis skipped -> no LLM call
     assert comp.usage is not None
+
+
+def test_comparison_csv_header_and_rows():
+    import csv
+    import io
+
+    comp = _comparison()
+    text = to_csv(comp)
+    rows = list(csv.DictReader(io.StringIO(text)))
+    assert len(rows) == 2
+    assert rows[0]["标题"] == "FlashAttention-2"
+    assert rows[0]["arXiv"] == "2307.08691"
+    assert rows[0]["年份"] == "2023"
+    assert rows[0]["核心贡献"] == "faster attention"
+    assert rows[0]["关键方法"] == "Tiling"
+    assert rows[0]["性能/基准"] == "seq=2k: 2.0x"
+    assert rows[1]["标题"] == "Transformer"
+    assert rows[1]["关键方法"] == "Self-Attention"
+
+
+def test_comparison_csv_synthesis_appended():
+    comp = _comparison()
+    comp.synthesis = "Both papers advance transformer efficiency."
+    text = to_csv(comp)
+    lines = text.splitlines()
+    assert any("Both papers advance" in line for line in lines)
+    assert any("对比小结" in line for line in lines)
+
+
+def test_comparison_csv_to_file(tmp_path):
+    comp = _comparison()
+    out = str(tmp_path / "compare.csv")
+    result = comp.to_csv(out)
+    assert (tmp_path / "compare.csv").read_text(encoding="utf-8") == result
+    assert "FlashAttention-2" in result
+
+
+def test_comparison_csv_empty_fields_not_dash():
+    """CSV cells for missing values should be empty strings, not '-' (unlike MD/HTML)."""
+    import csv
+    import io
+
+    from papermind.output.schema import Comparison, ComparedPaper
+
+    comp = Comparison(papers=[ComparedPaper(title="Paper A")])
+    text = to_csv(comp)
+    rows = list(csv.DictReader(io.StringIO(text)))
+    assert rows[0]["arXiv"] == ""
+    assert rows[0]["年份"] == ""
