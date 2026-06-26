@@ -2,9 +2,12 @@
 
 from __future__ import annotations
 
+import csv
+import io
+
 import papermind.compare as compare_mod
 from papermind.compare import build_comparison
-from papermind.output.compare_render import to_html, to_markdown
+from papermind.output.compare_render import to_csv, to_html, to_markdown
 from papermind.output.schema import (
     Benchmark,
     Contributions,
@@ -60,6 +63,47 @@ def test_comparison_html_table_and_links():
     assert html.startswith("<!DOCTYPE html>")
     assert "<th>2307.08691</th>" in html
     assert "<a href='https://github.com/x/y'>" in html  # official code linked
+
+
+def test_comparison_csv_columns_and_rows():
+    comp = _comparison()
+    raw = to_csv(comp)
+    rows = list(csv.reader(io.StringIO(raw)))
+    # Header row has expected column names
+    assert rows[0] == ["标题", "arXiv", "年份", "核心贡献", "新颖之处", "关键方法", "性能/基准", "推荐硬件", "官方代码"]
+    # One data row per paper
+    assert len([r for r in rows if r and r[0] not in ("标题", "对比小结")]) == 2
+    # First paper row has correct values
+    paper_rows = [r for r in rows if r and r[0] not in ("标题", "对比小结", "")]
+    assert paper_rows[0][0] == "FlashAttention-2"
+    assert paper_rows[0][1] == "2307.08691"
+    assert paper_rows[0][4] == "n"  # novelty
+    assert paper_rows[0][5] == "Tiling"  # methods joined
+    assert paper_rows[1][0] == "Transformer"
+
+
+def test_comparison_csv_synthesis_row():
+    comp = _comparison()
+    comp.synthesis = "These papers complement each other."
+    raw = to_csv(comp)
+    assert "对比小结" in raw
+    assert "These papers complement each other." in raw
+
+
+def test_comparison_csv_no_synthesis_when_empty():
+    comp = _comparison()
+    raw = to_csv(comp)
+    assert "对比小结" not in raw
+
+
+def test_comparison_csv_via_schema_method(tmp_path):
+    comp = _comparison()
+    out = tmp_path / "compare.csv"
+    text = comp.to_csv(str(out))
+    assert out.exists()
+    assert out.read_text(encoding="utf-8") == text
+    rows = list(csv.reader(io.StringIO(text)))
+    assert rows[0][0] == "标题"
 
 
 def test_comparison_json_round_trip():
