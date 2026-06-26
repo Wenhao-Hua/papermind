@@ -2,9 +2,12 @@
 
 from __future__ import annotations
 
+import csv
+import io
+
 import papermind.compare as compare_mod
 from papermind.compare import build_comparison
-from papermind.output.compare_render import to_html, to_markdown
+from papermind.output.compare_render import to_csv, to_html, to_markdown
 from papermind.output.schema import (
     Benchmark,
     Contributions,
@@ -93,3 +96,46 @@ def test_compare_orchestration_reuses_mocked_analyze(monkeypatch):
     assert [p.title for p in comp.papers] == ["FlashAttention-2", "Transformer"]
     assert comp.synthesis == ""  # synthesis skipped -> no LLM call
     assert comp.usage is not None
+
+
+def test_comparison_csv_is_parseable():
+    csv_text = to_csv(_comparison())
+    rows = list(csv.reader(io.StringIO(csv_text)))
+    # header row: ["维度", "2307.08691", "1706.03762"]
+    assert rows[0] == ["维度", "2307.08691", "1706.03762"]
+    labels = [r[0] for r in rows[1:] if r]
+    assert "标题" in labels
+    assert "核心贡献" in labels
+    assert "关键方法" in labels
+
+
+def test_comparison_csv_contains_paper_data():
+    csv_text = to_csv(_comparison())
+    rows = list(csv.reader(io.StringIO(csv_text)))
+    row_map = {r[0]: r[1:] for r in rows if len(r) >= 2}
+    assert row_map["标题"] == ["FlashAttention-2", "Transformer"]
+    assert row_map["核心贡献"][0] == "faster attention"
+    assert row_map["关键方法"][0] == "Tiling"
+
+
+def test_comparison_csv_via_schema_method():
+    comp = _comparison()
+    csv_text = comp.to_csv()
+    assert "维度" in csv_text
+    assert "2307.08691" in csv_text
+    assert "faster attention" in csv_text
+
+
+def test_comparison_csv_with_synthesis():
+    from papermind.output.schema import Comparison, ComparedPaper
+
+    comp = Comparison(
+        papers=[
+            ComparedPaper(title="A", arxiv_id="0001.00001"),
+            ComparedPaper(title="B", arxiv_id="0002.00002"),
+        ],
+        synthesis="A is faster, B is more general.",
+    )
+    csv_text = to_csv(comp)
+    assert "对比小结" in csv_text
+    assert "A is faster" in csv_text
