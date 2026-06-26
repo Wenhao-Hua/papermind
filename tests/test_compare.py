@@ -2,9 +2,14 @@
 
 from __future__ import annotations
 
+import csv
+import io
+import pathlib
+import tempfile
+
 import papermind.compare as compare_mod
 from papermind.compare import build_comparison
-from papermind.output.compare_render import to_html, to_markdown
+from papermind.output.compare_render import to_csv, to_html, to_markdown
 from papermind.output.schema import (
     Benchmark,
     Contributions,
@@ -76,6 +81,50 @@ def test_has_compare_modules_rejects_partial_report():
     partial = Report(paper=PaperMeta(title="P", arxiv_id="2"),
                      contributions=Contributions(main_contribution="c", novelty="n"))
     assert compare_mod._has_compare_modules(partial) is False
+
+
+def test_comparison_csv_structure():
+    comp = _comparison()
+    text = to_csv(comp)
+    rows = list(csv.reader(io.StringIO(text)))
+    # header row: "维度" + one column per paper
+    assert rows[0] == ["维度", "2307.08691", "1706.03762"]
+    # dimension rows: 9 rows (one per field in _rows)
+    labels = [r[0] for r in rows[1:]]
+    assert "标题" in labels
+    assert "核心贡献" in labels
+    assert "关键方法" in labels
+    # values present
+    contrib_row = next(r for r in rows if r[0] == "核心贡献")
+    assert contrib_row[1] == "faster attention"
+    assert contrib_row[2] == "attention-only arch"
+
+
+def test_comparison_csv_with_synthesis():
+    comp = _comparison()
+    comp.synthesis = "Both papers address attention; FlashAttention-2 is faster."
+    text = to_csv(comp)
+    rows = list(csv.reader(io.StringIO(text)))
+    synth_row = next((r for r in rows if r[0] == "对比小结"), None)
+    assert synth_row is not None
+    assert synth_row[1] == "Both papers address attention; FlashAttention-2 is faster."
+
+
+def test_comparison_csv_no_synthesis():
+    comp = _comparison()
+    comp.synthesis = ""
+    text = to_csv(comp)
+    rows = list(csv.reader(io.StringIO(text)))
+    assert all(r[0] != "对比小结" for r in rows)
+
+
+def test_comparison_to_csv_writes_file():
+    comp = _comparison()
+    with tempfile.TemporaryDirectory() as tmp:
+        path = str(pathlib.Path(tmp) / "compare.csv")
+        result = comp.to_csv(path)
+        assert pathlib.Path(path).read_text(encoding="utf-8") == result
+        assert "维度" in result
 
 
 def test_compare_orchestration_reuses_mocked_analyze(monkeypatch):
