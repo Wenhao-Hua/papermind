@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import papermind.compare as compare_mod
 from papermind.compare import build_comparison
-from papermind.output.compare_render import to_html, to_markdown
+from papermind.output.compare_render import to_csv, to_html, to_markdown
 from papermind.output.schema import (
     Benchmark,
     Contributions,
@@ -93,3 +93,50 @@ def test_compare_orchestration_reuses_mocked_analyze(monkeypatch):
     assert [p.title for p in comp.papers] == ["FlashAttention-2", "Transformer"]
     assert comp.synthesis == ""  # synthesis skipped -> no LLM call
     assert comp.usage is not None
+
+
+def test_comparison_csv_format():
+    import csv
+    import io
+
+    comp = _comparison()
+    text = to_csv(comp)
+    rows = list(csv.reader(io.StringIO(text)))
+    # Header row: 维度, then one column per paper (arxiv ID)
+    assert rows[0] == ["维度", "2307.08691", "1706.03762"]
+    # Find the contribution row and check values
+    contrib_row = next(r for r in rows if r[0] == "核心贡献")
+    assert contrib_row[1] == "faster attention"
+    assert contrib_row[2] == "attention-only arch"
+    # All rows have the same width
+    assert all(len(r) == 3 for r in rows)
+
+
+def test_comparison_csv_via_schema_method(tmp_path):
+    comp = _comparison()
+    csv_path = tmp_path / "out.csv"
+    text = comp.to_csv(str(csv_path))
+    assert csv_path.exists()
+    assert csv_path.read_text(encoding="utf-8") == text
+    assert "维度" in text
+    assert "2307.08691" in text
+
+
+def test_comparison_csv_synthesis_row():
+    import csv
+    import io
+    from papermind.output.schema import ComparedPaper, Comparison
+
+    comp = Comparison(
+        papers=[
+            ComparedPaper(title="A", arxiv_id="0001"),
+            ComparedPaper(title="B", arxiv_id="0002"),
+        ],
+        synthesis="Both papers improve efficiency.",
+    )
+    text = to_csv(comp)
+    rows = list(csv.reader(io.StringIO(text)))
+    last = rows[-1]
+    assert last[0] == "对比小结"
+    assert last[1] == "Both papers improve efficiency."
+    assert last[2] == ""  # padding for second paper column
