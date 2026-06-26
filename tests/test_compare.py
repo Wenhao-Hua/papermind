@@ -2,9 +2,12 @@
 
 from __future__ import annotations
 
+import csv
+import io
+
 import papermind.compare as compare_mod
 from papermind.compare import build_comparison
-from papermind.output.compare_render import to_html, to_markdown
+from papermind.output.compare_render import to_csv, to_html, to_markdown
 from papermind.output.schema import (
     Benchmark,
     Contributions,
@@ -46,6 +49,32 @@ def test_build_comparison_extracts_fields():
     assert p0.methods == ["Tiling"]
     assert p0.benchmark == "seq=2k: 2.0x"
     assert comp.papers[1].benchmark == "seq=2k"  # no speedup/result -> setting only
+
+
+def test_comparison_csv_export():
+    comp = _comparison()
+    text = to_csv(comp)
+    reader = csv.reader(io.StringIO(text))
+    rows = list(reader)
+    # Header row: "维度" + one column per paper
+    assert rows[0] == ["维度", "2307.08691", "1706.03762"]
+    # Dimension labels present
+    labels = [r[0] for r in rows[1:] if r]
+    assert "核心贡献" in labels
+    assert "关键方法" in labels
+    # Data values in the right columns
+    contrib_row = next(r for r in rows if r and r[0] == "核心贡献")
+    assert contrib_row[1] == "faster attention"
+    assert contrib_row[2] == "attention-only arch"
+
+
+def test_comparison_csv_via_model_method(tmp_path):
+    comp = _comparison()
+    out = tmp_path / "compare.csv"
+    text = comp.to_csv(str(out))
+    assert out.exists()
+    assert out.read_text(encoding="utf-8") == text
+    assert "2307.08691" in text
 
 
 def test_comparison_markdown_table():
