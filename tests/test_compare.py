@@ -2,9 +2,12 @@
 
 from __future__ import annotations
 
+import csv
+import io
+
 import papermind.compare as compare_mod
 from papermind.compare import build_comparison
-from papermind.output.compare_render import to_html, to_markdown
+from papermind.output.compare_render import to_csv, to_html, to_markdown
 from papermind.output.schema import (
     Benchmark,
     Contributions,
@@ -76,6 +79,39 @@ def test_has_compare_modules_rejects_partial_report():
     partial = Report(paper=PaperMeta(title="P", arxiv_id="2"),
                      contributions=Contributions(main_contribution="c", novelty="n"))
     assert compare_mod._has_compare_modules(partial) is False
+
+
+def test_comparison_csv_structure():
+    comp = _comparison()
+    text = to_csv(comp)
+    rows = list(csv.reader(io.StringIO(text)))
+    # header row: 维度, arxiv_id_0, arxiv_id_1
+    assert rows[0] == ["维度", "2307.08691", "1706.03762"]
+    # each dimension row has 3 cells
+    for row in rows[1:]:
+        if row:  # skip blank separator rows
+            assert len(row) == 3
+    labels = [r[0] for r in rows[1:] if r]
+    assert "核心贡献" in labels
+    assert "关键方法" in labels
+
+
+def test_comparison_csv_values():
+    comp = _comparison()
+    text = to_csv(comp)
+    rows = {r[0]: r[1:] for r in csv.reader(io.StringIO(text)) if r}
+    assert rows["核心贡献"] == ["faster attention", "attention-only arch"]
+    assert rows["关键方法"] == ["Tiling", "Self-Attention"]
+
+
+def test_comparison_csv_file_write(tmp_path):
+    comp = _comparison()
+    out = str(tmp_path / "compare.csv")
+    comp.to_csv(out)
+    with open(out, newline="", encoding="utf-8") as f:
+        rows = list(csv.reader(f))
+    assert rows[0][0] == "维度"
+    assert len(rows) >= 9  # header + 8 dimension rows (at minimum)
 
 
 def test_compare_orchestration_reuses_mocked_analyze(monkeypatch):
