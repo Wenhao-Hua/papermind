@@ -69,6 +69,35 @@ def test_comparison_json_round_trip():
     assert "usage" not in data  # usage excluded from export
 
 
+def test_comparison_csv_content():
+    csv_text = _comparison().to_csv()
+    assert "维度" in csv_text
+    assert "2307.08691" in csv_text
+    assert "faster attention" in csv_text
+    assert "Tiling" in csv_text
+
+
+def test_comparison_csv_columns():
+    import csv
+    import io
+
+    comp = _comparison()
+    rows = list(csv.reader(io.StringIO(comp.to_csv())))
+    assert rows[0] == ["维度", "2307.08691", "1706.03762"]
+    labels = [r[0] for r in rows if r]
+    assert "标题" in labels
+    assert "核心贡献" in labels
+    assert "关键方法" in labels
+
+
+def test_comparison_csv_writes_file(tmp_path):
+    dest = tmp_path / "compare.csv"
+    _comparison().to_csv(str(dest))
+    assert dest.exists()
+    content = dest.read_text(encoding="utf-8")
+    assert "FlashAttention-2" in content
+
+
 def test_has_compare_modules_rejects_partial_report():
     full = _report("F", "1", "c", "M", "2x")  # contributions + technical + reproduction
     assert compare_mod._has_compare_modules(full) is True
