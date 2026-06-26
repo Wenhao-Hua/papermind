@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import papermind.compare as compare_mod
 from papermind.compare import build_comparison
-from papermind.output.compare_render import to_html, to_markdown
+from papermind.output.compare_render import to_csv, to_html, to_markdown
 from papermind.output.schema import (
     Benchmark,
     Contributions,
@@ -93,3 +93,64 @@ def test_compare_orchestration_reuses_mocked_analyze(monkeypatch):
     assert [p.title for p in comp.papers] == ["FlashAttention-2", "Transformer"]
     assert comp.synthesis == ""  # synthesis skipped -> no LLM call
     assert comp.usage is not None
+
+
+def test_comparison_csv_header_row():
+    import csv
+    import io
+
+    comp = _comparison()
+    text = to_csv(comp)
+    rows = list(csv.reader(io.StringIO(text)))
+    assert rows[0] == ["维度", "2307.08691", "1706.03762"]
+
+
+def test_comparison_csv_dimension_rows():
+    import csv
+    import io
+
+    comp = _comparison()
+    rows = list(csv.reader(io.StringIO(to_csv(comp))))
+    labels = [r[0] for r in rows if r]
+    assert "核心贡献" in labels
+    assert "关键方法" in labels
+    assert "年份" in labels
+
+
+def test_comparison_csv_values():
+    import csv
+    import io
+
+    comp = _comparison()
+    rows = {r[0]: r[1:] for r in csv.reader(io.StringIO(to_csv(comp))) if r}
+    assert rows["核心贡献"] == ["faster attention", "attention-only arch"]
+    assert rows["关键方法"] == ["Tiling", "Self-Attention"]
+
+
+def test_comparison_csv_synthesis_row():
+    import csv
+    import io
+
+    comp = _comparison()
+    comp.synthesis = "Both papers address attention."
+    text = to_csv(comp)
+    rows = list(csv.reader(io.StringIO(text)))
+    synth_rows = [r for r in rows if r and r[0] == "对比小结"]
+    assert synth_rows
+    assert synth_rows[0][1] == "Both papers address attention."
+
+
+def test_comparison_to_csv_method_returns_string():
+    comp = _comparison()
+    text = comp.to_csv()
+    assert "维度" in text
+    assert "2307.08691" in text
+
+
+def test_comparison_to_csv_writes_file(tmp_path):
+    comp = _comparison()
+    out = str(tmp_path / "compare.csv")
+    comp.to_csv(out)
+    content = open(out, encoding="utf-8").read()
+    assert "核心贡献" in content
+    assert "faster attention" in content
