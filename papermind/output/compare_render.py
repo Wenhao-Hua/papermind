@@ -1,8 +1,10 @@
-"""Render a Comparison as a side-by-side Markdown or HTML table."""
+"""Render a Comparison as a side-by-side Markdown or HTML table, or per-paper CSV."""
 
 from __future__ import annotations
 
+import csv
 import html as _html
+import io
 from typing import Callable, List, Tuple
 
 from papermind.output.schema import ComparedPaper, Comparison
@@ -87,3 +89,38 @@ def _html_cell(label: str, value: str) -> str:
 
 def _e(text) -> str:
     return _html.escape(str(text)) if text is not None else ""
+
+
+_CSV_FIELDS = [
+    ("title", "标题"),
+    ("arxiv_id", "arXiv"),
+    ("year", "年份"),
+    ("main_contribution", "核心贡献"),
+    ("novelty", "新颖之处"),
+    ("methods", "关键方法"),
+    ("benchmark", "性能/基准"),
+    ("hardware", "推荐硬件"),
+    ("official_code", "官方代码"),
+]
+
+
+def to_csv(comparison: Comparison) -> str:
+    """Return a UTF-8 CSV string with one row per paper (BOM-free, RFC 4180)."""
+    buf = io.StringIO()
+    writer = csv.writer(buf, lineterminator="\r\n")
+    writer.writerow([label for _, label in _CSV_FIELDS])
+    for paper in comparison.papers:
+        row = []
+        for attr, _ in _CSV_FIELDS:
+            val = getattr(paper, attr, None)
+            if attr == "methods":
+                row.append("; ".join(val) if val else "")
+            elif val is None:
+                row.append("")
+            else:
+                row.append(str(val))
+        writer.writerow(row)
+    if comparison.synthesis:
+        writer.writerow([])
+        writer.writerow(["对比小结", comparison.synthesis])
+    return buf.getvalue()
