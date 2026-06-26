@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import papermind.compare as compare_mod
 from papermind.compare import build_comparison
-from papermind.output.compare_render import to_html, to_markdown
+from papermind.output.compare_render import to_csv, to_html, to_markdown
 from papermind.output.schema import (
     Benchmark,
     Contributions,
@@ -76,6 +76,27 @@ def test_has_compare_modules_rejects_partial_report():
     partial = Report(paper=PaperMeta(title="P", arxiv_id="2"),
                      contributions=Contributions(main_contribution="c", novelty="n"))
     assert compare_mod._has_compare_modules(partial) is False
+
+
+def test_comparison_csv_structure():
+    csv_text = to_csv(_comparison())
+    lines = [l for l in csv_text.splitlines() if l]
+    # header row: 维度, then paper ids
+    assert lines[0] == "维度,2307.08691,1706.03762"
+    # spot check dimension rows
+    assert any(l.startswith("标题,") for l in lines)
+    assert any(l.startswith("核心贡献,faster attention") for l in lines)
+    assert any(l.startswith("关键方法,Tiling,Self-Attention") for l in lines)
+
+
+def test_comparison_csv_round_trip_via_method(tmp_path):
+    comp = _comparison()
+    out = tmp_path / "compare.csv"
+    text = comp.to_csv(str(out))
+    assert out.exists()
+    assert out.read_text(encoding="utf-8") == text
+    assert "维度" in text
+    assert "2307.08691" in text
 
 
 def test_compare_orchestration_reuses_mocked_analyze(monkeypatch):
