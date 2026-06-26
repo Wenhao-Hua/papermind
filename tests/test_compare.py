@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import papermind.compare as compare_mod
 from papermind.compare import build_comparison
-from papermind.output.compare_render import to_html, to_markdown
+from papermind.output.compare_render import to_csv, to_html, to_markdown
 from papermind.output.schema import (
     Benchmark,
     Contributions,
@@ -93,3 +93,45 @@ def test_compare_orchestration_reuses_mocked_analyze(monkeypatch):
     assert [p.title for p in comp.papers] == ["FlashAttention-2", "Transformer"]
     assert comp.synthesis == ""  # synthesis skipped -> no LLM call
     assert comp.usage is not None
+
+
+def test_comparison_csv_header_and_rows():
+    csv_text = to_csv(_comparison())
+    lines = [l for l in csv_text.splitlines() if l.strip()]
+    # header row: 维度 + two paper ids
+    assert lines[0] == "维度,2307.08691,1706.03762"
+    # 9 data rows (one per comparison dimension)
+    assert len(lines) == 10
+
+
+def test_comparison_csv_contains_values():
+    csv_text = to_csv(_comparison())
+    assert "faster attention" in csv_text
+    assert "attention-only arch" in csv_text
+    assert "Tiling" in csv_text
+
+
+def test_comparison_csv_with_synthesis():
+    comp = _comparison()
+    comp.synthesis = "Both papers are about attention mechanisms."
+    csv_text = to_csv(comp)
+    assert "对比小结" in csv_text
+    assert "Both papers are about attention mechanisms." in csv_text
+
+
+def test_comparison_to_csv_method_matches_render(tmp_path):
+    comp = _comparison()
+    csv_via_render = to_csv(comp)
+    csv_via_method = comp.to_csv()
+    assert csv_via_render == csv_via_method
+
+
+def test_comparison_to_csv_writes_file(tmp_path):
+    comp = _comparison()
+    out = str(tmp_path / "compare.csv")
+    result = comp.to_csv(out)
+    import pathlib
+    assert pathlib.Path(out).exists()
+    content = pathlib.Path(out).read_text(encoding="utf-8")
+    assert content == result
+    assert "维度" in content
