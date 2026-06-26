@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import papermind.compare as compare_mod
 from papermind.compare import build_comparison
-from papermind.output.compare_render import to_html, to_markdown
+from papermind.output.compare_render import to_csv, to_html, to_markdown
 from papermind.output.schema import (
     Benchmark,
     Contributions,
@@ -76,6 +76,38 @@ def test_has_compare_modules_rejects_partial_report():
     partial = Report(paper=PaperMeta(title="P", arxiv_id="2"),
                      contributions=Contributions(main_contribution="c", novelty="n"))
     assert compare_mod._has_compare_modules(partial) is False
+
+
+def test_comparison_csv_columns_and_rows():
+    comp = _comparison()
+    csv_text = to_csv(comp)
+    lines = csv_text.strip().splitlines()
+    # Header row should list all field names
+    assert lines[0] == "arxiv_id,title,year,main_contribution,novelty,methods,benchmark,hardware,official_code"
+    # Two data rows, one per paper
+    assert lines[1].startswith("2307.08691,")
+    assert lines[2].startswith("1706.03762,")
+    # benchmark value included
+    assert "seq=2k: 2.0x" in lines[1]
+    # official code included
+    assert "https://github.com/x/y" in lines[1]
+
+
+def test_comparison_csv_via_method(tmp_path):
+    comp = _comparison()
+    out = tmp_path / "compare.csv"
+    result = comp.to_csv(str(out))
+    assert out.exists()
+    assert out.read_text(encoding="utf-8") == result
+    assert "FlashAttention-2" in result
+
+
+def test_comparison_csv_synthesis_appended():
+    comp = _comparison()
+    comp.synthesis = "Paper A extends Paper B."
+    csv_text = to_csv(comp)
+    assert "synthesis" in csv_text
+    assert "Paper A extends Paper B." in csv_text
 
 
 def test_compare_orchestration_reuses_mocked_analyze(monkeypatch):
