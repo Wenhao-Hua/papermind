@@ -1,12 +1,24 @@
-"""Tests for reproduction export (setup.sh / notebook) and BibTeX citation."""
+"""Tests for reproduction export (setup.sh / notebook), BibTeX citation, and reading-time."""
 
 from __future__ import annotations
 
 import json
 
 from papermind.output.cite import to_bibtex
+from papermind.output.html import to_html
+from papermind.output.markdown import to_markdown
 from papermind.output.reproduce_export import to_notebook, to_setup_script
-from papermind.output.schema import CommonError, PaperMeta, Reproduction, Report, SetupStep
+from papermind.output.schema import (
+    CommonError,
+    Contributions,
+    PaperMeta,
+    Reproduction,
+    Report,
+    SetupStep,
+    TechnicalPoint,
+    TechnicalSection,
+    report_reading_minutes,
+)
 
 
 def _report():
@@ -68,3 +80,57 @@ def test_bibtex_without_arxiv_is_misc():
     meta = PaperMeta(title="Some Local Paper", authors=["Jane Doe"], year=2020)
     bib = to_bibtex(meta)
     assert bib.startswith("@misc{doe2020some,")
+
+
+def _full_report():
+    return Report(
+        paper=PaperMeta(title="Attention Is All You Need", arxiv_id="1706.03762", year=2017),
+        contributions=Contributions(
+            main_contribution="Transformer architecture replacing RNNs",
+            novelty="Self-attention allows parallel computation across sequence positions",
+            problem_solved="Sequential bottleneck in RNN-based sequence transduction",
+        ),
+        technical=TechnicalSection(details=[
+            TechnicalPoint(
+                name="Multi-Head Attention",
+                explanation="Runs multiple attention heads in parallel to capture different aspects of the input",
+                analogy="Like examining a document through several different lenses simultaneously",
+            ),
+            TechnicalPoint(
+                name="Positional Encoding",
+                explanation="Adds position information via sinusoidal functions since attention is order-invariant",
+                analogy="Like numbering pages so you know their order",
+            ),
+        ]),
+    )
+
+
+def test_reading_time_minimum_is_one():
+    empty = Report(paper=PaperMeta(title="Empty Paper"))
+    assert report_reading_minutes(empty) == 1
+
+
+def test_reading_time_scales_with_content():
+    short = Report(
+        paper=PaperMeta(title="Short"),
+        contributions=Contributions(main_contribution="A", novelty="B", problem_solved="C"),
+    )
+    full = _full_report()
+    assert report_reading_minutes(full) >= report_reading_minutes(short)
+
+
+def test_reading_time_reasonable_range():
+    minutes = report_reading_minutes(_full_report())
+    assert 1 <= minutes <= 15
+
+
+def test_markdown_includes_reading_time():
+    md = to_markdown(_full_report())
+    assert "阅读时长" in md
+    assert "分钟" in md
+
+
+def test_html_includes_reading_time():
+    h = to_html(_full_report())
+    assert "阅读时长" in h
+    assert "分钟" in h

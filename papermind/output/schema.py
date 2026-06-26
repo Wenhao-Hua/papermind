@@ -289,6 +289,30 @@ class Report(BaseModel):
         return write_notebook(self, path) if path else to_notebook(self)
 
 
+def report_reading_minutes(report: Report) -> int:
+    """Estimate reading time in minutes for the generated report at 200 WPM."""
+    texts: List[str] = []
+    if report.contributions:
+        c = report.contributions
+        texts += [c.main_contribution, c.novelty, c.problem_solved]
+    for p in report.technical.details:
+        texts += [p.explanation, p.analogy]
+    for w in report.connections.related_works:
+        texts += [w.concept, w.relationship]
+    if report.reproduction:
+        r = report.reproduction
+        texts += [r.requirements or "", r.recommended_hardware or ""]
+        texts += list(r.gotchas)
+        for e in r.common_errors:
+            texts += [e.error, e.cause]
+        for d in r.datasets:
+            texts.append(d.purpose)
+        for s in r.env_setup_steps:
+            texts += [s.title, s.desc]
+    word_count = sum(len(t.split()) for t in texts if t)
+    return max(1, round(word_count / 200))
+
+
 # --------------------------------------------------------------------------- #
 # Q&A / reasoning / tutoring
 # --------------------------------------------------------------------------- #
