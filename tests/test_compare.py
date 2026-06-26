@@ -2,9 +2,12 @@
 
 from __future__ import annotations
 
+import csv
+import io
+
 import papermind.compare as compare_mod
 from papermind.compare import build_comparison
-from papermind.output.compare_render import to_html, to_markdown
+from papermind.output.compare_render import to_csv, to_html, to_markdown
 from papermind.output.schema import (
     Benchmark,
     Contributions,
@@ -76,6 +79,57 @@ def test_has_compare_modules_rejects_partial_report():
     partial = Report(paper=PaperMeta(title="P", arxiv_id="2"),
                      contributions=Contributions(main_contribution="c", novelty="n"))
     assert compare_mod._has_compare_modules(partial) is False
+
+
+def test_comparison_csv_structure():
+    comp = _comparison()
+    text = to_csv(comp)
+    reader = csv.reader(io.StringIO(text))
+    rows = list(reader)
+    # First row is the header
+    assert rows[0][0] == "paper"
+    assert "标题" in rows[0]
+    assert "核心贡献" in rows[0]
+    assert "年份" in rows[0]
+    # Two data rows, one per paper
+    paper_ids = [r[0] for r in rows[1:] if r and not r[0].startswith("#")]
+    assert "2307.08691" in paper_ids
+    assert "1706.03762" in paper_ids
+
+
+def test_comparison_csv_values():
+    comp = _comparison()
+    text = to_csv(comp)
+    reader = csv.reader(io.StringIO(text))
+    rows = list(reader)
+    header = rows[0]
+    contrib_col = header.index("核心贡献")
+    data_rows = {r[0]: r for r in rows[1:] if r and not r[0].startswith("#")}
+    assert data_rows["2307.08691"][contrib_col] == "faster attention"
+    assert data_rows["1706.03762"][contrib_col] == "attention-only arch"
+
+
+def test_comparison_csv_via_schema_method():
+    comp = _comparison()
+    text = comp.to_csv()
+    assert "paper" in text.splitlines()[0]
+    assert "2307.08691" in text
+
+
+def test_comparison_csv_with_synthesis():
+    comp = _comparison()
+    comp.synthesis = "Both papers improve attention."
+    text = to_csv(comp)
+    assert "Both papers improve attention." in text
+
+
+def test_comparison_csv_to_file(tmp_path):
+    comp = _comparison()
+    out = str(tmp_path / "compare.csv")
+    comp.to_csv(out)
+    content = open(out, encoding="utf-8").read()
+    assert "paper" in content.splitlines()[0]
+    assert "2307.08691" in content
 
 
 def test_compare_orchestration_reuses_mocked_analyze(monkeypatch):
