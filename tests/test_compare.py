@@ -2,9 +2,12 @@
 
 from __future__ import annotations
 
+import csv
+import io
+
 import papermind.compare as compare_mod
 from papermind.compare import build_comparison
-from papermind.output.compare_render import to_html, to_markdown
+from papermind.output.compare_render import to_csv, to_html, to_markdown
 from papermind.output.schema import (
     Benchmark,
     Contributions,
@@ -76,6 +79,44 @@ def test_has_compare_modules_rejects_partial_report():
     partial = Report(paper=PaperMeta(title="P", arxiv_id="2"),
                      contributions=Contributions(main_contribution="c", novelty="n"))
     assert compare_mod._has_compare_modules(partial) is False
+
+
+def test_comparison_csv_structure():
+    comp = _comparison()
+    text = to_csv(comp)
+    reader = csv.DictReader(io.StringIO(text))
+    rows = list(reader)
+    assert len(rows) == 2
+    assert rows[0]["paper"] == "2307.08691"
+    assert rows[1]["paper"] == "1706.03762"
+    assert rows[0]["标题"] == "FlashAttention-2"
+    assert rows[0]["核心贡献"] == "faster attention"
+    assert rows[0]["关键方法"] == "Tiling"
+    assert rows[1]["关键方法"] == "Self-Attention"
+
+
+def test_comparison_csv_synthesis_appended():
+    comp = _comparison()
+    comp.synthesis = "paper A is better"
+    text = to_csv(comp)
+    assert "synthesis" in text
+    assert "paper A is better" in text
+
+
+def test_comparison_to_csv_method():
+    comp = _comparison()
+    text = comp.to_csv()
+    assert "2307.08691" in text
+    assert "标题" in text
+
+
+def test_comparison_to_csv_writes_file(tmp_path):
+    comp = _comparison()
+    out = str(tmp_path / "compare.csv")
+    comp.to_csv(out)
+    content = open(out, encoding="utf-8").read()
+    assert "paper" in content
+    assert "2307.08691" in content
 
 
 def test_compare_orchestration_reuses_mocked_analyze(monkeypatch):
