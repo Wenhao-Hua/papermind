@@ -2,9 +2,13 @@
 
 from __future__ import annotations
 
+import csv
+import io
+from pathlib import Path
+
 import papermind.compare as compare_mod
 from papermind.compare import build_comparison
-from papermind.output.compare_render import to_html, to_markdown
+from papermind.output.compare_render import to_csv, to_html, to_markdown
 from papermind.output.schema import (
     Benchmark,
     Contributions,
@@ -67,6 +71,38 @@ def test_comparison_json_round_trip():
     data = comp.to_dict()
     assert data["papers"][0]["arxiv_id"] == "2307.08691"
     assert "usage" not in data  # usage excluded from export
+
+
+def test_comparison_csv_rows_and_columns():
+    comp = _comparison()
+    csv_text = to_csv(comp)
+    reader = csv.DictReader(io.StringIO(csv_text))
+    rows = list(reader)
+    assert len(rows) == 2
+    assert set(reader.fieldnames or []) >= {"arxiv_id", "title", "year", "main_contribution", "methods", "benchmark"}
+    assert rows[0]["arxiv_id"] == "2307.08691"
+    assert rows[0]["title"] == "FlashAttention-2"
+    assert rows[0]["main_contribution"] == "faster attention"
+    assert rows[0]["methods"] == "Tiling"
+    assert rows[1]["arxiv_id"] == "1706.03762"
+    assert rows[1]["methods"] == "Self-Attention"
+
+
+def test_comparison_csv_via_model_method():
+    comp = _comparison()
+    csv_text = comp.to_csv()
+    assert "2307.08691" in csv_text
+    assert "1706.03762" in csv_text
+    assert "faster attention" in csv_text
+
+
+def test_comparison_csv_file_write(tmp_path):
+    comp = _comparison()
+    out = str(tmp_path / "compare.csv")
+    comp.to_csv(out)
+    content = Path(out).read_text(encoding="utf-8")
+    assert "arxiv_id" in content
+    assert "2307.08691" in content
 
 
 def test_has_compare_modules_rejects_partial_report():
