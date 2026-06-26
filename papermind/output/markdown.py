@@ -48,6 +48,8 @@ def _render(report: Report) -> List[str]:
     lines.append("")
     lines.append(_meta_line(report))
     lines.append("")
+    if paper.abstract:
+        lines += _abstract_md(paper.abstract)
     lines += _toc_md(report)
 
     if report.contributions:
@@ -82,6 +84,10 @@ def _toc_md(report: Report) -> List[str]:
     if len(items) < 2:
         return []
     return [f"- [{label}](#{anchor})" for anchor, label in items] + [""]
+
+
+def _abstract_md(abstract: str) -> List[str]:
+    return ["> **摘要:** " + abstract.replace("\n", " "), ""]
 
 
 def _meta_line(report: Report) -> str:

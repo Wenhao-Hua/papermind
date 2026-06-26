@@ -149,6 +149,7 @@ def _render(report: Report) -> List[str]:
         '<div class="wrap">',
         f"<h1>{esc(paper.title)}</h1>",
         f'<div class="meta">{_meta(report)}</div>',
+        _abstract_block(paper.abstract),
         _bibtex_block(report),
         _toc(report),
     ]
@@ -181,6 +182,15 @@ def _cmd_block(command: str) -> str:
     return (
         '<div class="codeblock"><button class="copy-code" onclick="pmCopyCode(this)">复制</button>'
         f"<pre><code>{esc(command)}</code></pre></div>"
+    )
+
+
+def _abstract_block(abstract: Optional[str]) -> str:
+    if not abstract:
+        return ""
+    return (
+        '<blockquote class="abstract"><b>摘要</b><br>'
+        f"{esc(abstract)}</blockquote>"
     )
 
 

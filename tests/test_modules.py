@@ -182,6 +182,31 @@ def test_markdown_has_toc_with_anchors():
     assert '<a id="contributions"></a>' in md and '<a id="technical"></a>' in md
 
 
+def test_abstract_shown_in_html_and_markdown_when_set():
+    abstract = "We present a novel mechanism for sequence transduction."
+    report = Report(
+        paper=PaperMeta(title="Transformer", arxiv_id="1706.03762", abstract=abstract),
+        contributions=Contributions(main_contribution="c"),
+    )
+    md = report.to_markdown()
+    assert "摘要" in md
+    assert abstract in md
+    html = report.to_html()
+    assert "摘要" in html
+    assert abstract in html
+
+
+def test_abstract_absent_when_not_set():
+    report = Report(
+        paper=PaperMeta(title="No Abstract Paper"),
+        contributions=Contributions(main_contribution="c"),
+    )
+    md = report.to_markdown()
+    assert "摘要" not in md
+    html = report.to_html()
+    assert "摘要" not in html
+
+
 def test_html_export_self_contained(tmp_path):
     from papermind.output.schema import Figure
 
