@@ -2,9 +2,12 @@
 
 from __future__ import annotations
 
+import csv
+import io
+
 import papermind.compare as compare_mod
 from papermind.compare import build_comparison
-from papermind.output.compare_render import to_html, to_markdown
+from papermind.output.compare_render import to_csv, to_html, to_markdown
 from papermind.output.schema import (
     Benchmark,
     Contributions,
@@ -53,6 +56,44 @@ def test_comparison_markdown_table():
     assert "| 维度 | 2307.08691 | 1706.03762 |" in md
     assert "| 核心贡献 | faster attention | attention-only arch |" in md
     assert "| 关键方法 | Tiling | Self-Attention |" in md
+
+
+def test_comparison_csv_structure():
+    comp = _comparison()
+    text = to_csv(comp)
+    reader = csv.reader(io.StringIO(text))
+    rows = list(reader)
+    # header row: 维度, paper1_id, paper2_id
+    assert rows[0] == ["维度", "2307.08691", "1706.03762"]
+    # dimension labels present
+    labels = [r[0] for r in rows[1:] if r]
+    assert "核心贡献" in labels
+    assert "关键方法" in labels
+    assert "性能/基准" in labels
+    # values for faster-attention paper
+    contrib_row = next(r for r in rows if r and r[0] == "核心贡献")
+    assert contrib_row[1] == "faster attention"
+    assert contrib_row[2] == "attention-only arch"
+
+
+def test_comparison_csv_to_method_and_file(tmp_path):
+    comp = _comparison()
+    out = str(tmp_path / "compare.csv")
+    text = comp.to_csv(out)
+    assert (tmp_path / "compare.csv").read_text(encoding="utf-8") == text
+    # quick sanity: valid CSV with expected header
+    reader = csv.reader(io.StringIO(text))
+    header = next(reader)
+    assert header[0] == "维度"
+    assert len(header) == 3  # label + 2 papers
+
+
+def test_comparison_csv_with_synthesis():
+    comp = _comparison()
+    comp.synthesis = "Paper A is better at speed; Paper B at generality."
+    text = to_csv(comp)
+    assert "对比小结" in text
+    assert "Paper A is better" in text
 
 
 def test_comparison_html_table_and_links():
