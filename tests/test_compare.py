@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import papermind.compare as compare_mod
 from papermind.compare import build_comparison
-from papermind.output.compare_render import to_html, to_markdown
+from papermind.output.compare_render import to_csv, to_html, to_markdown
 from papermind.output.schema import (
     Benchmark,
     Contributions,
@@ -76,6 +76,36 @@ def test_has_compare_modules_rejects_partial_report():
     partial = Report(paper=PaperMeta(title="P", arxiv_id="2"),
                      contributions=Contributions(main_contribution="c", novelty="n"))
     assert compare_mod._has_compare_modules(partial) is False
+
+
+def test_comparison_csv_export():
+    comp = _comparison()
+    csv_text = to_csv(comp)
+    # BOM for Excel compatibility
+    assert csv_text.startswith("﻿")
+    # Header row contains the dimension column and both arXiv IDs
+    assert "维度" in csv_text
+    assert "2307.08691" in csv_text
+    assert "1706.03762" in csv_text
+    # Data rows present
+    assert "核心贡献" in csv_text
+    assert "faster attention" in csv_text
+    assert "attention-only arch" in csv_text
+
+
+def test_comparison_csv_via_schema_method():
+    comp = _comparison()
+    csv_text = comp.to_csv()
+    assert "标题" in csv_text
+    assert "FlashAttention-2" in csv_text
+
+
+def test_comparison_csv_with_synthesis():
+    comp = _comparison()
+    comp.synthesis = "Both improve efficiency."
+    csv_text = to_csv(comp)
+    assert "对比小结" in csv_text
+    assert "Both improve efficiency." in csv_text
 
 
 def test_compare_orchestration_reuses_mocked_analyze(monkeypatch):
