@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import papermind.compare as compare_mod
 from papermind.compare import build_comparison
-from papermind.output.compare_render import to_html, to_markdown
+from papermind.output.compare_render import to_csv, to_html, to_markdown
 from papermind.output.schema import (
     Benchmark,
     Contributions,
@@ -67,6 +67,29 @@ def test_comparison_json_round_trip():
     data = comp.to_dict()
     assert data["papers"][0]["arxiv_id"] == "2307.08691"
     assert "usage" not in data  # usage excluded from export
+
+
+def test_comparison_csv_columns_and_rows():
+    comp = _comparison()
+    csv_text = to_csv(comp)
+    lines = csv_text.strip().splitlines()
+    # header + one row per paper
+    assert len(lines) == 3
+    header = lines[0]
+    assert header == "arxiv_id,title,year,main_contribution,novelty,methods,benchmark,hardware,official_code"
+    assert "2307.08691" in lines[1]
+    assert "faster attention" in lines[1]
+    assert "Tiling" in lines[1]
+    assert "1706.03762" in lines[2]
+
+
+def test_comparison_csv_to_csv_method(tmp_path):
+    comp = _comparison()
+    out = tmp_path / "compare.csv"
+    comp.to_csv(str(out))
+    content = out.read_text()
+    assert "arxiv_id" in content
+    assert "2307.08691" in content
 
 
 def test_has_compare_modules_rejects_partial_report():
