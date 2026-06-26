@@ -2,9 +2,12 @@
 
 from __future__ import annotations
 
+import csv
+import io
+
 import papermind.compare as compare_mod
 from papermind.compare import build_comparison
-from papermind.output.compare_render import to_html, to_markdown
+from papermind.output.compare_render import to_csv, to_html, to_markdown
 from papermind.output.schema import (
     Benchmark,
     Contributions,
@@ -93,3 +96,54 @@ def test_compare_orchestration_reuses_mocked_analyze(monkeypatch):
     assert [p.title for p in comp.papers] == ["FlashAttention-2", "Transformer"]
     assert comp.synthesis == ""  # synthesis skipped -> no LLM call
     assert comp.usage is not None
+
+
+def test_comparison_csv_structure():
+    comp = _comparison()
+    comp.synthesis = "Flash is faster"
+    text = to_csv(comp)
+    rows = list(csv.reader(io.StringIO(text)))
+    # header row + one data row per paper
+    assert len(rows) == 3
+    header = rows[0]
+    assert "arXiv" in header
+    assert "核心贡献" in header
+    assert "对比小结" in header
+    # first data row: first paper values
+    assert rows[1][header.index("arXiv")] == "2307.08691"
+    assert rows[1][header.index("核心贡献")] == "faster attention"
+    assert rows[1][header.index("对比小结")] == "Flash is faster"
+    # second data row: synthesis column empty (not repeated)
+    assert rows[2][header.index("arXiv")] == "1706.03762"
+    assert rows[2][header.index("对比小结")] == ""
+
+
+def test_comparison_csv_via_schema_method(tmp_path):
+    comp = _comparison()
+    out = tmp_path / "compare.csv"
+    text = comp.to_csv(str(out))
+    assert out.exists()
+    assert out.read_text(encoding="utf-8") == text
+    rows = list(csv.reader(io.StringIO(text)))
+    assert len(rows) == 3  # header + 2 papers
+
+
+def test_comparison_csv_special_chars():
+    """Commas and newlines in values must be properly quoted."""
+    from papermind.output.schema import ComparedPaper, Comparison
+
+    comp = Comparison(
+        papers=[
+            ComparedPaper(
+                title='Title, with "commas"',
+                arxiv_id="1234.56789",
+                main_contribution="A, B, and C",
+            ),
+            ComparedPaper(title="Other", arxiv_id="9999.00001"),
+        ]
+    )
+    text = to_csv(comp)
+    rows = list(csv.reader(io.StringIO(text)))
+    header = rows[0]
+    assert rows[1][header.index("标题")] == 'Title, with "commas"'
+    assert rows[1][header.index("核心贡献")] == "A, B, and C"
