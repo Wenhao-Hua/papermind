@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import papermind.compare as compare_mod
 from papermind.compare import build_comparison
-from papermind.output.compare_render import to_html, to_markdown
+from papermind.output.compare_render import to_csv, to_html, to_markdown
 from papermind.output.schema import (
     Benchmark,
     Contributions,
@@ -93,3 +93,45 @@ def test_compare_orchestration_reuses_mocked_analyze(monkeypatch):
     assert [p.title for p in comp.papers] == ["FlashAttention-2", "Transformer"]
     assert comp.synthesis == ""  # synthesis skipped -> no LLM call
     assert comp.usage is not None
+
+
+def test_comparison_csv_structure():
+    import csv
+    import io
+
+    comp = _comparison()
+    text = to_csv(comp)
+    rows = list(csv.reader(io.StringIO(text)))
+    # Header row: 维度, then one column per paper
+    assert rows[0] == ["维度", "2307.08691", "1706.03762"]
+    labels = [r[0] for r in rows[1:]]
+    assert "核心贡献" in labels
+    assert "关键方法" in labels
+    # Values in the contribution row
+    contrib_row = next(r for r in rows if r[0] == "核心贡献")
+    assert contrib_row[1] == "faster attention"
+    assert contrib_row[2] == "attention-only arch"
+
+
+def test_comparison_csv_to_file(tmp_path):
+    comp = _comparison()
+    out = str(tmp_path / "compare.csv")
+    comp.to_csv(out)
+    content = open(out, encoding="utf-8").read()
+    assert "维度" in content
+    assert "2307.08691" in content
+    assert "faster attention" in content
+
+
+def test_comparison_csv_with_synthesis():
+    import csv
+    import io
+
+    comp = _comparison()
+    comp.synthesis = "FlashAttention-2 significantly outperforms Transformer on long sequences."
+    text = to_csv(comp)
+    rows = list(csv.reader(io.StringIO(text)))
+    # Last two rows: blank separator, then synthesis
+    non_empty = [r for r in rows if any(r)]
+    assert non_empty[-1][0] == "对比小结"
+    assert "FlashAttention" in non_empty[-1][1]
