@@ -2,9 +2,12 @@
 
 from __future__ import annotations
 
+import csv
+import io
+
 import papermind.compare as compare_mod
 from papermind.compare import build_comparison
-from papermind.output.compare_render import to_html, to_markdown
+from papermind.output.compare_render import to_csv, to_html, to_markdown
 from papermind.output.schema import (
     Benchmark,
     Contributions,
@@ -60,6 +63,51 @@ def test_comparison_html_table_and_links():
     assert html.startswith("<!DOCTYPE html>")
     assert "<th>2307.08691</th>" in html
     assert "<a href='https://github.com/x/y'>" in html  # official code linked
+
+
+def test_comparison_csv_structure():
+    comp = _comparison()
+    text = to_csv(comp)
+    rows = list(csv.reader(io.StringIO(text)))
+    # header row: first cell is "维度", remaining cells are paper ids
+    assert rows[0][0] == "维度"
+    assert rows[0][1] == "2307.08691"
+    assert rows[0][2] == "1706.03762"
+    # dimension rows match expected labels
+    labels = [r[0] for r in rows[1:]]
+    assert "核心贡献" in labels
+    assert "关键方法" in labels
+    assert "年份" in labels
+    # cell values present
+    contrib_row = next(r for r in rows if r[0] == "核心贡献")
+    assert contrib_row[1] == "faster attention"
+    assert contrib_row[2] == "attention-only arch"
+
+
+def test_comparison_csv_synthesis_row():
+    comp = _comparison()
+    comp.synthesis = "Flash is faster."
+    text = to_csv(comp)
+    rows = list(csv.reader(io.StringIO(text)))
+    last = rows[-1]
+    assert last[0] == "对比小结"
+    assert last[1] == "Flash is faster."
+
+
+def test_comparison_csv_no_synthesis_when_empty():
+    comp = _comparison()
+    comp.synthesis = ""
+    text = to_csv(comp)
+    rows = list(csv.reader(io.StringIO(text)))
+    assert all(r[0] != "对比小结" for r in rows)
+
+
+def test_comparison_to_csv_writes_file(tmp_path):
+    comp = _comparison()
+    path = str(tmp_path / "out.csv")
+    result = comp.to_csv(path)
+    assert (tmp_path / "out.csv").read_text(encoding="utf-8") == result
+    assert "维度" in result
 
 
 def test_comparison_json_round_trip():
