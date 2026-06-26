@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import papermind.compare as compare_mod
 from papermind.compare import build_comparison
-from papermind.output.compare_render import to_html, to_markdown
+from papermind.output.compare_render import to_csv, to_html, to_markdown
 from papermind.output.schema import (
     Benchmark,
     Contributions,
@@ -60,6 +60,35 @@ def test_comparison_html_table_and_links():
     assert html.startswith("<!DOCTYPE html>")
     assert "<th>2307.08691</th>" in html
     assert "<a href='https://github.com/x/y'>" in html  # official code linked
+
+
+def test_comparison_csv_export():
+    import csv
+    import io
+
+    comp = _comparison()
+    text = to_csv(comp)
+    rows = list(csv.DictReader(io.StringIO(text)))
+    assert len(rows) == 2
+    assert rows[0]["arxiv_id"] == "2307.08691"
+    assert rows[0]["title"] == "FlashAttention-2"
+    assert rows[0]["methods"] == "Tiling"
+    assert rows[1]["arxiv_id"] == "1706.03762"
+    assert rows[1]["year"] == "2023"
+    # to_csv via Comparison.to_csv should also work
+    assert comp.to_csv() == text
+
+
+def test_comparison_csv_file_write(tmp_path):
+    import csv
+
+    comp = _comparison()
+    out = str(tmp_path / "compare.csv")
+    comp.to_csv(out)
+    with open(out, newline="", encoding="utf-8") as f:
+        rows = list(csv.DictReader(f))
+    assert len(rows) == 2
+    assert rows[0]["main_contribution"] == "faster attention"
 
 
 def test_comparison_json_round_trip():
