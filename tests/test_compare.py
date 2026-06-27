@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import papermind.compare as compare_mod
 from papermind.compare import build_comparison
-from papermind.output.compare_render import to_html, to_markdown
+from papermind.output.compare_render import to_csv, to_html, to_markdown
 from papermind.output.schema import (
     Benchmark,
     Contributions,
@@ -53,6 +53,40 @@ def test_comparison_markdown_table():
     assert "| 维度 | 2307.08691 | 1706.03762 |" in md
     assert "| 核心贡献 | faster attention | attention-only arch |" in md
     assert "| 关键方法 | Tiling | Self-Attention |" in md
+
+
+def test_comparison_csv_export():
+    import csv
+    import io
+
+    csv_text = to_csv(_comparison())
+    rows = list(csv.reader(io.StringIO(csv_text)))
+    # header row has the expected field names
+    assert rows[0][0] == "标题"
+    assert "arXiv" in rows[0]
+    assert "核心贡献" in rows[0]
+    # one data row per paper
+    assert len(rows) == 3  # header + 2 papers
+    titles = [r[0] for r in rows[1:]]
+    assert "FlashAttention-2" in titles and "Transformer" in titles
+    # check field values are present in the correct row
+    fa2_row = rows[1] if rows[1][0] == "FlashAttention-2" else rows[2]
+    arxiv_idx = rows[0].index("arXiv")
+    assert fa2_row[arxiv_idx] == "2307.08691"
+    contrib_idx = rows[0].index("核心贡献")
+    assert fa2_row[contrib_idx] == "faster attention"
+
+
+def test_comparison_csv_to_csv_method():
+    csv_text = _comparison().to_csv()
+    assert "标题" in csv_text and "FlashAttention-2" in csv_text
+
+
+def test_comparison_csv_write_to_file(tmp_path):
+    out = tmp_path / "compare.csv"
+    _comparison().to_csv(str(out))
+    content = out.read_text(encoding="utf-8")
+    assert "Transformer" in content and "标题" in content
 
 
 def test_comparison_html_table_and_links():
