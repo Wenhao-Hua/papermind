@@ -2,9 +2,12 @@
 
 from __future__ import annotations
 
+import csv
+import io
+
 import papermind.compare as compare_mod
 from papermind.compare import build_comparison
-from papermind.output.compare_render import to_html, to_markdown
+from papermind.output.compare_render import to_csv, to_html, to_markdown
 from papermind.output.schema import (
     Benchmark,
     Contributions,
@@ -93,3 +96,53 @@ def test_compare_orchestration_reuses_mocked_analyze(monkeypatch):
     assert [p.title for p in comp.papers] == ["FlashAttention-2", "Transformer"]
     assert comp.synthesis == ""  # synthesis skipped -> no LLM call
     assert comp.usage is not None
+
+
+def test_comparison_csv_header_and_rows():
+    comp = _comparison()
+    raw = to_csv(comp)
+    reader = list(csv.reader(io.StringIO(raw)))
+    # header row: dimension + one column per paper
+    assert reader[0] == ["dimension", "2307.08691", "1706.03762"]
+    # dimension labels appear as first column
+    labels = [row[0] for row in reader[1:]]
+    assert "标题" in labels
+    assert "核心贡献" in labels
+    assert "关键方法" in labels
+
+
+def test_comparison_csv_values():
+    comp = _comparison()
+    raw = to_csv(comp)
+    reader = {row[0]: row[1:] for row in csv.reader(io.StringIO(raw)) if row}
+    assert reader["核心贡献"][0] == "faster attention"
+    assert reader["核心贡献"][1] == "attention-only arch"
+    assert reader["关键方法"][0] == "Tiling"
+
+
+def test_comparison_csv_synthesis_row():
+    comp = _comparison()
+    comp.synthesis = "FlashAttention-2 is faster; Transformer is foundational."
+    raw = to_csv(comp)
+    reader = {row[0]: row[1:] for row in csv.reader(io.StringIO(raw)) if row}
+    assert "synthesis" in reader
+    assert "FlashAttention-2 is faster" in reader["synthesis"][0]
+
+
+def test_comparison_csv_no_synthesis_row_when_empty():
+    comp = _comparison()
+    assert comp.synthesis == ""
+    raw = to_csv(comp)
+    row_labels = [row[0] for row in csv.reader(io.StringIO(raw)) if row]
+    assert "synthesis" not in row_labels
+
+
+def test_comparison_to_csv_method_matches_render(tmp_path):
+    comp = _comparison()
+    direct = to_csv(comp)
+    via_method = comp.to_csv()
+    assert direct == via_method
+
+    path = tmp_path / "out.csv"
+    comp.to_csv(str(path))
+    assert path.read_text(encoding="utf-8") == direct
