@@ -1,8 +1,10 @@
-"""Render a Comparison as a side-by-side Markdown or HTML table."""
+"""Render a Comparison as a side-by-side Markdown, HTML, or CSV table."""
 
 from __future__ import annotations
 
+import csv
 import html as _html
+import io
 from typing import Callable, List, Tuple
 
 from papermind.output.schema import ComparedPaper, Comparison
@@ -87,3 +89,40 @@ def _html_cell(label: str, value: str) -> str:
 
 def _e(text) -> str:
     return _html.escape(str(text)) if text is not None else ""
+
+
+# --------------------------------------------------------------------------- #
+# CSV export — one row per paper, one column per comparison dimension
+# --------------------------------------------------------------------------- #
+
+_DIMENSION_KEYS: List[Tuple[str, Callable[[ComparedPaper], str]]] = [
+    ("title", lambda p: p.title or ""),
+    ("arxiv_id", lambda p: p.arxiv_id or ""),
+    ("year", lambda p: str(p.year) if p.year else ""),
+    ("main_contribution", lambda p: p.main_contribution or ""),
+    ("novelty", lambda p: p.novelty or ""),
+    ("methods", lambda p: "; ".join(p.methods) if p.methods else ""),
+    ("benchmark", lambda p: p.benchmark or ""),
+    ("hardware", lambda p: p.hardware or ""),
+    ("official_code", lambda p: p.official_code or ""),
+]
+
+
+def to_csv(comparison: Comparison) -> str:
+    """Return a CSV string with one row per paper and one column per dimension.
+
+    The synthesis summary, if present, is appended as a trailing comment row
+    so the structured data rows remain machine-readable.
+    """
+    buf = io.StringIO()
+    writer = csv.DictWriter(
+        buf,
+        fieldnames=[key for key, _ in _DIMENSION_KEYS],
+        lineterminator="\n",
+    )
+    writer.writeheader()
+    for paper in comparison.papers:
+        writer.writerow({key: fn(paper) for key, fn in _DIMENSION_KEYS})
+    if comparison.synthesis:
+        buf.write(f"\n# synthesis: {comparison.synthesis.replace(chr(10), ' ')}\n")
+    return buf.getvalue()
