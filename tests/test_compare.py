@@ -2,9 +2,14 @@
 
 from __future__ import annotations
 
+import csv
+import io
+import tempfile
+from pathlib import Path
+
 import papermind.compare as compare_mod
 from papermind.compare import build_comparison
-from papermind.output.compare_render import to_html, to_markdown
+from papermind.output.compare_render import to_csv, to_html, to_markdown
 from papermind.output.schema import (
     Benchmark,
     Contributions,
@@ -76,6 +81,48 @@ def test_has_compare_modules_rejects_partial_report():
     partial = Report(paper=PaperMeta(title="P", arxiv_id="2"),
                      contributions=Contributions(main_contribution="c", novelty="n"))
     assert compare_mod._has_compare_modules(partial) is False
+
+
+def test_comparison_csv_header_and_rows():
+    csv_text = to_csv(_comparison())
+    reader = csv.reader(io.StringIO(csv_text))
+    rows = list(reader)
+    # First row is headers: dimension label + paper arxiv IDs
+    assert rows[0] == ["维度", "2307.08691", "1706.03762"]
+    # Find the contribution row
+    contrib_row = next(r for r in rows if r[0] == "核心贡献")
+    assert contrib_row[1] == "faster attention"
+    assert contrib_row[2] == "attention-only arch"
+    # Find the method row
+    method_row = next(r for r in rows if r[0] == "关键方法")
+    assert method_row[1] == "Tiling"
+    assert method_row[2] == "Self-Attention"
+
+
+def test_comparison_csv_synthesis_row():
+    comp = _comparison()
+    comp.synthesis = "Both papers explore efficient attention."
+    csv_text = to_csv(comp)
+    reader = csv.reader(io.StringIO(csv_text))
+    rows = list(reader)
+    synth_row = next(r for r in rows if r[0] == "对比小结")
+    assert "Both papers explore efficient attention." in synth_row[1]
+
+
+def test_comparison_csv_no_synthesis_when_empty():
+    csv_text = to_csv(_comparison())
+    assert "对比小结" not in csv_text
+
+
+def test_comparison_to_csv_writes_file():
+    comp = _comparison()
+    with tempfile.TemporaryDirectory() as tmp:
+        out = str(Path(tmp) / "compare.csv")
+        comp.to_csv(out)
+        content = Path(out).read_text(encoding="utf-8")
+        assert Path(out).exists()
+        assert "2307.08691" in content
+        assert "faster attention" in content
 
 
 def test_compare_orchestration_reuses_mocked_analyze(monkeypatch):
