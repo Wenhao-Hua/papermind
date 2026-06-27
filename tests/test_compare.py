@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import papermind.compare as compare_mod
 from papermind.compare import build_comparison
-from papermind.output.compare_render import to_html, to_markdown
+from papermind.output.compare_render import to_csv, to_html, to_markdown
 from papermind.output.schema import (
     Benchmark,
     Contributions,
@@ -93,3 +93,49 @@ def test_compare_orchestration_reuses_mocked_analyze(monkeypatch):
     assert [p.title for p in comp.papers] == ["FlashAttention-2", "Transformer"]
     assert comp.synthesis == ""  # synthesis skipped -> no LLM call
     assert comp.usage is not None
+
+
+def test_comparison_csv_structure():
+    comp = _comparison()
+    csv_text = to_csv(comp)
+    lines = csv_text.strip().splitlines()
+    # Header row: 维度, paper1_id, paper2_id
+    assert lines[0] == "维度,2307.08691,1706.03762"
+    # All dimension labels present
+    for label in ("标题", "arXiv", "年份", "核心贡献", "新颖之处", "关键方法", "性能/基准", "推荐硬件", "官方代码"):
+        assert any(line.startswith(label) for line in lines), f"Missing dimension: {label}"
+    # Known values present
+    assert any("faster attention" in line for line in lines)
+    assert any("attention-only arch" in line for line in lines)
+
+
+def test_comparison_csv_synthesis():
+    comp = _comparison()
+    comp.synthesis = "Both papers focus on attention mechanisms."
+    csv_text = to_csv(comp)
+    assert "对比小结" in csv_text
+    assert "Both papers focus on attention mechanisms." in csv_text
+
+
+def test_comparison_csv_no_synthesis():
+    comp = _comparison()
+    comp.synthesis = ""
+    csv_text = to_csv(comp)
+    assert "对比小结" not in csv_text
+
+
+def test_comparison_to_csv_method_returns_string():
+    comp = _comparison()
+    result = comp.to_csv()
+    assert isinstance(result, str)
+    assert "维度" in result
+
+
+def test_comparison_to_csv_method_writes_file(tmp_path):
+    comp = _comparison()
+    out = str(tmp_path / "result.csv")
+    comp.to_csv(out)
+    import pathlib
+    content = pathlib.Path(out).read_text(encoding="utf-8")
+    assert "维度" in content
+    assert "2307.08691" in content
