@@ -8,6 +8,7 @@ the JSON shape documented in the README.
 
 from __future__ import annotations
 
+import re
 from pathlib import Path
 from typing import List, Literal, Optional
 
@@ -287,6 +288,31 @@ class Report(BaseModel):
         from papermind.output.reproduce_export import to_notebook, write_notebook
 
         return write_notebook(self, path) if path else to_notebook(self)
+
+    def reading_minutes(self) -> int:
+        """Estimate reading time from the report's text volume.
+
+        Counts Chinese characters (300/min) and English words (200/min).
+        Returns at least 1 minute.
+        """
+        texts: List[str] = []
+        if self.contributions:
+            c = self.contributions
+            texts += [c.main_contribution, c.novelty, c.problem_solved]
+        for tp in self.technical.details:
+            texts += [tp.name, tp.explanation, tp.analogy or ""]
+        for con in self.connections.related_works:
+            texts += [con.concept, con.relationship]
+        if self.reproduction:
+            r = self.reproduction
+            texts += [r.requirements or "", r.recommended_hardware or ""]
+            for step in r.env_setup_steps:
+                texts += [step.title, step.desc]
+            texts += list(r.gotchas)
+        combined = " ".join(t for t in texts if t)
+        cn_chars = len(re.findall(r"[一-鿿]", combined))
+        en_words = len(re.findall(r"[a-zA-Z]+", combined))
+        return max(1, round(cn_chars / 300 + en_words / 200))
 
 
 # --------------------------------------------------------------------------- #

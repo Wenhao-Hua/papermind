@@ -182,6 +182,30 @@ def test_markdown_has_toc_with_anchors():
     assert '<a id="contributions"></a>' in md and '<a id="technical"></a>' in md
 
 
+def test_reading_time_appears_in_html_and_markdown():
+    report = Report(
+        paper=PaperMeta(title="Attention Is All You Need", year=2017),
+        contributions=Contributions(
+            main_contribution="We propose the Transformer, a model architecture eschewing recurrence.",
+            novelty="Attention mechanisms allow modeling of dependencies without regard to their distance.",
+            problem_solved="Recurrent models preclude parallelization within training examples.",
+        ),
+        technical=TechnicalSection(
+            details=[TechnicalPoint(name="Scaled Dot-Product Attention", explanation="Compute attention weights via dot products scaled by the square root of the key dimension.")]
+        ),
+    )
+    assert report.reading_minutes() >= 1
+    html = report.to_html()
+    assert "⏱ 约" in html and "分钟" in html
+    md = report.to_markdown()
+    assert "**阅读时长:** 约" in md and "分钟" in md
+
+
+def test_reading_time_minimum_one_minute():
+    report = Report(paper=PaperMeta(title="Empty"))
+    assert report.reading_minutes() == 1
+
+
 def test_html_export_self_contained(tmp_path):
     from papermind.output.schema import Figure
 
