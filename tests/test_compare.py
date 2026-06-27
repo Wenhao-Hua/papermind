@@ -2,9 +2,12 @@
 
 from __future__ import annotations
 
+import csv
+import io
+
 import papermind.compare as compare_mod
 from papermind.compare import build_comparison
-from papermind.output.compare_render import to_html, to_markdown
+from papermind.output.compare_render import to_csv, to_html, to_markdown
 from papermind.output.schema import (
     Benchmark,
     Contributions,
@@ -67,6 +70,42 @@ def test_comparison_json_round_trip():
     data = comp.to_dict()
     assert data["papers"][0]["arxiv_id"] == "2307.08691"
     assert "usage" not in data  # usage excluded from export
+
+
+def test_comparison_csv_columns_and_rows():
+    csv_text = to_csv(_comparison())
+    reader = csv.DictReader(io.StringIO(csv_text))
+    rows = list(reader)
+    assert len(rows) == 2
+    assert rows[0]["title"] == "FlashAttention-2"
+    assert rows[0]["arxiv_id"] == "2307.08691"
+    assert rows[0]["year"] == "2023"
+    assert rows[0]["main_contribution"] == "faster attention"
+    assert rows[0]["methods"] == "Tiling"
+    assert rows[0]["hardware"] == "A100"
+    assert rows[1]["title"] == "Transformer"
+    assert rows[1]["arxiv_id"] == "1706.03762"
+    assert rows[1]["methods"] == "Self-Attention"
+
+
+def test_comparison_csv_synthesis_appended():
+    comp = _comparison()
+    comp.synthesis = "Paper A outperforms Paper B on speed."
+    csv_text = to_csv(comp)
+    assert "synthesis" in csv_text
+    assert "Paper A outperforms Paper B on speed." in csv_text
+
+
+def test_comparison_csv_via_schema_method(tmp_path):
+    comp = _comparison()
+    out = tmp_path / "compare.csv"
+    text = comp.to_csv(str(out))
+    assert out.exists()
+    assert out.read_text(encoding="utf-8") == text
+    reader = csv.DictReader(io.StringIO(text))
+    rows = list(reader)
+    assert len(rows) == 2
+    assert rows[0]["arxiv_id"] == "2307.08691"
 
 
 def test_has_compare_modules_rejects_partial_report():
