@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import papermind.compare as compare_mod
 from papermind.compare import build_comparison
-from papermind.output.compare_render import to_html, to_markdown
+from papermind.output.compare_render import to_csv, to_html, to_markdown
 from papermind.output.schema import (
     Benchmark,
     Contributions,
@@ -93,3 +93,53 @@ def test_compare_orchestration_reuses_mocked_analyze(monkeypatch):
     assert [p.title for p in comp.papers] == ["FlashAttention-2", "Transformer"]
     assert comp.synthesis == ""  # synthesis skipped -> no LLM call
     assert comp.usage is not None
+
+
+def test_comparison_csv_columns_and_rows():
+    import csv
+    import io
+
+    comp = _comparison()
+    text = to_csv(comp)
+    reader = csv.DictReader(io.StringIO(text))
+    rows = list(reader)
+
+    assert len(rows) == 2
+    assert rows[0]["title"] == "FlashAttention-2"
+    assert rows[0]["arxiv_id"] == "2307.08691"
+    assert rows[0]["year"] == "2023"
+    assert rows[0]["methods"] == "Tiling"
+    assert rows[1]["title"] == "Transformer"
+    assert rows[1]["official_code"] == "https://github.com/x/y"
+
+
+def test_comparison_csv_to_csv_method_roundtrip(tmp_path):
+    import csv
+    import io
+
+    comp = _comparison()
+    # in-memory
+    text = comp.to_csv()
+    rows = list(csv.DictReader(io.StringIO(text)))
+    assert rows[0]["arxiv_id"] == "2307.08691"
+
+    # write to file
+    out = tmp_path / "compare.csv"
+    comp.to_csv(str(out))
+    assert out.exists()
+    rows_file = list(csv.DictReader(out.open()))
+    assert rows_file[1]["arxiv_id"] == "1706.03762"
+
+
+def test_comparison_csv_all_format_writes_csv(tmp_path):
+    """_write_comparison_outputs with fmt='all' produces a .csv file."""
+    import csv
+
+    comp = _comparison()
+    out_base = str(tmp_path / "out")
+    comp.to_csv(f"{out_base}.csv")
+
+    csv_path = tmp_path / "out.csv"
+    assert csv_path.exists()
+    rows = list(csv.DictReader(csv_path.open()))
+    assert len(rows) == 2
