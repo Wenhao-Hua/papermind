@@ -445,14 +445,34 @@ def _get_local_encoder(model_name: str, cls):
     return _LOCAL_ENCODERS[model_name]
 
 
-def _import_litellm():
-    try:
-        import litellm
+# None = not yet attempted; False = import failed; module object = success
+_LITELLM_CACHE: object = None
+_LITELLM_IMPORT_LOCK = threading.Lock()
 
-        litellm.drop_params = True  # silently drop unsupported params per provider
-        return litellm
-    except ImportError as exc:  # pragma: no cover
-        raise LLMError("litellm is required. Install with: pip install litellm") from exc
+
+def _import_litellm():
+    global _LITELLM_CACHE
+    if _LITELLM_CACHE is not None:
+        if _LITELLM_CACHE is False:
+            raise LLMError("litellm unavailable (previous import failed)")
+        return _LITELLM_CACHE
+    with _LITELLM_IMPORT_LOCK:
+        if _LITELLM_CACHE is not None:  # re-check after acquiring lock
+            if _LITELLM_CACHE is False:
+                raise LLMError("litellm unavailable (previous import failed)")
+            return _LITELLM_CACHE
+        try:
+            import litellm
+
+            litellm.drop_params = True  # silently drop unsupported params per provider
+            _LITELLM_CACHE = litellm
+            return litellm
+        except ImportError as exc:  # pragma: no cover
+            _LITELLM_CACHE = False
+            raise LLMError("litellm is required. Install with: pip install litellm") from exc
+        except BaseException as exc:  # pyo3 panics / C-extension failures are BaseException, not Exception
+            _LITELLM_CACHE = False
+            raise LLMError(f"litellm unavailable: {type(exc).__name__}") from exc
 
 
 def _supports_json_mode(model: str) -> bool:
