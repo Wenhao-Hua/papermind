@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import papermind.compare as compare_mod
 from papermind.compare import build_comparison
-from papermind.output.compare_render import to_html, to_markdown
+from papermind.output.compare_render import to_csv, to_html, to_markdown
 from papermind.output.schema import (
     Benchmark,
     Contributions,
@@ -67,6 +67,25 @@ def test_comparison_json_round_trip():
     data = comp.to_dict()
     assert data["papers"][0]["arxiv_id"] == "2307.08691"
     assert "usage" not in data  # usage excluded from export
+
+
+def test_comparison_csv_header_and_rows():
+    comp = _comparison()
+    csv_text = to_csv(comp)
+    lines = csv_text.strip().split("\n")
+    assert len(lines) == 3  # header + one row per paper
+    assert lines[0] == "标题,arXiv,年份,核心贡献,新颖之处,关键方法,性能/基准,推荐硬件,官方代码"
+    assert "FlashAttention-2" in lines[1] and "2307.08691" in lines[1]
+    assert "Transformer" in lines[2] and "1706.03762" in lines[2]
+
+
+def test_comparison_csv_via_method_and_file(tmp_path):
+    comp = _comparison()
+    out = str(tmp_path / "compare.csv")
+    text = comp.to_csv(out)
+    from pathlib import Path
+    assert Path(out).read_text(encoding="utf-8") == text
+    assert "FlashAttention-2" in text
 
 
 def test_has_compare_modules_rejects_partial_report():
