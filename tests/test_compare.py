@@ -2,9 +2,12 @@
 
 from __future__ import annotations
 
+import csv
+import io
+
 import papermind.compare as compare_mod
 from papermind.compare import build_comparison
-from papermind.output.compare_render import to_html, to_markdown
+from papermind.output.compare_render import to_csv, to_html, to_markdown
 from papermind.output.schema import (
     Benchmark,
     Contributions,
@@ -60,6 +63,44 @@ def test_comparison_html_table_and_links():
     assert html.startswith("<!DOCTYPE html>")
     assert "<th>2307.08691</th>" in html
     assert "<a href='https://github.com/x/y'>" in html  # official code linked
+
+
+def test_comparison_csv_export():
+    comp = _comparison()
+    text = to_csv(comp)
+    rows = list(csv.DictReader(io.StringIO(text)))
+    assert len(rows) == 2
+    assert rows[0]["arXiv"] == "2307.08691"
+    assert rows[0]["Main Contribution"] == "faster attention"
+    assert rows[0]["Methods"] == "Tiling"
+    assert rows[1]["arXiv"] == "1706.03762"
+    assert rows[1]["Year"] == "2023"
+
+
+def test_comparison_csv_via_schema_method():
+    comp = _comparison()
+    text = comp.to_csv()
+    assert "Title" in text.splitlines()[0]
+    assert "2307.08691" in text
+    assert "1706.03762" in text
+
+
+def test_comparison_csv_with_synthesis():
+    comp = _comparison()
+    comp.synthesis = "Both papers improve attention efficiency."
+    text = to_csv(comp)
+    assert "Synthesis" in text
+    assert "Both papers improve attention efficiency." in text
+
+
+def test_comparison_csv_to_file(tmp_path):
+    comp = _comparison()
+    out = str(tmp_path / "compare.csv")
+    comp.to_csv(out)
+    content = open(out).read()
+    rows = list(csv.DictReader(io.StringIO(content)))
+    assert len(rows) == 2
+    assert rows[0]["Official Code"] == "https://github.com/x/y"
 
 
 def test_comparison_json_round_trip():
