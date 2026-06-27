@@ -438,6 +438,16 @@ def _count_tokens(litellm, model: str, messages=None, text: str = "") -> int:
 
 _LOCAL_ENCODERS: dict = {}
 
+# Guards the first import of litellm.  litellm transitively imports
+# cryptography whose pyo3/Rust bindings raise BaseException (not Exception)
+# when the underlying C extension is missing or broken.  We serialise the
+# import under a lock and convert any BaseException into LLMError so callers'
+# normal `except Exception` guards work, and cache a "permanently unavailable"
+# flag to avoid re-triggering the Rust panic on every subsequent call.
+_litellm_import_lock = threading.Lock()
+_litellm_module = None
+_litellm_unavailable = False
+
 
 def _get_local_encoder(model_name: str, cls):
     if model_name not in _LOCAL_ENCODERS:
@@ -446,13 +456,28 @@ def _get_local_encoder(model_name: str, cls):
 
 
 def _import_litellm():
-    try:
-        import litellm
+    global _litellm_module, _litellm_unavailable
+    if _litellm_module is not None:
+        return _litellm_module
+    if _litellm_unavailable:
+        raise LLMError("litellm is not available in this environment")
+    with _litellm_import_lock:
+        if _litellm_module is not None:
+            return _litellm_module
+        if _litellm_unavailable:
+            raise LLMError("litellm is not available in this environment")
+        try:
+            import litellm
 
-        litellm.drop_params = True  # silently drop unsupported params per provider
-        return litellm
-    except ImportError as exc:  # pragma: no cover
-        raise LLMError("litellm is required. Install with: pip install litellm") from exc
+            litellm.drop_params = True  # silently drop unsupported params per provider
+            _litellm_module = litellm
+            return litellm
+        except ImportError as exc:  # pragma: no cover
+            _litellm_unavailable = True
+            raise LLMError("litellm is required. Install with: pip install litellm") from exc
+        except BaseException as exc:  # pyo3 Rust panics are BaseException, not Exception
+            _litellm_unavailable = True
+            raise LLMError(f"litellm is not available in this environment: {exc}") from exc
 
 
 def _supports_json_mode(model: str) -> bool:
