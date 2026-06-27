@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import papermind.compare as compare_mod
 from papermind.compare import build_comparison
-from papermind.output.compare_render import to_html, to_markdown
+from papermind.output.compare_render import to_csv, to_html, to_markdown
 from papermind.output.schema import (
     Benchmark,
     Contributions,
@@ -93,3 +93,41 @@ def test_compare_orchestration_reuses_mocked_analyze(monkeypatch):
     assert [p.title for p in comp.papers] == ["FlashAttention-2", "Transformer"]
     assert comp.synthesis == ""  # synthesis skipped -> no LLM call
     assert comp.usage is not None
+
+
+def test_comparison_csv_structure():
+    comp = _comparison()
+    csv_text = to_csv(comp)
+    lines = csv_text.strip().splitlines()
+    # first row is header: 维度 + paper ids
+    assert lines[0] == "维度,2307.08691,1706.03762"
+    # one data row per dimension
+    assert any(line.startswith("核心贡献,") for line in lines)
+    assert any(line.startswith("关键方法,") for line in lines)
+    # values match expected comparison data
+    assert "faster attention" in csv_text
+    assert "attention-only arch" in csv_text
+
+
+def test_comparison_csv_via_schema_method(tmp_path):
+    comp = _comparison()
+    out = tmp_path / "compare.csv"
+    result = comp.to_csv(str(out))
+    assert out.exists()
+    assert out.read_text(encoding="utf-8") == result
+    assert "维度" in result
+
+
+def test_comparison_csv_with_synthesis():
+    from papermind.output.schema import Comparison, ComparedPaper
+
+    comp = Comparison(
+        papers=[
+            ComparedPaper(title="A", arxiv_id="1"),
+            ComparedPaper(title="B", arxiv_id="2"),
+        ],
+        synthesis="A is better in X; B is better in Y.",
+    )
+    csv_text = to_csv(comp)
+    assert "对比小结" in csv_text
+    assert "A is better in X" in csv_text

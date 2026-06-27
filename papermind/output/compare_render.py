@@ -2,7 +2,9 @@
 
 from __future__ import annotations
 
+import csv
 import html as _html
+import io
 from typing import Callable, List, Tuple
 
 from papermind.output.schema import ComparedPaper, Comparison
@@ -87,3 +89,19 @@ def _html_cell(label: str, value: str) -> str:
 
 def _e(text) -> str:
     return _html.escape(str(text)) if text is not None else ""
+
+
+def to_csv(comparison: Comparison) -> str:
+    """Render the comparison as CSV with one row per paper and one column per dimension."""
+    headers = _headers(comparison)
+    rows = _rows(comparison)
+    buf = io.StringIO()
+    writer = csv.writer(buf, lineterminator="\n")
+    # header row: "维度" + one column per paper
+    writer.writerow(["维度"] + headers)
+    for label, values in rows:
+        writer.writerow([label] + values)
+    if comparison.synthesis:
+        writer.writerow([])
+        writer.writerow(["对比小结", comparison.synthesis])
+    return buf.getvalue()
