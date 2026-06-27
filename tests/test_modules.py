@@ -207,6 +207,57 @@ def test_html_export_self_contained(tmp_path):
     assert "&lt;test&gt;" in doc                      # title HTML-escaped
 
 
+def test_reading_time_in_markdown_and_html():
+    """Reading-time estimate appears in the meta line of both renderers."""
+    report = Report(
+        paper=PaperMeta(title="FlashAttention-2", arxiv_id="2307.08691", year=2023),
+        contributions=Contributions(
+            main_contribution="Reorders attention computation to reduce HBM reads/writes",
+            novelty="IO-aware tiling strategy applied to both forward and backward pass",
+            problem_solved="Memory bandwidth bottleneck in standard attention",
+        ),
+        technical=TechnicalSection(details=[
+            TechnicalPoint(name="Tiling", explanation="Splits Q/K/V into blocks that fit in SRAM"),
+        ]),
+    )
+    md = report.to_markdown()
+    assert "阅读时长" in md
+    assert "分钟" in md
+
+    html_out = report.to_html()
+    assert "阅读时长" in html_out
+    assert "分钟" in html_out
+
+
+def test_reading_time_minimum_one_minute():
+    """Even an empty report gives at least 1 minute."""
+    from papermind.output.html import _reading_time_minutes as _rt_html
+    from papermind.output.markdown import _reading_time_minutes as _rt_md
+
+    empty = Report(paper=PaperMeta(title="X"))
+    assert _rt_html(empty) >= 1
+    assert _rt_md(empty) >= 1
+
+
+def test_reading_time_scales_with_content():
+    """A content-rich report produces a longer estimate than a sparse one."""
+    from papermind.output.markdown import _reading_time_minutes
+
+    sparse = Report(paper=PaperMeta(title="Sparse"))
+    rich_report = Report(
+        paper=PaperMeta(title="Rich"),
+        contributions=Contributions(
+            main_contribution=" ".join(["word"] * 100),
+            novelty=" ".join(["word"] * 100),
+            problem_solved=" ".join(["word"] * 100),
+        ),
+        technical=TechnicalSection(details=[
+            TechnicalPoint(name="T", explanation=" ".join(["word"] * 200)),
+        ]),
+    )
+    assert _reading_time_minutes(rich_report) > _reading_time_minutes(sparse)
+
+
 def test_demo_plays_offline_instantly():
     import io
 

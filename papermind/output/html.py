@@ -17,6 +17,27 @@ from papermind.output.schema import Connection, Reproduction, Report, Source, Te
 
 _DIFFICULTY = {"high": ("high", "#e5484d"), "mid": ("mid", "#f5a623"), "low": ("low", "#30a46c")}
 
+
+def _reading_time_minutes(report: Report) -> int:
+    """Estimate reading time in minutes at ~200 WPM from all report text content."""
+    parts: List[str] = []
+    if report.paper.abstract:
+        parts.append(report.paper.abstract)
+    if report.contributions:
+        c = report.contributions
+        parts += [c.main_contribution, c.novelty, c.problem_solved]
+    for p in report.technical.details:
+        parts += [p.name, p.explanation, p.analogy or ""]
+    for conn in report.connections.related_works:
+        parts += [conn.concept, conn.relationship]
+    if report.reproduction:
+        r = report.reproduction
+        parts += [r.requirements or "", r.recommended_hardware or ""]
+        parts += [s.title + " " + (s.desc or "") for s in r.env_setup_steps]
+        parts += list(r.gotchas)
+    words = sum(len(t.split()) for t in parts if t)
+    return max(1, round(words / 200))
+
 _CSS = """
 :root { --fg:#0f172a; --muted:#475569; --faint:#94a3b8; --accent:#2563eb; --accent-press:#1d4ed8;
   --border:#e8edf3; --border-strong:#d4dbe4; --bg:#f5f7fa; --card:#ffffff; --soft:#f1f5f9; --accent-soft:#eff5ff;
@@ -222,6 +243,8 @@ def _meta(report: Report) -> str:
         bits.append(f'<b>arXiv:</b> <a href="https://arxiv.org/abs/{esc(paper.arxiv_id)}">{esc(paper.arxiv_id)}</a>')
     if paper.pdf_url:
         bits.append(f'<a href="{esc(paper.pdf_url)}">PDF</a>')
+    mins = _reading_time_minutes(report)
+    bits.append(f"<b>阅读时长:</b> 约 {mins} 分钟")
     return " &nbsp;•&nbsp; ".join(bits)
 
 
