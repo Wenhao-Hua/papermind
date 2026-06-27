@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import papermind.compare as compare_mod
 from papermind.compare import build_comparison
-from papermind.output.compare_render import to_html, to_markdown
+from papermind.output.compare_render import to_csv, to_html, to_markdown
 from papermind.output.schema import (
     Benchmark,
     Contributions,
@@ -93,3 +93,52 @@ def test_compare_orchestration_reuses_mocked_analyze(monkeypatch):
     assert [p.title for p in comp.papers] == ["FlashAttention-2", "Transformer"]
     assert comp.synthesis == ""  # synthesis skipped -> no LLM call
     assert comp.usage is not None
+
+
+def test_comparison_csv_structure():
+    import csv
+    import io
+
+    comp = _comparison()
+    text = to_csv(comp)
+    rows = list(csv.reader(io.StringIO(text)))
+    # Header row: "Paper" + dimension labels
+    assert rows[0][0] == "Paper"
+    assert "核心贡献" in rows[0]
+    assert "关键方法" in rows[0]
+    # One data row per paper
+    assert rows[1][0] == "2307.08691"
+    assert rows[2][0] == "1706.03762"
+    # faster attention appears in the 核心贡献 column
+    contrib_col = rows[0].index("核心贡献")
+    assert rows[1][contrib_col] == "faster attention"
+
+
+def test_comparison_csv_synthesis_appended():
+    import csv
+    import io
+
+    from papermind.output.schema import ComparedPaper, Comparison
+
+    comp = Comparison(
+        papers=[
+            ComparedPaper(title="A", arxiv_id="1", year=2023),
+            ComparedPaper(title="B", arxiv_id="2", year=2024),
+        ],
+        synthesis="These papers share similar goals.",
+    )
+    text = to_csv(comp)
+    rows = list(csv.reader(io.StringIO(text)))
+    # synthesis appears after a blank separator row
+    non_empty = [r for r in rows if any(r)]
+    assert any("对比小结" in r[0] for r in non_empty)
+    assert any("These papers share similar goals." in r[1] for r in non_empty)
+
+
+def test_comparison_to_csv_method_and_path(tmp_path):
+    comp = _comparison()
+    out = tmp_path / "compare.csv"
+    text = comp.to_csv(str(out))
+    assert out.exists()
+    assert "Paper" in text
+    assert "2307.08691" in text
