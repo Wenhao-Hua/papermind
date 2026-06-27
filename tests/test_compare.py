@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import papermind.compare as compare_mod
 from papermind.compare import build_comparison
-from papermind.output.compare_render import to_html, to_markdown
+from papermind.output.compare_render import to_csv, to_html, to_markdown
 from papermind.output.schema import (
     Benchmark,
     Contributions,
@@ -60,6 +60,37 @@ def test_comparison_html_table_and_links():
     assert html.startswith("<!DOCTYPE html>")
     assert "<th>2307.08691</th>" in html
     assert "<a href='https://github.com/x/y'>" in html  # official code linked
+
+
+def test_comparison_csv_export():
+    import csv
+    import io
+
+    comp = _comparison()
+    csv_text = to_csv(comp)
+
+    rows = list(csv.reader(io.StringIO(csv_text)))
+    # header row: 维度, 2307.08691, 1706.03762
+    assert rows[0] == ["维度", "2307.08691", "1706.03762"]
+    # find the 核心贡献 row
+    contrib_row = next(r for r in rows if r[0] == "核心贡献")
+    assert contrib_row[1] == "faster attention"
+    assert contrib_row[2] == "attention-only arch"
+    # to_csv on the model delegates correctly
+    assert comp.to_csv() == csv_text
+
+
+def test_comparison_csv_to_file(tmp_path):
+    comp = _comparison()
+    out = str(tmp_path / "result.csv")
+    comp.to_csv(out)
+    import csv
+    import io
+
+    text = open(out, encoding="utf-8").read()
+    rows = list(csv.reader(io.StringIO(text)))
+    assert rows[0][0] == "维度"
+    assert any(r[0] == "年份" for r in rows)
 
 
 def test_comparison_json_round_trip():
