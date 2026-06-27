@@ -2,9 +2,12 @@
 
 from __future__ import annotations
 
+import csv
+import io
+
 import papermind.compare as compare_mod
 from papermind.compare import build_comparison
-from papermind.output.compare_render import to_html, to_markdown
+from papermind.output.compare_render import to_csv, to_html, to_markdown
 from papermind.output.schema import (
     Benchmark,
     Contributions,
@@ -93,3 +96,55 @@ def test_compare_orchestration_reuses_mocked_analyze(monkeypatch):
     assert [p.title for p in comp.papers] == ["FlashAttention-2", "Transformer"]
     assert comp.synthesis == ""  # synthesis skipped -> no LLM call
     assert comp.usage is not None
+
+
+# --------------------------------------------------------------------------- #
+# CSV export
+# --------------------------------------------------------------------------- #
+
+def test_comparison_csv_headers():
+    rows = list(csv.DictReader(io.StringIO(to_csv(_comparison()))))
+    expected_headers = {"标题", "arXiv", "年份", "核心贡献", "新颖之处", "关键方法", "性能/基准", "推荐硬件", "官方代码"}
+    assert set(rows[0].keys()) == expected_headers
+
+
+def test_comparison_csv_one_row_per_paper():
+    rows = list(csv.DictReader(io.StringIO(to_csv(_comparison()))))
+    assert len(rows) == 2
+    assert rows[0]["arXiv"] == "2307.08691"
+    assert rows[1]["arXiv"] == "1706.03762"
+
+
+def test_comparison_csv_field_values():
+    rows = list(csv.DictReader(io.StringIO(to_csv(_comparison()))))
+    assert rows[0]["核心贡献"] == "faster attention"
+    assert rows[0]["关键方法"] == "Tiling"
+    assert rows[0]["年份"] == "2023"
+    assert rows[1]["关键方法"] == "Self-Attention"
+
+
+def test_comparison_csv_via_model_method():
+    comp = _comparison()
+    text = comp.to_csv()
+    rows = list(csv.DictReader(io.StringIO(text)))
+    assert len(rows) == 2
+    assert rows[0]["标题"] == "FlashAttention-2"
+
+
+def test_comparison_csv_writes_file(tmp_path):
+    out = str(tmp_path / "compare.csv")
+    comp = _comparison()
+    text = comp.to_csv(path=out)
+    assert (tmp_path / "compare.csv").read_text(encoding="utf-8") == text
+    rows = list(csv.DictReader(io.StringIO(text)))
+    assert len(rows) == 2
+
+
+def test_comparison_csv_commas_in_values_are_quoted():
+    from papermind.output.schema import ComparedPaper, Comparison
+    comp = Comparison(papers=[
+        ComparedPaper(title="A, B", arxiv_id="1", main_contribution="hello, world", year=2024),
+    ])
+    rows = list(csv.DictReader(io.StringIO(to_csv(comp))))
+    assert rows[0]["标题"] == "A, B"
+    assert rows[0]["核心贡献"] == "hello, world"
