@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import papermind.compare as compare_mod
 from papermind.compare import build_comparison
-from papermind.output.compare_render import to_html, to_markdown
+from papermind.output.compare_render import to_csv, to_html, to_markdown
 from papermind.output.schema import (
     Benchmark,
     Contributions,
@@ -76,6 +76,57 @@ def test_has_compare_modules_rejects_partial_report():
     partial = Report(paper=PaperMeta(title="P", arxiv_id="2"),
                      contributions=Contributions(main_contribution="c", novelty="n"))
     assert compare_mod._has_compare_modules(partial) is False
+
+
+def test_comparison_csv_export():
+    import csv
+    import io
+
+    comp = _comparison()
+    text = to_csv(comp)
+    rows = list(csv.reader(io.StringIO(text)))
+    # header row: 维度 + one column per paper
+    assert rows[0] == ["维度", "2307.08691", "1706.03762"]
+    # find the row labelled 核心贡献
+    contrib_rows = [r for r in rows if r and r[0] == "核心贡献"]
+    assert contrib_rows, "missing 核心贡献 row"
+    assert contrib_rows[0][1] == "faster attention"
+    assert contrib_rows[0][2] == "attention-only arch"
+    # official code row should be present
+    code_rows = [r for r in rows if r and r[0] == "官方代码"]
+    assert code_rows and code_rows[0][1] == "https://github.com/x/y"
+
+
+def test_comparison_csv_via_schema_method(tmp_path):
+    import csv
+    import io
+
+    comp = _comparison()
+    # in-memory
+    text = comp.to_csv()
+    rows = list(csv.reader(io.StringIO(text)))
+    assert rows[0][0] == "维度"
+
+    # write to file
+    out = tmp_path / "compare.csv"
+    comp.to_csv(str(out))
+    assert out.exists()
+    content = out.read_text(encoding="utf-8")
+    assert "核心贡献" in content
+
+
+def test_comparison_csv_includes_synthesis():
+    import csv
+    import io
+
+    comp = _comparison()
+    comp.synthesis = "Paper A is faster; Paper B is more general."
+    text = to_csv(comp)
+    rows = list(csv.reader(io.StringIO(text)))
+    # synthesis should appear after a blank row
+    flat = "\n".join(",".join(r) for r in rows)
+    assert "对比小结" in flat
+    assert "Paper A is faster" in flat
 
 
 def test_compare_orchestration_reuses_mocked_analyze(monkeypatch):
