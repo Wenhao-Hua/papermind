@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import papermind.compare as compare_mod
 from papermind.compare import build_comparison
-from papermind.output.compare_render import to_html, to_markdown
+from papermind.output.compare_render import to_csv, to_html, to_markdown
 from papermind.output.schema import (
     Benchmark,
     Contributions,
@@ -60,6 +60,46 @@ def test_comparison_html_table_and_links():
     assert html.startswith("<!DOCTYPE html>")
     assert "<th>2307.08691</th>" in html
     assert "<a href='https://github.com/x/y'>" in html  # official code linked
+
+
+def test_comparison_csv_export():
+    import csv
+    import io
+
+    comp = _comparison()
+    text = to_csv(comp)
+    rows = list(csv.DictReader(io.StringIO(text)))
+    assert len(rows) == 2
+    assert rows[0]["标题"] == "FlashAttention-2"
+    assert rows[0]["arXiv"] == "2307.08691"
+    assert rows[0]["年份"] == "2023"
+    assert rows[0]["关键方法"] == "Tiling"
+    assert rows[1]["标题"] == "Transformer"
+    assert rows[1]["关键方法"] == "Self-Attention"
+    # synthesis is not included in CSV (it's a paper-level table)
+    assert "synthesis" not in text
+
+
+def test_comparison_csv_via_schema():
+    import csv
+    import io
+    import tempfile
+    import os
+
+    comp = _comparison()
+    # to_csv() without path returns string
+    text = comp.to_csv()
+    rows = list(csv.DictReader(io.StringIO(text)))
+    assert len(rows) == 2
+    # to_csv(path) writes a file
+    with tempfile.NamedTemporaryFile(suffix=".csv", delete=False, mode="w") as f:
+        tmp = f.name
+    try:
+        comp.to_csv(tmp)
+        written = open(tmp, encoding="utf-8").read()
+        assert written == text
+    finally:
+        os.unlink(tmp)
 
 
 def test_comparison_json_round_trip():
