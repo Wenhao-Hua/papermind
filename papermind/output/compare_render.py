@@ -2,7 +2,9 @@
 
 from __future__ import annotations
 
+import csv
 import html as _html
+import io
 from typing import Callable, List, Tuple
 
 from papermind.output.schema import ComparedPaper, Comparison
@@ -77,6 +79,29 @@ def to_html(comparison: Comparison) -> str:
         "<a href='https://github.com/Wenhao-Hua/papermind'>PaperMind</a>.</p>"
         "</body></html>"
     )
+
+
+_CSV_FIELDS = ["标题", "arXiv", "年份", "核心贡献", "新颖之处", "关键方法", "性能/基准", "推荐硬件", "官方代码"]
+
+
+def to_csv(comparison: Comparison) -> str:
+    """Return a CSV string with one paper per row and one attribute per column."""
+    buf = io.StringIO()
+    writer = csv.DictWriter(buf, fieldnames=_CSV_FIELDS, lineterminator="\n")
+    writer.writeheader()
+    for paper in comparison.papers:
+        writer.writerow({
+            "标题": paper.title or "",
+            "arXiv": paper.arxiv_id or "",
+            "年份": str(paper.year) if paper.year else "",
+            "核心贡献": paper.main_contribution or "",
+            "新颖之处": paper.novelty or "",
+            "关键方法": "; ".join(paper.methods) if paper.methods else "",
+            "性能/基准": paper.benchmark or "",
+            "推荐硬件": paper.hardware or "",
+            "官方代码": paper.official_code or "",
+        })
+    return buf.getvalue()
 
 
 def _html_cell(label: str, value: str) -> str:

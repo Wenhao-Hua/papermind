@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import papermind.compare as compare_mod
 from papermind.compare import build_comparison
-from papermind.output.compare_render import to_html, to_markdown
+from papermind.output.compare_render import to_csv, to_html, to_markdown
 from papermind.output.schema import (
     Benchmark,
     Contributions,
@@ -76,6 +76,47 @@ def test_has_compare_modules_rejects_partial_report():
     partial = Report(paper=PaperMeta(title="P", arxiv_id="2"),
                      contributions=Contributions(main_contribution="c", novelty="n"))
     assert compare_mod._has_compare_modules(partial) is False
+
+
+def test_comparison_csv_columns_and_rows():
+    import csv
+    import io
+
+    csv_text = to_csv(_comparison())
+    reader = csv.DictReader(io.StringIO(csv_text))
+    rows = list(reader)
+    assert len(rows) == 2
+    assert rows[0]["arXiv"] == "2307.08691"
+    assert rows[0]["核心贡献"] == "faster attention"
+    assert rows[0]["关键方法"] == "Tiling"
+    assert rows[1]["arXiv"] == "1706.03762"
+    assert rows[1]["关键方法"] == "Self-Attention"
+    # year and title are present
+    assert rows[0]["年份"] == "2023"
+    assert rows[0]["标题"] == "FlashAttention-2"
+
+
+def test_comparison_csv_via_schema_method(tmp_path):
+    comp = _comparison()
+    # to_csv() returns text
+    text = comp.to_csv()
+    assert "2307.08691" in text and "1706.03762" in text
+    # to_csv(path) writes a file
+    out = tmp_path / "compare.csv"
+    comp.to_csv(str(out))
+    assert out.exists() and "faster attention" in out.read_text(encoding="utf-8")
+
+
+def test_comparison_csv_empty_fields_are_blank_not_dash():
+    import csv
+    import io
+
+    from papermind.output.schema import ComparedPaper, Comparison
+
+    comp = Comparison(papers=[ComparedPaper(title="NoCode", arxiv_id="0000.00000")])
+    rows = list(csv.DictReader(io.StringIO(to_csv(comp))))
+    assert rows[0]["官方代码"] == ""   # blank, not "-"
+    assert rows[0]["推荐硬件"] == ""
 
 
 def test_compare_orchestration_reuses_mocked_analyze(monkeypatch):
