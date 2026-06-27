@@ -2,9 +2,12 @@
 
 from __future__ import annotations
 
+import csv
+import io
+
 import papermind.compare as compare_mod
 from papermind.compare import build_comparison
-from papermind.output.compare_render import to_html, to_markdown
+from papermind.output.compare_render import to_csv, to_html, to_markdown
 from papermind.output.schema import (
     Benchmark,
     Contributions,
@@ -76,6 +79,45 @@ def test_has_compare_modules_rejects_partial_report():
     partial = Report(paper=PaperMeta(title="P", arxiv_id="2"),
                      contributions=Contributions(main_contribution="c", novelty="n"))
     assert compare_mod._has_compare_modules(partial) is False
+
+
+def test_comparison_csv_structure():
+    csv_text = to_csv(_comparison())
+    rows = list(csv.reader(io.StringIO(csv_text)))
+    # Header row: 维度 + paper ids
+    assert rows[0] == ["维度", "2307.08691", "1706.03762"]
+    # Find the 核心贡献 row
+    contrib_row = next(r for r in rows if r[0] == "核心贡献")
+    assert contrib_row[1] == "faster attention"
+    assert contrib_row[2] == "attention-only arch"
+    # Find the 关键方法 row
+    method_row = next(r for r in rows if r[0] == "关键方法")
+    assert method_row[1] == "Tiling"
+    assert method_row[2] == "Self-Attention"
+
+
+def test_comparison_csv_with_synthesis():
+    from papermind.output.schema import Comparison, ComparedPaper
+
+    comp = Comparison(
+        papers=[
+            ComparedPaper(title="A", arxiv_id="111", main_contribution="contrib_a"),
+            ComparedPaper(title="B", arxiv_id="222", main_contribution="contrib_b"),
+        ],
+        synthesis="A is faster; B is simpler.",
+    )
+    csv_text = to_csv(comp)
+    assert "对比小结" in csv_text
+    assert "A is faster; B is simpler." in csv_text
+
+
+def test_comparison_to_csv_writes_file(tmp_path):
+    path = str(tmp_path / "out.csv")
+    _comparison().to_csv(path)
+    content = open(path, encoding="utf-8").read()
+    rows = list(csv.reader(io.StringIO(content)))
+    assert rows[0][0] == "维度"
+    assert "2307.08691" in rows[0]
 
 
 def test_compare_orchestration_reuses_mocked_analyze(monkeypatch):
