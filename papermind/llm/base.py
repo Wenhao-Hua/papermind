@@ -221,7 +221,7 @@ class LLMClient:
             resp = litellm.embedding(model=model, input=texts)
         except Exception as exc:  # noqa: BLE001 - litellm raises provider-specific errors
             raise _wrap_llm_error(exc, model) from exc
-        self._record_usage(model, _usage_value(resp, "prompt_tokens"), 0)
+        self._record_usage(model, _usage_value(resp, "prompt_tokens"), 0, litellm=litellm)
         vectors = [item["embedding"] for item in resp["data"]]
         return np.asarray(vectors, dtype="float32")
 
@@ -285,7 +285,10 @@ class LLMClient:
                 raise _wrap_llm_error(exc2, self.model) from exc2
 
         self._record_usage(
-            self.model, _usage_value(resp, "prompt_tokens"), _usage_value(resp, "completion_tokens")
+            self.model,
+            _usage_value(resp, "prompt_tokens"),
+            _usage_value(resp, "completion_tokens"),
+            litellm=litellm,
         )
         try:
             return resp["choices"][0]["message"]["content"] or ""
@@ -323,19 +326,25 @@ class LLMClient:
         else:  # provider didn't return usage in the stream; estimate
             pt = _count_tokens(litellm, self.model, messages=kwargs["messages"])
             ct = _count_tokens(litellm, self.model, text=text)
-        self._record_usage(self.model, pt, ct)
+        self._record_usage(self.model, pt, ct, litellm=litellm)
         return text
 
-    def _record_usage(self, model: str, prompt_tokens: int, completion_tokens: int) -> None:
+    def _record_usage(
+        self, model: str, prompt_tokens: int, completion_tokens: int, litellm=None
+    ) -> None:
+        # litellm is passed in by the callers (_call / _call_stream / _embed_openai)
+        # which have already imported it in the same thread.  Receiving it as a
+        # parameter avoids a re-import from background threads, where pyo3-backed
+        # extensions (e.g. cryptography) can panic if initialised concurrently.
         cost = 0.0
-        try:
-            litellm = _import_litellm()
-            prompt_cost, completion_cost = litellm.cost_per_token(
-                model=model, prompt_tokens=prompt_tokens, completion_tokens=completion_tokens
-            )
-            cost = float(prompt_cost) + float(completion_cost)
-        except Exception:  # noqa: BLE001 - cost is best-effort; many models lack pricing
-            cost = 0.0
+        if litellm is not None:
+            try:
+                prompt_cost, completion_cost = litellm.cost_per_token(
+                    model=model, prompt_tokens=prompt_tokens, completion_tokens=completion_tokens
+                )
+                cost = float(prompt_cost) + float(completion_cost)
+            except Exception:  # noqa: BLE001 - cost is best-effort; many models lack pricing
+                cost = 0.0
         with self._usage_lock:
             self.usage.record(prompt_tokens, completion_tokens, cost)
 
@@ -445,14 +454,29 @@ def _get_local_encoder(model_name: str, cls):
     return _LOCAL_ENCODERS[model_name]
 
 
-def _import_litellm():
-    try:
-        import litellm
+_litellm_import_lock = threading.Lock()
+_litellm_cached = None
 
-        litellm.drop_params = True  # silently drop unsupported params per provider
-        return litellm
-    except ImportError as exc:  # pragma: no cover
-        raise LLMError("litellm is required. Install with: pip install litellm") from exc
+
+def _import_litellm():
+    global _litellm_cached
+    if _litellm_cached is not None:
+        return _litellm_cached
+    # Serialize the first import: pyo3-backed extensions (e.g. cryptography's Rust
+    # bindings loaded transitively by litellm) panic when initialised concurrently
+    # from multiple Python threads.  After the first import succeeds the cached
+    # module reference is returned without acquiring the lock.
+    with _litellm_import_lock:
+        if _litellm_cached is not None:
+            return _litellm_cached
+        try:
+            import litellm
+
+            litellm.drop_params = True  # silently drop unsupported params per provider
+            _litellm_cached = litellm
+            return litellm
+        except ImportError as exc:  # pragma: no cover
+            raise LLMError("litellm is required. Install with: pip install litellm") from exc
 
 
 def _supports_json_mode(model: str) -> bool:
