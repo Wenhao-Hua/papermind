@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import papermind.compare as compare_mod
 from papermind.compare import build_comparison
-from papermind.output.compare_render import to_html, to_markdown
+from papermind.output.compare_render import to_csv, to_html, to_markdown
 from papermind.output.schema import (
     Benchmark,
     Contributions,
@@ -76,6 +76,28 @@ def test_has_compare_modules_rejects_partial_report():
     partial = Report(paper=PaperMeta(title="P", arxiv_id="2"),
                      contributions=Contributions(main_contribution="c", novelty="n"))
     assert compare_mod._has_compare_modules(partial) is False
+
+
+def test_comparison_csv_structure():
+    import csv, io
+    comp = _comparison()
+    text = to_csv(comp)
+    rows = list(csv.reader(io.StringIO(text)))
+    assert rows[0] == ["维度", "2307.08691", "1706.03762"]
+    labels = [r[0] for r in rows if r]
+    assert "核心贡献" in labels
+    assert "关键方法" in labels
+    # 官方代码 value should appear as plain text, not HTML
+    code_row = next(r for r in rows if r and r[0] == "官方代码")
+    assert "https://github.com/x/y" in code_row[1]
+    assert "<a" not in code_row[1]
+
+
+def test_comparison_csv_via_schema():
+    comp = _comparison()
+    text = comp.to_csv()
+    assert "核心贡献" in text
+    assert "faster attention" in text
 
 
 def test_compare_orchestration_reuses_mocked_analyze(monkeypatch):
