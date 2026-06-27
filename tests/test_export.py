@@ -68,3 +68,38 @@ def test_bibtex_without_arxiv_is_misc():
     meta = PaperMeta(title="Some Local Paper", authors=["Jane Doe"], year=2020)
     bib = to_bibtex(meta)
     assert bib.startswith("@misc{doe2020some,")
+
+
+def test_reading_time_in_html_meta():
+    from papermind.output.html import to_html
+    from papermind.output.schema import Contributions
+
+    report = Report(
+        paper=PaperMeta(title="Test", year=2024),
+        contributions=Contributions(
+            main_contribution="这是一篇" * 100,  # 400 Chinese chars → ~1 min
+            novelty="B" * 100,
+            problem_solved="",
+        ),
+    )
+    h = to_html(report)
+    assert "分钟" in h
+
+
+def test_reading_time_in_markdown_meta():
+    from papermind.output.markdown import to_markdown
+    from papermind.output.schema import Contributions
+
+    report = Report(
+        paper=PaperMeta(title="Test", year=2024),
+        contributions=Contributions(main_contribution="这是一篇" * 100, novelty="", problem_solved=""),
+    )
+    md = to_markdown(report)
+    assert "分钟" in md
+
+
+def test_reading_time_minimum_one_minute():
+    from papermind.output.html import _reading_minutes
+
+    empty = Report(paper=PaperMeta(title="Empty"))
+    assert _reading_minutes(empty) == 1

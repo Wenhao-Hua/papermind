@@ -84,6 +84,32 @@ def _toc_md(report: Report) -> List[str]:
     return [f"- [{label}](#{anchor})" for anchor, label in items] + [""]
 
 
+def _reading_minutes(report: Report) -> int:
+    """Estimate how many minutes it takes to read this report.
+
+    Collects text from the four analysis sections and applies typical reading
+    speeds: ~400 Chinese characters/min and ~200 English words/min.
+    """
+    import re
+    from typing import List as _List
+
+    texts: _List[str] = []
+    if report.contributions:
+        c = report.contributions
+        texts.extend([c.main_contribution, c.novelty, c.problem_solved])
+    for pt in report.technical.details:
+        texts.extend([pt.explanation, pt.analogy or ""])
+    for conn in report.connections.related_works:
+        texts.append(conn.relationship)
+    if report.reproduction:
+        for step in report.reproduction.env_setup_steps:
+            texts.extend([step.title, step.desc])
+    combined = " ".join(t for t in texts if t)
+    cn = len(re.findall(r"[一-鿿]", combined))
+    en = len(re.findall(r"[a-zA-Z]+", combined))
+    return max(1, round(cn / 400 + en / 200))
+
+
 def _meta_line(report: Report) -> str:
     paper = report.paper
     bits = []
@@ -96,6 +122,7 @@ def _meta_line(report: Report) -> str:
         bits.append(f"**arXiv:** [{paper.arxiv_id}](https://arxiv.org/abs/{paper.arxiv_id})")
     if paper.pdf_url:
         bits.append(f"[PDF]({paper.pdf_url})")
+    bits.append(f"约 {_reading_minutes(report)} 分钟")
     return "  •  ".join(bits)
 
 
