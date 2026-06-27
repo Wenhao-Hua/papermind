@@ -68,3 +68,24 @@ def test_bibtex_without_arxiv_is_misc():
     meta = PaperMeta(title="Some Local Paper", authors=["Jane Doe"], year=2020)
     bib = to_bibtex(meta)
     assert bib.startswith("@misc{doe2020some,")
+
+
+def test_reading_time_appears_in_html_and_markdown():
+    from papermind.output.schema import Contributions, TechnicalPoint, TechnicalSection
+
+    long_text = "深度学习模型通过多层非线性变换学习数据的层次化表示。" * 20  # ~500 chars
+    report = Report(
+        paper=PaperMeta(title="T"),
+        contributions=Contributions(main_contribution=long_text, novelty="n", problem_solved="p"),
+        technical=TechnicalSection(details=[TechnicalPoint(name="n", explanation=long_text)]),
+    )
+    html = report.to_html()
+    md = report.to_markdown()
+    assert "分钟阅读" in html
+    assert "分钟阅读" in md
+
+
+def test_reading_time_absent_for_empty_report():
+    report = Report(paper=PaperMeta(title="Empty"))
+    assert "分钟阅读" not in report.to_html()
+    assert "分钟阅读" not in report.to_markdown()
