@@ -2,9 +2,12 @@
 
 from __future__ import annotations
 
+import csv
+import io
+
 import papermind.compare as compare_mod
 from papermind.compare import build_comparison
-from papermind.output.compare_render import to_html, to_markdown
+from papermind.output.compare_render import to_csv, to_html, to_markdown
 from papermind.output.schema import (
     Benchmark,
     Contributions,
@@ -93,3 +96,56 @@ def test_compare_orchestration_reuses_mocked_analyze(monkeypatch):
     assert [p.title for p in comp.papers] == ["FlashAttention-2", "Transformer"]
     assert comp.synthesis == ""  # synthesis skipped -> no LLM call
     assert comp.usage is not None
+
+
+def test_comparison_csv_structure():
+    comp = _comparison()
+    text = to_csv(comp)
+    rows = list(csv.reader(io.StringIO(text)))
+    # header row: 维度 + one column per paper
+    assert rows[0] == ["维度", "2307.08691", "1706.03762"]
+    # all dimension labels present
+    labels = [r[0] for r in rows[1:] if r]
+    assert "核心贡献" in labels
+    assert "关键方法" in labels
+    assert "年份" in labels
+    # data cells correct
+    contrib_row = next(r for r in rows if r and r[0] == "核心贡献")
+    assert contrib_row[1] == "faster attention"
+    assert contrib_row[2] == "attention-only arch"
+
+
+def test_comparison_csv_synthesis_appended():
+    comp = _comparison()
+    comp.synthesis = "FlashAttention-2 is faster; Transformer is seminal."
+    text = to_csv(comp)
+    assert "对比小结" in text
+    assert "FlashAttention-2 is faster" in text
+
+
+def test_comparison_csv_via_schema_method(tmp_path):
+    comp = _comparison()
+    # in-memory
+    assert comp.to_csv().startswith("维度,")
+    # file write
+    out = tmp_path / "compare.csv"
+    comp.to_csv(str(out))
+    assert out.exists()
+    rows = list(csv.reader(out.open(encoding="utf-8")))
+    assert rows[0][0] == "维度"
+    assert len(rows[0]) == 3  # 维度 + 2 papers
+
+
+def test_comparison_csv_pipes_and_special_chars():
+    """CSV must not break on values that would confuse Markdown table syntax."""
+    from papermind.output.schema import ComparedPaper, Comparison
+
+    comp = Comparison(papers=[
+        ComparedPaper(title="A|B", arxiv_id="1111.1111", main_contribution="uses | pipe"),
+        ComparedPaper(title="C,D", arxiv_id="2222.2222", main_contribution='has "quotes"'),
+    ])
+    text = to_csv(comp)
+    rows = list(csv.reader(io.StringIO(text)))
+    contrib_row = next(r for r in rows if r and r[0] == "核心贡献")
+    assert contrib_row[1] == "uses | pipe"
+    assert contrib_row[2] == 'has "quotes"'
