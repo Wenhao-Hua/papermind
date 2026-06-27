@@ -2,9 +2,12 @@
 
 from __future__ import annotations
 
+import csv
+import io
+
 import papermind.compare as compare_mod
 from papermind.compare import build_comparison
-from papermind.output.compare_render import to_html, to_markdown
+from papermind.output.compare_render import to_csv, to_html, to_markdown
 from papermind.output.schema import (
     Benchmark,
     Contributions,
@@ -93,3 +96,46 @@ def test_compare_orchestration_reuses_mocked_analyze(monkeypatch):
     assert [p.title for p in comp.papers] == ["FlashAttention-2", "Transformer"]
     assert comp.synthesis == ""  # synthesis skipped -> no LLM call
     assert comp.usage is not None
+
+
+def test_comparison_csv_structure():
+    comp = _comparison()
+    text = to_csv(comp)
+    rows = list(csv.reader(io.StringIO(text)))
+    # header row: "维度" + paper IDs
+    assert rows[0] == ["维度", "2307.08691", "1706.03762"]
+    # each data row has 3 columns
+    for row in rows[1:]:
+        assert len(row) == 3
+    # spot-check specific rows
+    labels = [r[0] for r in rows]
+    assert "标题" in labels
+    assert "核心贡献" in labels
+    assert "关键方法" in labels
+    title_row = next(r for r in rows if r[0] == "标题")
+    assert title_row[1] == "FlashAttention-2"
+    assert title_row[2] == "Transformer"
+
+
+def test_comparison_csv_via_schema_method(tmp_path):
+    comp = _comparison()
+    # to_csv() with no path returns string
+    text = comp.to_csv()
+    assert "维度" in text
+    assert "2307.08691" in text
+    # to_csv() with path writes file
+    out = tmp_path / "compare.csv"
+    comp.to_csv(str(out))
+    assert out.read_text(encoding="utf-8") == text
+
+
+def test_comparison_csv_with_synthesis():
+    comp = _comparison()
+    comp.synthesis = "FlashAttention-2 outperforms Transformer on long sequences."
+    text = to_csv(comp)
+    rows = list(csv.reader(io.StringIO(text)))
+    # synthesis appended after a blank row
+    non_empty = [r for r in rows if r]
+    synth_row = next((r for r in non_empty if r[0] == "对比小结"), None)
+    assert synth_row is not None
+    assert "FlashAttention-2" in synth_row[1]
