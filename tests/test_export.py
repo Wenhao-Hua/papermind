@@ -1,12 +1,23 @@
-"""Tests for reproduction export (setup.sh / notebook) and BibTeX citation."""
+"""Tests for reproduction export (setup.sh / notebook), BibTeX citation, and reading-time estimate."""
 
 from __future__ import annotations
 
 import json
 
 from papermind.output.cite import to_bibtex
+from papermind.output.html import _reading_time_minutes as html_reading_time
+from papermind.output.markdown import _reading_time_minutes as md_reading_time
 from papermind.output.reproduce_export import to_notebook, to_setup_script
-from papermind.output.schema import CommonError, PaperMeta, Reproduction, Report, SetupStep
+from papermind.output.schema import (
+    CommonError,
+    Contributions,
+    PaperMeta,
+    Reproduction,
+    Report,
+    SetupStep,
+    TechnicalPoint,
+    TechnicalSection,
+)
 
 
 def _report():
@@ -68,3 +79,45 @@ def test_bibtex_without_arxiv_is_misc():
     meta = PaperMeta(title="Some Local Paper", authors=["Jane Doe"], year=2020)
     bib = to_bibtex(meta)
     assert bib.startswith("@misc{doe2020some,")
+
+
+# --------------------------------------------------------------------------- #
+# Reading-time estimate
+# --------------------------------------------------------------------------- #
+def test_reading_time_minimum_is_one_minute():
+    report = Report(paper=PaperMeta(title="Empty"))
+    assert md_reading_time(report) == 1
+    assert html_reading_time(report) == 1
+
+
+def test_reading_time_scales_with_content():
+    long_text = "这是一段测试文本用来估算阅读时间。" * 100  # ~1700 chars → ~5 min at 350 chars/min
+    report = Report(
+        paper=PaperMeta(title="T"),
+        contributions=Contributions(main_contribution=long_text, novelty="", problem_solved=""),
+    )
+    minutes = md_reading_time(report)
+    assert minutes >= 4, f"expected ≥4 min for long text, got {minutes}"
+    assert minutes <= 8, f"expected ≤8 min for long text, got {minutes}"
+
+
+def test_reading_time_matches_between_md_and_html():
+    report = Report(
+        paper=PaperMeta(title="T"),
+        technical=TechnicalSection(
+            details=[TechnicalPoint(name="N", explanation="A" * 700, difficulty="mid")]
+        ),
+    )
+    assert md_reading_time(report) == html_reading_time(report)
+
+
+def test_reading_time_appears_in_markdown_output():
+    report = Report(paper=PaperMeta(title="T", year=2024))
+    md = report.to_markdown()
+    assert "分钟阅读" in md
+
+
+def test_reading_time_appears_in_html_output():
+    report = Report(paper=PaperMeta(title="T", year=2024))
+    html = report.to_html()
+    assert "分钟阅读" in html

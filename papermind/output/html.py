@@ -119,6 +119,28 @@ _MATHJAX = (
 )
 
 
+def _reading_time_minutes(report: Report) -> int:
+    """Estimate reading time in minutes from the report's text content.
+
+    Uses ~350 characters/minute, typical for mixed Chinese academic prose.
+    Returns at least 1 minute.
+    """
+    texts: List[str] = []
+    if report.contributions:
+        c = report.contributions
+        texts += [c.main_contribution, c.novelty, c.problem_solved]
+    for point in report.technical.details:
+        texts += [point.explanation, point.analogy or ""]
+    for conn in report.connections.related_works:
+        texts.append(conn.relationship)
+    if report.reproduction:
+        r = report.reproduction
+        texts += [r.requirements or "", r.recommended_hardware or ""]
+        texts += list(r.gotchas)
+    total_chars = sum(len(t) for t in texts if t)
+    return max(1, round(total_chars / 350))
+
+
 def to_html(report: Report, path: Optional[str] = None) -> str:
     doc = "\n".join(_render(report))
     if path:
@@ -222,6 +244,7 @@ def _meta(report: Report) -> str:
         bits.append(f'<b>arXiv:</b> <a href="https://arxiv.org/abs/{esc(paper.arxiv_id)}">{esc(paper.arxiv_id)}</a>')
     if paper.pdf_url:
         bits.append(f'<a href="{esc(paper.pdf_url)}">PDF</a>')
+    bits.append(f"约 {_reading_time_minutes(report)} 分钟阅读")
     return " &nbsp;•&nbsp; ".join(bits)
 
 
