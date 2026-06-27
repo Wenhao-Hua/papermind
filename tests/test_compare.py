@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import papermind.compare as compare_mod
 from papermind.compare import build_comparison
-from papermind.output.compare_render import to_html, to_markdown
+from papermind.output.compare_render import to_csv, to_html, to_markdown
 from papermind.output.schema import (
     Benchmark,
     Contributions,
@@ -67,6 +67,45 @@ def test_comparison_json_round_trip():
     data = comp.to_dict()
     assert data["papers"][0]["arxiv_id"] == "2307.08691"
     assert "usage" not in data  # usage excluded from export
+
+
+def test_comparison_csv_headers_and_rows():
+    csv_text = to_csv(_comparison())
+    lines = csv_text.strip().splitlines()
+    # header row has dimension column plus one column per paper
+    assert lines[0].startswith("维度")
+    assert "2307.08691" in lines[0]
+    assert "1706.03762" in lines[0]
+    # data rows contain expected field labels and values
+    assert any("核心贡献" in line and "faster attention" in line for line in lines)
+    assert any("关键方法" in line and "Tiling" in line for line in lines)
+    assert any("官方代码" in line and "https://github.com/x/y" in line for line in lines)
+
+
+def test_comparison_to_csv_method_and_file(tmp_path):
+    comp = _comparison()
+    csv_text = comp.to_csv()
+    assert "维度" in csv_text
+    assert "2307.08691" in csv_text
+    # write to file
+    out = tmp_path / "compare.csv"
+    comp.to_csv(str(out))
+    assert out.read_text(encoding="utf-8") == csv_text
+
+
+def test_comparison_csv_synthesis_appended():
+    from papermind.output.schema import ComparedPaper, Comparison
+
+    comp = Comparison(
+        papers=[
+            ComparedPaper(title="A", arxiv_id="0001", main_contribution="c1"),
+            ComparedPaper(title="B", arxiv_id="0002", main_contribution="c2"),
+        ],
+        synthesis="A is better than B in speed.",
+    )
+    csv_text = to_csv(comp)
+    assert "对比小结" in csv_text
+    assert "A is better than B in speed." in csv_text
 
 
 def test_has_compare_modules_rejects_partial_report():
