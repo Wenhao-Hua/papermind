@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import papermind.compare as compare_mod
 from papermind.compare import build_comparison
-from papermind.output.compare_render import to_html, to_markdown
+from papermind.output.compare_render import to_csv, to_html, to_markdown
 from papermind.output.schema import (
     Benchmark,
     Contributions,
@@ -76,6 +76,57 @@ def test_has_compare_modules_rejects_partial_report():
     partial = Report(paper=PaperMeta(title="P", arxiv_id="2"),
                      contributions=Contributions(main_contribution="c", novelty="n"))
     assert compare_mod._has_compare_modules(partial) is False
+
+
+def test_comparison_csv_columns_and_rows():
+    import csv
+    import io
+
+    comp = _comparison()
+    text = to_csv(comp)
+    rows = list(csv.reader(io.StringIO(text)))
+    # header row contains all expected dimension columns
+    assert rows[0] == ["标题", "arXiv", "年份", "核心贡献", "新颖之处", "关键方法", "性能/基准", "推荐硬件", "官方代码"]
+    # one data row per paper
+    assert rows[1][0] == "FlashAttention-2"
+    assert rows[1][1] == "2307.08691"
+    assert rows[1][2] == "2023"
+    assert rows[1][3] == "faster attention"
+    assert rows[1][5] == "Tiling"
+    assert rows[2][0] == "Transformer"
+
+
+def test_comparison_csv_synthesis_row():
+    import csv
+    import io
+
+    comp = _comparison()
+    comp.synthesis = "Both papers tackle transformers."
+    text = to_csv(comp)
+    rows = list(csv.reader(io.StringIO(text)))
+    # blank separator + synthesis row appended after data rows
+    synth_row = [r for r in rows if r and r[0] == "对比小结"]
+    assert len(synth_row) == 1
+    assert synth_row[0][1] == "Both papers tackle transformers."
+
+
+def test_comparison_csv_no_synthesis_when_empty():
+    import io
+    import csv
+
+    comp = _comparison()
+    comp.synthesis = ""
+    text = to_csv(comp)
+    rows = [r for r in csv.reader(io.StringIO(text)) if r]
+    assert all(r[0] != "对比小结" for r in rows)
+
+
+def test_comparison_to_csv_writes_file(tmp_path):
+    comp = _comparison()
+    out = str(tmp_path / "result.csv")
+    text = comp.to_csv(out)
+    assert (tmp_path / "result.csv").read_text(encoding="utf-8") == text
+    assert "FlashAttention-2" in text
 
 
 def test_compare_orchestration_reuses_mocked_analyze(monkeypatch):
