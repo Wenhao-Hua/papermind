@@ -336,6 +336,11 @@ class LLMClient:
             cost = float(prompt_cost) + float(completion_cost)
         except Exception:  # noqa: BLE001 - cost is best-effort; many models lack pricing
             cost = 0.0
+        except BaseException as exc:  # noqa: BLE001 - Rust-extension panics (e.g. PanicException from
+            # pyo3) are BaseException, not Exception; still record usage with cost=0
+            if isinstance(exc, (KeyboardInterrupt, SystemExit, GeneratorExit)):
+                raise
+            cost = 0.0
         with self._usage_lock:
             self.usage.record(prompt_tokens, completion_tokens, cost)
 
@@ -438,6 +443,11 @@ def _count_tokens(litellm, model: str, messages=None, text: str = "") -> int:
 
 _LOCAL_ENCODERS: dict = {}
 
+# Cached litellm module reference: None=not tried, False=unavailable, else the module.
+# Memoising avoids re-triggering slow Rust-extension panics on every call in
+# environments where the cryptography backend cannot be loaded inside threads.
+_litellm_ref: object = None
+
 
 def _get_local_encoder(model_name: str, cls):
     if model_name not in _LOCAL_ENCODERS:
@@ -446,13 +456,25 @@ def _get_local_encoder(model_name: str, cls):
 
 
 def _import_litellm():
+    global _litellm_ref
+    if _litellm_ref is False:
+        raise LLMError("litellm is required. Install with: pip install litellm")
+    if _litellm_ref is not None:
+        return _litellm_ref  # type: ignore[return-value]
     try:
         import litellm
 
         litellm.drop_params = True  # silently drop unsupported params per provider
+        _litellm_ref = litellm
         return litellm
     except ImportError as exc:  # pragma: no cover
+        _litellm_ref = False
         raise LLMError("litellm is required. Install with: pip install litellm") from exc
+    except BaseException as exc:  # noqa: BLE001 - Rust-extension panics are BaseException
+        if isinstance(exc, (KeyboardInterrupt, SystemExit, GeneratorExit)):
+            raise
+        _litellm_ref = False  # don't retry; subsequent calls raise LLMError cheaply
+        raise
 
 
 def _supports_json_mode(model: str) -> bool:
