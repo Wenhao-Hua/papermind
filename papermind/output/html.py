@@ -210,6 +210,27 @@ def _toc(report: Report) -> str:
     return f'<nav class="toc">{links}</nav>'
 
 
+def _estimate_reading_minutes(report: Report) -> int:
+    """Count characters across all prose sections; estimate at 300 chars/min."""
+    parts: List[str] = []
+    if report.contributions:
+        c = report.contributions
+        parts.extend([c.main_contribution or "", c.novelty or "", c.problem_solved or ""])
+    for p in report.technical.details:
+        parts.extend([p.explanation or "", p.analogy or ""])
+    for w in report.connections.related_works:
+        parts.extend([w.concept or "", w.relationship or ""])
+    if report.reproduction:
+        r = report.reproduction
+        parts.extend([r.requirements or "", r.recommended_hardware or ""])
+        for step in r.env_setup_steps:
+            parts.append(step.desc or "")
+        for e in r.common_errors:
+            parts.extend([e.error or "", e.cause or ""])
+    chars = sum(len(p) for p in parts)
+    return max(1, round(chars / 300)) if chars else 0
+
+
 def _meta(report: Report) -> str:
     paper = report.paper
     bits = []
@@ -222,6 +243,9 @@ def _meta(report: Report) -> str:
         bits.append(f'<b>arXiv:</b> <a href="https://arxiv.org/abs/{esc(paper.arxiv_id)}">{esc(paper.arxiv_id)}</a>')
     if paper.pdf_url:
         bits.append(f'<a href="{esc(paper.pdf_url)}">PDF</a>')
+    mins = _estimate_reading_minutes(report)
+    if mins:
+        bits.append(f"约 {mins} 分钟阅读")
     return " &nbsp;•&nbsp; ".join(bits)
 
 
