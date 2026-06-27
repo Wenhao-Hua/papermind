@@ -2,9 +2,12 @@
 
 from __future__ import annotations
 
+import csv
+import io
+
 import papermind.compare as compare_mod
 from papermind.compare import build_comparison
-from papermind.output.compare_render import to_html, to_markdown
+from papermind.output.compare_render import to_csv, to_html, to_markdown
 from papermind.output.schema import (
     Benchmark,
     Contributions,
@@ -93,3 +96,54 @@ def test_compare_orchestration_reuses_mocked_analyze(monkeypatch):
     assert [p.title for p in comp.papers] == ["FlashAttention-2", "Transformer"]
     assert comp.synthesis == ""  # synthesis skipped -> no LLM call
     assert comp.usage is not None
+
+
+def test_comparison_csv_header_and_paper_rows():
+    comp = _comparison()
+    text = to_csv(comp)
+    reader = csv.reader(io.StringIO(text))
+    rows = list(reader)
+    # first row is header: paper_id, then dimension labels
+    assert rows[0][0] == "paper_id"
+    assert "标题" in rows[0]
+    assert "核心贡献" in rows[0]
+    assert "关键方法" in rows[0]
+    # one row per paper
+    assert rows[1][0] == "2307.08691"
+    assert rows[2][0] == "1706.03762"
+    assert len(rows) == 3  # header + 2 papers (no synthesis)
+
+
+def test_comparison_csv_values():
+    comp = _comparison()
+    text = to_csv(comp)
+    reader = csv.reader(io.StringIO(text))
+    rows = list(reader)
+    headers = rows[0]
+    contrib_col = headers.index("核心贡献")
+    assert rows[1][contrib_col] == "faster attention"
+    assert rows[2][contrib_col] == "attention-only arch"
+
+
+def test_comparison_csv_with_synthesis():
+    comp = _comparison()
+    comp.synthesis = "Both papers improve transformers."
+    text = to_csv(comp)
+    assert "synthesis" in text
+    assert "Both papers improve transformers." in text
+
+
+def test_comparison_to_csv_method_returns_string():
+    comp = _comparison()
+    result = comp.to_csv()
+    assert isinstance(result, str)
+    assert "paper_id" in result
+
+
+def test_comparison_to_csv_writes_file(tmp_path):
+    comp = _comparison()
+    out = str(tmp_path / "compare.csv")
+    comp.to_csv(out)
+    content = (tmp_path / "compare.csv").read_text(encoding="utf-8")
+    assert "paper_id" in content
+    assert "2307.08691" in content
