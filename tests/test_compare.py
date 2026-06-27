@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import papermind.compare as compare_mod
 from papermind.compare import build_comparison
-from papermind.output.compare_render import to_html, to_markdown
+from papermind.output.compare_render import to_csv, to_html, to_markdown
 from papermind.output.schema import (
     Benchmark,
     Contributions,
@@ -60,6 +60,42 @@ def test_comparison_html_table_and_links():
     assert html.startswith("<!DOCTYPE html>")
     assert "<th>2307.08691</th>" in html
     assert "<a href='https://github.com/x/y'>" in html  # official code linked
+
+
+def test_comparison_csv_export():
+    import csv
+    import io
+
+    comp = _comparison()
+    text = to_csv(comp)
+    rows = list(csv.DictReader(io.StringIO(text)))
+    assert len(rows) == 2
+    assert rows[0]["arxiv_id"] == "2307.08691"
+    assert rows[0]["title"] == "FlashAttention-2"
+    assert rows[0]["main_contribution"] == "faster attention"
+    assert rows[0]["methods"] == "Tiling"
+    assert rows[1]["arxiv_id"] == "1706.03762"
+    assert rows[1]["year"] == "2023"
+
+
+def test_comparison_csv_via_schema_method():
+    import csv
+    import io
+    import tempfile
+    from pathlib import Path
+
+    comp = _comparison()
+    # in-memory call
+    text = comp.to_csv()
+    rows = list(csv.DictReader(io.StringIO(text)))
+    assert len(rows) == 2
+    # file write path
+    with tempfile.TemporaryDirectory() as tmp:
+        out = Path(tmp) / "compare.csv"
+        comp.to_csv(str(out))
+        written = out.read_text(encoding="utf-8")
+    assert "FlashAttention-2" in written
+    assert "2307.08691" in written
 
 
 def test_comparison_json_round_trip():
