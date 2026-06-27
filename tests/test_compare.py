@@ -2,9 +2,12 @@
 
 from __future__ import annotations
 
+import csv
+import io
+
 import papermind.compare as compare_mod
 from papermind.compare import build_comparison
-from papermind.output.compare_render import to_html, to_markdown
+from papermind.output.compare_render import to_csv, to_html, to_markdown
 from papermind.output.schema import (
     Benchmark,
     Contributions,
@@ -76,6 +79,55 @@ def test_has_compare_modules_rejects_partial_report():
     partial = Report(paper=PaperMeta(title="P", arxiv_id="2"),
                      contributions=Contributions(main_contribution="c", novelty="n"))
     assert compare_mod._has_compare_modules(partial) is False
+
+
+def test_comparison_csv_has_header_and_rows():
+    comp = _comparison()
+    csv_text = to_csv(comp)
+    reader = csv.reader(io.StringIO(csv_text))
+    rows = list(reader)
+    # header: 维度, arxiv_id1, arxiv_id2
+    assert rows[0] == ["维度", "2307.08691", "1706.03762"]
+    # at least one data row per comparison dimension
+    labels = [r[0] for r in rows[1:]]
+    assert "标题" in labels
+    assert "核心贡献" in labels
+    assert "关键方法" in labels
+    # values for FlashAttention-2 contribution
+    contrib_row = next(r for r in rows[1:] if r[0] == "核心贡献")
+    assert contrib_row[1] == "faster attention"
+    assert contrib_row[2] == "attention-only arch"
+
+
+def test_comparison_csv_empty_for_missing_fields():
+    comp = _comparison()
+    csv_text = to_csv(comp)
+    reader = csv.reader(io.StringIO(csv_text))
+    rows = list(reader)
+    # Transformer has no speedup -> benchmark is setting-only; hardware and official_code are set
+    hardware_row = next(r for r in rows[1:] if r[0] == "推荐硬件")
+    assert hardware_row[1] == "A100"
+
+
+def test_comparison_csv_synthesis_row():
+    comp = _comparison()
+    comp.synthesis = "FlashAttention-2 is faster."
+    csv_text = to_csv(comp)
+    reader = csv.reader(io.StringIO(csv_text))
+    rows = list(reader)
+    synth_row = next((r for r in rows if r[0] == "对比小结"), None)
+    assert synth_row is not None
+    assert synth_row[1] == "FlashAttention-2 is faster."
+
+
+def test_comparison_to_csv_method_round_trip(tmp_path):
+    comp = _comparison()
+    out = tmp_path / "compare.csv"
+    comp.to_csv(str(out))
+    assert out.exists()
+    content = out.read_text(encoding="utf-8")
+    assert "维度" in content
+    assert "2307.08691" in content
 
 
 def test_compare_orchestration_reuses_mocked_analyze(monkeypatch):
