@@ -17,6 +17,7 @@ from papermind.output.schema import (
     Report,
     Source,
     TechnicalPoint,
+    reading_time_minutes,
 )
 
 _DIFFICULTY_BADGE = {"high": "🔴 high", "mid": "🟡 mid", "low": "🟢 low"}
@@ -96,6 +97,8 @@ def _meta_line(report: Report) -> str:
         bits.append(f"**arXiv:** [{paper.arxiv_id}](https://arxiv.org/abs/{paper.arxiv_id})")
     if paper.pdf_url:
         bits.append(f"[PDF]({paper.pdf_url})")
+    mins = reading_time_minutes(report)
+    bits.append(f"**阅读时长:** 约 {mins} 分钟")
     return "  •  ".join(bits)
 
 

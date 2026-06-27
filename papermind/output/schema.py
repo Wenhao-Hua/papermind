@@ -290,6 +290,59 @@ class Report(BaseModel):
 
 
 # --------------------------------------------------------------------------- #
+# Reading-time estimate
+# --------------------------------------------------------------------------- #
+
+def reading_time_minutes(report: "Report") -> int:
+    """Return an estimated reading time in minutes for a generated report.
+
+    Counts words in all human-readable text fields (abstract, contributions,
+    technical explanations, analogies, connection descriptions, reproduction
+    notes) and divides by 200 wpm — a conservative pace for dense technical
+    writing.  Result is clamped to [1, 60].
+    """
+    chunks: list[str] = []
+    paper = report.paper
+    if paper.abstract:
+        chunks.append(paper.abstract)
+
+    if report.contributions:
+        c = report.contributions
+        for field in (c.main_contribution, c.novelty, c.problem_solved):
+            if field:
+                chunks.append(field)
+        for src in c.sources:
+            if src.text:
+                chunks.append(src.text)
+
+    for point in report.technical.details:
+        for field in (point.name, point.explanation, point.analogy):
+            if field:
+                chunks.append(field)
+
+    for conn in report.connections.related_works:
+        if conn.relationship:
+            chunks.append(conn.relationship)
+
+    if report.reproduction:
+        r = report.reproduction
+        for field in (r.requirements, r.recommended_hardware):
+            if field:
+                chunks.append(field)
+        for step in r.env_setup_steps:
+            for f in (step.title, step.desc):
+                if f:
+                    chunks.append(f)
+        for g in r.gotchas:
+            if g:
+                chunks.append(g)
+
+    total_words = sum(len(chunk.split()) for chunk in chunks)
+    minutes = max(1, round(total_words / 200))
+    return min(minutes, 60)
+
+
+# --------------------------------------------------------------------------- #
 # Q&A / reasoning / tutoring
 # --------------------------------------------------------------------------- #
 class Summary(BaseModel):

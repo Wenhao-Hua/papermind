@@ -13,7 +13,7 @@ from pathlib import Path
 from typing import List, Optional
 
 from papermind.output.cite import to_bibtex
-from papermind.output.schema import Connection, Reproduction, Report, Source, TechnicalPoint
+from papermind.output.schema import Connection, Reproduction, Report, Source, TechnicalPoint, reading_time_minutes
 
 _DIFFICULTY = {"high": ("high", "#e5484d"), "mid": ("mid", "#f5a623"), "low": ("low", "#30a46c")}
 
@@ -222,6 +222,8 @@ def _meta(report: Report) -> str:
         bits.append(f'<b>arXiv:</b> <a href="https://arxiv.org/abs/{esc(paper.arxiv_id)}">{esc(paper.arxiv_id)}</a>')
     if paper.pdf_url:
         bits.append(f'<a href="{esc(paper.pdf_url)}">PDF</a>')
+    mins = reading_time_minutes(report)
+    bits.append(f"<b>阅读时长:</b> 约 {mins} 分钟")
     return " &nbsp;•&nbsp; ".join(bits)
 
 
