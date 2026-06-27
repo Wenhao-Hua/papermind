@@ -2,9 +2,12 @@
 
 from __future__ import annotations
 
+import csv
+import io
+
 import papermind.compare as compare_mod
 from papermind.compare import build_comparison
-from papermind.output.compare_render import to_html, to_markdown
+from papermind.output.compare_render import to_csv, to_html, to_markdown
 from papermind.output.schema import (
     Benchmark,
     Contributions,
@@ -93,3 +96,51 @@ def test_compare_orchestration_reuses_mocked_analyze(monkeypatch):
     assert [p.title for p in comp.papers] == ["FlashAttention-2", "Transformer"]
     assert comp.synthesis == ""  # synthesis skipped -> no LLM call
     assert comp.usage is not None
+
+
+def test_comparison_csv_columns_and_rows():
+    comp = _comparison()
+    text = to_csv(comp)
+    reader = csv.DictReader(io.StringIO(text))
+    rows = list(reader)
+    assert len(rows) == 2
+    assert rows[0]["arxiv_id"] == "2307.08691"
+    assert rows[0]["title"] == "FlashAttention-2"
+    assert rows[0]["year"] == "2023"
+    assert rows[0]["main_contribution"] == "faster attention"
+    assert rows[0]["methods"] == "Tiling"
+    assert rows[1]["arxiv_id"] == "1706.03762"
+    assert rows[1]["benchmark"] == "seq=2k"  # no speedup -> setting only
+
+
+def test_comparison_csv_synthesis_appended():
+    comp = _comparison()
+    comp.synthesis = "Flash is faster; Transformer is seminal."
+    text = to_csv(comp)
+    assert "synthesis" in text
+    assert "Flash is faster" in text
+
+
+def test_comparison_to_csv_method_writes_file(tmp_path):
+    comp = _comparison()
+    out = str(tmp_path / "compare.csv")
+    result = comp.to_csv(out)
+    from pathlib import Path
+    # file is written in text mode (normalises \r\n -> \n); just check it was created
+    content = Path(out).read_text(encoding="utf-8")
+    assert "arxiv_id" in content
+    assert "2307.08691" in content
+    assert "arxiv_id" in result
+
+
+def test_comparison_csv_missing_fields_use_empty_string():
+    from papermind.output.schema import Comparison, ComparedPaper
+    comp = Comparison(papers=[
+        ComparedPaper(title="Minimal", arxiv_id=None, year=None),
+    ])
+    text = to_csv(comp)
+    reader = csv.DictReader(io.StringIO(text))
+    rows = list(reader)
+    assert rows[0]["arxiv_id"] == ""
+    assert rows[0]["year"] == ""
+    assert rows[0]["title"] == "Minimal"
