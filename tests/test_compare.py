@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import papermind.compare as compare_mod
 from papermind.compare import build_comparison
-from papermind.output.compare_render import to_html, to_markdown
+from papermind.output.compare_render import to_csv, to_html, to_markdown
 from papermind.output.schema import (
     Benchmark,
     Contributions,
@@ -67,6 +67,46 @@ def test_comparison_json_round_trip():
     data = comp.to_dict()
     assert data["papers"][0]["arxiv_id"] == "2307.08691"
     assert "usage" not in data  # usage excluded from export
+
+
+def test_comparison_csv_headers_and_rows():
+    import csv, io
+
+    csv_text = to_csv(_comparison())
+    rows = list(csv.reader(io.StringIO(csv_text)))
+    assert rows[0] == [
+        "title", "arxiv_id", "year", "main_contribution",
+        "novelty", "methods", "benchmark", "hardware", "official_code",
+    ]
+    assert len(rows) == 3  # header + 2 papers
+    assert rows[1][1] == "2307.08691"
+    assert rows[2][1] == "1706.03762"
+
+
+def test_comparison_csv_methods_joined():
+    import csv, io
+
+    csv_text = to_csv(_comparison())
+    rows = list(csv.reader(io.StringIO(csv_text)))
+    assert rows[1][5] == "Tiling"
+
+
+def test_comparison_csv_roundtrip_via_schema():
+    import csv, io, tempfile, os
+
+    comp = _comparison()
+    csv_text = comp.to_csv()
+    rows = list(csv.reader(io.StringIO(csv_text)))
+    assert rows[0][0] == "title"
+
+    with tempfile.NamedTemporaryFile(suffix=".csv", delete=False, mode="w") as f:
+        path = f.name
+    try:
+        comp.to_csv(path)
+        saved = open(path, encoding="utf-8").read()
+        assert saved == csv_text
+    finally:
+        os.unlink(path)
 
 
 def test_has_compare_modules_rejects_partial_report():
