@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import papermind.compare as compare_mod
 from papermind.compare import build_comparison
-from papermind.output.compare_render import to_html, to_markdown
+from papermind.output.compare_render import to_csv, to_html, to_markdown
 from papermind.output.schema import (
     Benchmark,
     Contributions,
@@ -76,6 +76,49 @@ def test_has_compare_modules_rejects_partial_report():
     partial = Report(paper=PaperMeta(title="P", arxiv_id="2"),
                      contributions=Contributions(main_contribution="c", novelty="n"))
     assert compare_mod._has_compare_modules(partial) is False
+
+
+def test_comparison_csv_format():
+    import csv
+    import io
+
+    comp = _comparison()
+    csv_text = to_csv(comp)
+    rows = list(csv.reader(io.StringIO(csv_text)))
+    # Header row: 维度, then one column per paper
+    assert rows[0] == ["维度", "2307.08691", "1706.03762"]
+    # Find the 核心贡献 row
+    contrib_row = next(r for r in rows if r[0] == "核心贡献")
+    assert contrib_row[1] == "faster attention"
+    assert contrib_row[2] == "attention-only arch"
+    # Should have all 9 data rows plus header
+    data_rows = [r for r in rows if len(r) > 1 and r[0] != "维度"]
+    assert len(data_rows) == 9
+
+
+def test_comparison_csv_via_schema_method():
+    import csv
+    import io
+    import tempfile
+    import os
+
+    comp = _comparison()
+    # Test in-memory return
+    csv_text = comp.to_csv()
+    rows = list(csv.reader(io.StringIO(csv_text)))
+    assert rows[0][0] == "维度"
+
+    # Test file write
+    with tempfile.NamedTemporaryFile(suffix=".csv", delete=False, mode="w") as f:
+        path = f.name
+    try:
+        comp.to_csv(path)
+        with open(path, encoding="utf-8") as f:
+            saved = f.read()
+        assert "维度" in saved
+        assert "2307.08691" in saved
+    finally:
+        os.unlink(path)
 
 
 def test_compare_orchestration_reuses_mocked_analyze(monkeypatch):
