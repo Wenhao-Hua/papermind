@@ -2,9 +2,12 @@
 
 from __future__ import annotations
 
+import csv
+import io
+
 import papermind.compare as compare_mod
 from papermind.compare import build_comparison
-from papermind.output.compare_render import to_html, to_markdown
+from papermind.output.compare_render import to_csv, to_html, to_markdown
 from papermind.output.schema import (
     Benchmark,
     Contributions,
@@ -67,6 +70,63 @@ def test_comparison_json_round_trip():
     data = comp.to_dict()
     assert data["papers"][0]["arxiv_id"] == "2307.08691"
     assert "usage" not in data  # usage excluded from export
+
+
+def test_comparison_csv_structure():
+    comp = _comparison()
+    text = to_csv(comp)
+    rows = list(csv.reader(io.StringIO(text)))
+    # header row: 维度 + paper ids
+    assert rows[0] == ["维度", "2307.08691", "1706.03762"]
+    # 9 dimension rows follow the header
+    labels = [r[0] for r in rows[1:10]]
+    assert "标题" in labels
+    assert "核心贡献" in labels
+    assert "关键方法" in labels
+    # each dimension row has one value per paper
+    for row in rows[1:10]:
+        assert len(row) == 3
+
+
+def test_comparison_csv_values():
+    comp = _comparison()
+    text = to_csv(comp)
+    rows = list(csv.reader(io.StringIO(text)))
+    row_by_label = {r[0]: r[1:] for r in rows if r}
+    assert row_by_label["核心贡献"] == ["faster attention", "attention-only arch"]
+    assert row_by_label["关键方法"] == ["Tiling", "Self-Attention"]
+    assert row_by_label["arXiv"] == ["2307.08691", "1706.03762"]
+
+
+def test_comparison_csv_synthesis_appended():
+    comp = _comparison()
+    comp.synthesis = "These two papers complement each other."
+    text = to_csv(comp)
+    rows = list(csv.reader(io.StringIO(text)))
+    # blank separator row then synthesis row
+    non_empty = [r for r in rows if r]
+    last = non_empty[-1]
+    assert last[0] == "对比小结"
+    assert last[1] == "These two papers complement each other."
+
+
+def test_comparison_csv_no_synthesis_no_extra_rows():
+    comp = _comparison()
+    comp.synthesis = ""
+    text = to_csv(comp)
+    rows = [r for r in csv.reader(io.StringIO(text)) if r]
+    # header + 9 dimension rows only
+    assert len(rows) == 10
+
+
+def test_comparison_to_csv_method_writes_file(tmp_path):
+    comp = _comparison()
+    out = tmp_path / "compare.csv"
+    comp.to_csv(str(out))
+    assert out.exists()
+    content = out.read_text(encoding="utf-8")
+    assert "维度" in content
+    assert "2307.08691" in content
 
 
 def test_has_compare_modules_rejects_partial_report():
