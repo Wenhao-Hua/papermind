@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import papermind.compare as compare_mod
 from papermind.compare import build_comparison
-from papermind.output.compare_render import to_html, to_markdown
+from papermind.output.compare_render import to_csv, to_html, to_markdown
 from papermind.output.schema import (
     Benchmark,
     Contributions,
@@ -76,6 +76,36 @@ def test_has_compare_modules_rejects_partial_report():
     partial = Report(paper=PaperMeta(title="P", arxiv_id="2"),
                      contributions=Contributions(main_contribution="c", novelty="n"))
     assert compare_mod._has_compare_modules(partial) is False
+
+
+def test_comparison_csv_structure():
+    comp = _comparison()
+    csv_text = to_csv(comp)
+    lines = csv_text.strip().splitlines()
+    # Header row: 维度 + one column per paper (arxiv id)
+    assert lines[0].startswith("维度,")
+    assert "2307.08691" in lines[0]
+    assert "1706.03762" in lines[0]
+    # At least one data row for each dimension label
+    labels = [line.split(",")[0] for line in lines[1:] if line]
+    assert "标题" in labels
+    assert "核心贡献" in labels
+    assert "关键方法" in labels
+
+
+def test_comparison_csv_via_schema_method(tmp_path):
+    comp = _comparison()
+    # to_csv() with no path returns the CSV string
+    csv_str = comp.to_csv()
+    assert "维度" in csv_str
+    assert "FlashAttention-2" in csv_str
+    # to_csv() with a path writes the file
+    out = tmp_path / "compare.csv"
+    comp.to_csv(str(out))
+    assert out.exists()
+    content = out.read_text(encoding="utf-8")
+    assert "维度" in content
+    assert "2307.08691" in content
 
 
 def test_compare_orchestration_reuses_mocked_analyze(monkeypatch):
