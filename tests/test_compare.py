@@ -2,9 +2,12 @@
 
 from __future__ import annotations
 
+import csv
+import io
+
 import papermind.compare as compare_mod
 from papermind.compare import build_comparison
-from papermind.output.compare_render import to_html, to_markdown
+from papermind.output.compare_render import to_csv, to_html, to_markdown
 from papermind.output.schema import (
     Benchmark,
     Contributions,
@@ -76,6 +79,47 @@ def test_has_compare_modules_rejects_partial_report():
     partial = Report(paper=PaperMeta(title="P", arxiv_id="2"),
                      contributions=Contributions(main_contribution="c", novelty="n"))
     assert compare_mod._has_compare_modules(partial) is False
+
+
+def test_comparison_csv_structure():
+    comp = _comparison()
+    text = to_csv(comp)
+    rows = list(csv.reader(io.StringIO(text)))
+    # header row: 维度, paper1, paper2
+    assert rows[0] == ["维度", "2307.08691", "1706.03762"]
+    # check a data row exists for 核心贡献
+    labels = [r[0] for r in rows]
+    assert "核心贡献" in labels
+    contrib_row = rows[labels.index("核心贡献")]
+    assert contrib_row[1] == "faster attention"
+    assert contrib_row[2] == "attention-only arch"
+
+
+def test_comparison_csv_via_schema_method():
+    comp = _comparison()
+    text = comp.to_csv()
+    assert "维度" in text
+    assert "2307.08691" in text
+    assert "Tiling" in text
+
+
+def test_comparison_csv_to_file(tmp_path):
+    comp = _comparison()
+    out = str(tmp_path / "compare.csv")
+    returned = comp.to_csv(out)
+    with open(out, encoding="utf-8") as fh:
+        content = fh.read()
+    assert content == returned
+    assert "维度" in content
+    assert "faster attention" in content
+
+
+def test_comparison_csv_with_synthesis():
+    comp = _comparison()
+    comp.synthesis = "FlashAttention-2 is faster."
+    text = to_csv(comp)
+    assert "对比小结" in text
+    assert "FlashAttention-2 is faster." in text
 
 
 def test_compare_orchestration_reuses_mocked_analyze(monkeypatch):
