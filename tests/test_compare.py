@@ -2,9 +2,12 @@
 
 from __future__ import annotations
 
+import csv
+import io
+
 import papermind.compare as compare_mod
 from papermind.compare import build_comparison
-from papermind.output.compare_render import to_html, to_markdown
+from papermind.output.compare_render import to_csv, to_html, to_markdown
 from papermind.output.schema import (
     Benchmark,
     Contributions,
@@ -76,6 +79,50 @@ def test_has_compare_modules_rejects_partial_report():
     partial = Report(paper=PaperMeta(title="P", arxiv_id="2"),
                      contributions=Contributions(main_contribution="c", novelty="n"))
     assert compare_mod._has_compare_modules(partial) is False
+
+
+def test_comparison_csv_structure():
+    comp = _comparison()
+    csv_text = to_csv(comp)
+    reader = csv.reader(io.StringIO(csv_text))
+    rows = list(reader)
+    # First row is header; first column is "arXiv_id", rest are attribute labels
+    assert rows[0][0] == "arXiv_id"
+    assert "标题" in rows[0]
+    assert "核心贡献" in rows[0]
+    assert "关键方法" in rows[0]
+    # One row per paper after the header
+    assert rows[1][0] == "2307.08691"
+    assert rows[2][0] == "1706.03762"
+    # Core contribution in correct column
+    contrib_col = rows[0].index("核心贡献")
+    assert rows[1][contrib_col] == "faster attention"
+    assert rows[2][contrib_col] == "attention-only arch"
+
+
+def test_comparison_csv_synthesis_appended():
+    comp = _comparison()
+    comp.synthesis = "Flash is faster, Transformer is foundational"
+    csv_text = to_csv(comp)
+    assert "Flash is faster" in csv_text
+    assert "synthesis" in csv_text
+
+
+def test_comparison_csv_to_file(tmp_path):
+    comp = _comparison()
+    out = tmp_path / "compare.csv"
+    comp.to_csv(str(out))
+    content = out.read_text(encoding="utf-8")
+    assert "arXiv_id" in content
+    assert "2307.08691" in content
+
+
+def test_comparison_csv_no_synthesis():
+    comp = _comparison()
+    comp.synthesis = ""
+    csv_text = to_csv(comp)
+    # No trailing synthesis block when synthesis is empty
+    assert "synthesis" not in csv_text
 
 
 def test_compare_orchestration_reuses_mocked_analyze(monkeypatch):
