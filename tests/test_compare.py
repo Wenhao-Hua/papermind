@@ -2,9 +2,12 @@
 
 from __future__ import annotations
 
+import csv
+import io
+
 import papermind.compare as compare_mod
 from papermind.compare import build_comparison
-from papermind.output.compare_render import to_html, to_markdown
+from papermind.output.compare_render import to_csv, to_html, to_markdown
 from papermind.output.schema import (
     Benchmark,
     Contributions,
@@ -76,6 +79,53 @@ def test_has_compare_modules_rejects_partial_report():
     partial = Report(paper=PaperMeta(title="P", arxiv_id="2"),
                      contributions=Contributions(main_contribution="c", novelty="n"))
     assert compare_mod._has_compare_modules(partial) is False
+
+
+def test_comparison_csv_structure():
+    csv_text = to_csv(_comparison())
+    rows = list(csv.reader(io.StringIO(csv_text)))
+    # Header row: "维度" + one column per paper
+    assert rows[0] == ["维度", "2307.08691", "1706.03762"]
+    # Every dimension row must have the right number of columns
+    assert all(len(r) == 3 for r in rows if r)
+    # Spot-check a few dimension values
+    dim_map = {r[0]: r[1:] for r in rows[1:] if r}
+    assert dim_map["标题"] == ["FlashAttention-2", "Transformer"]
+    assert dim_map["核心贡献"] == ["faster attention", "attention-only arch"]
+    assert dim_map["关键方法"] == ["Tiling", "Self-Attention"]
+    assert dim_map["年份"] == ["2023", "2023"]
+
+
+def test_comparison_csv_no_synthesis():
+    csv_text = to_csv(_comparison())
+    # No synthesis was set, so the extra "对比小结" row should not appear
+    assert "对比小结" not in csv_text
+
+
+def test_comparison_csv_with_synthesis():
+    comp = _comparison()
+    comp.synthesis = "Both papers improve Transformers."
+    csv_text = to_csv(comp)
+    rows = list(csv.reader(io.StringIO(csv_text)))
+    synth_rows = [r for r in rows if r and r[0] == "对比小结"]
+    assert len(synth_rows) == 1
+    assert "Both papers improve Transformers." in synth_rows[0][1]
+
+
+def test_comparison_to_csv_method_returns_string():
+    comp = _comparison()
+    csv_text = comp.to_csv()
+    assert isinstance(csv_text, str)
+    assert "维度" in csv_text
+
+
+def test_comparison_to_csv_writes_file(tmp_path):
+    comp = _comparison()
+    out = str(tmp_path / "compare.csv")
+    comp.to_csv(out)
+    written = (tmp_path / "compare.csv").read_text(encoding="utf-8")
+    assert "维度" in written
+    assert "2307.08691" in written
 
 
 def test_compare_orchestration_reuses_mocked_analyze(monkeypatch):
