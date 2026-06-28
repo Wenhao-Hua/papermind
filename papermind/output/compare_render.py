@@ -1,8 +1,10 @@
-"""Render a Comparison as a side-by-side Markdown or HTML table."""
+"""Render a Comparison as a side-by-side Markdown, HTML, or CSV."""
 
 from __future__ import annotations
 
+import csv
 import html as _html
+import io
 from typing import Callable, List, Tuple
 
 from papermind.output.schema import ComparedPaper, Comparison
@@ -87,3 +89,31 @@ def _html_cell(label: str, value: str) -> str:
 
 def _e(text) -> str:
     return _html.escape(str(text)) if text is not None else ""
+
+
+# CSV columns in display order (header → accessor)
+_CSV_COLUMNS: List[Tuple[str, Callable[[ComparedPaper], str]]] = [
+    ("title", lambda p: p.title or ""),
+    ("arxiv_id", lambda p: p.arxiv_id or ""),
+    ("year", lambda p: str(p.year) if p.year else ""),
+    ("main_contribution", lambda p: p.main_contribution or ""),
+    ("novelty", lambda p: p.novelty or ""),
+    ("methods", lambda p: "; ".join(p.methods) if p.methods else ""),
+    ("benchmark", lambda p: p.benchmark or ""),
+    ("hardware", lambda p: p.hardware or ""),
+    ("official_code", lambda p: p.official_code or ""),
+]
+
+
+def to_csv(comparison: Comparison) -> str:
+    """Return a UTF-8 CSV string with one row per paper and one column per field.
+
+    Uses Python's stdlib ``csv`` module so the output is always standards-compliant
+    (commas in values are quoted automatically).
+    """
+    buf = io.StringIO()
+    writer = csv.writer(buf, lineterminator="\n")
+    writer.writerow([col for col, _ in _CSV_COLUMNS])
+    for paper in comparison.papers:
+        writer.writerow([fn(paper) for _, fn in _CSV_COLUMNS])
+    return buf.getvalue()
