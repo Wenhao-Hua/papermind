@@ -30,6 +30,11 @@ _KEYLESS_PREFIXES = ("ollama/", "ollama_chat/", "local/")
 _JSON_OBJECT_RE = re.compile(r"\{.*\}", re.DOTALL)
 _JSON_ARRAY_RE = re.compile(r"\[.*\]", re.DOTALL)
 
+# Set to True the first time litellm fails to load with a non-ImportError (e.g. pyo3
+# PanicException from a broken native dependency).  Subsequent calls skip the import
+# and raise LLMError immediately so callers' `except Exception` handlers fire correctly.
+_LITELLM_UNAVAILABLE: bool = False
+
 
 class LLMClient:
     """Stateless-ish wrapper around litellm bound to a model + config."""
@@ -446,6 +451,9 @@ def _get_local_encoder(model_name: str, cls):
 
 
 def _import_litellm():
+    global _LITELLM_UNAVAILABLE
+    if _LITELLM_UNAVAILABLE:
+        raise LLMError("litellm is not available in this environment")
     try:
         import litellm
 
@@ -453,6 +461,9 @@ def _import_litellm():
         return litellm
     except ImportError as exc:  # pragma: no cover
         raise LLMError("litellm is required. Install with: pip install litellm") from exc
+    except BaseException as exc:  # pragma: no cover – e.g. pyo3 PanicException in restricted envs
+        _LITELLM_UNAVAILABLE = True
+        raise LLMError(f"litellm failed to initialize: {exc}") from exc
 
 
 def _supports_json_mode(model: str) -> bool:
