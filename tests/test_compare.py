@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import papermind.compare as compare_mod
 from papermind.compare import build_comparison
-from papermind.output.compare_render import to_html, to_markdown
+from papermind.output.compare_render import to_csv, to_html, to_markdown
 from papermind.output.schema import (
     Benchmark,
     Contributions,
@@ -76,6 +76,58 @@ def test_has_compare_modules_rejects_partial_report():
     partial = Report(paper=PaperMeta(title="P", arxiv_id="2"),
                      contributions=Contributions(main_contribution="c", novelty="n"))
     assert compare_mod._has_compare_modules(partial) is False
+
+
+def test_comparison_csv_structure():
+    import csv
+    import io
+
+    comp = _comparison()
+    text = to_csv(comp)
+    rows = list(csv.reader(io.StringIO(text)))
+    # header row: dimension label + one column per paper
+    assert rows[0] == ["维度", "2307.08691", "1706.03762"]
+    # first data row is titles
+    assert rows[1][0] == "标题"
+    assert rows[1][1] == "FlashAttention-2"
+    assert rows[1][2] == "Transformer"
+    # contributions row is present
+    labels = [r[0] for r in rows]
+    assert "核心贡献" in labels
+    assert "关键方法" in labels
+
+
+def test_comparison_csv_via_method(tmp_path):
+    comp = _comparison()
+    # to_csv() returns a string
+    text = comp.to_csv()
+    assert "维度" in text
+    assert "2307.08691" in text
+    # to_csv(path) writes a file
+    out = tmp_path / "compare.csv"
+    comp.to_csv(str(out))
+    assert out.read_text(encoding="utf-8") == text
+
+
+def test_comparison_csv_with_synthesis():
+    import csv
+    import io
+
+    from papermind.output.schema import Comparison, ComparedPaper
+
+    comp = Comparison(
+        papers=[
+            ComparedPaper(title="A", arxiv_id="1"),
+            ComparedPaper(title="B", arxiv_id="2"),
+        ],
+        synthesis="A is better than B in speed.",
+    )
+    text = to_csv(comp)
+    rows = list(csv.reader(io.StringIO(text)))
+    # synthesis appended after a blank row
+    synth_rows = [r for r in rows if r and r[0] == "对比小结"]
+    assert synth_rows
+    assert "A is better than B in speed." in synth_rows[0][1]
 
 
 def test_compare_orchestration_reuses_mocked_analyze(monkeypatch):
