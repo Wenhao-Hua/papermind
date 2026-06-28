@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import papermind.compare as compare_mod
 from papermind.compare import build_comparison
-from papermind.output.compare_render import to_html, to_markdown
+from papermind.output.compare_render import to_csv, to_html, to_markdown
 from papermind.output.schema import (
     Benchmark,
     Contributions,
@@ -76,6 +76,59 @@ def test_has_compare_modules_rejects_partial_report():
     partial = Report(paper=PaperMeta(title="P", arxiv_id="2"),
                      contributions=Contributions(main_contribution="c", novelty="n"))
     assert compare_mod._has_compare_modules(partial) is False
+
+
+def test_comparison_csv_structure():
+    import csv
+    import io
+
+    comp = _comparison()
+    text = to_csv(comp)
+    rows = list(csv.reader(io.StringIO(text)))
+    # first row is the header (dimension labels)
+    assert rows[0][0] == "标题"
+    assert "arXiv" in rows[0]
+    assert "核心贡献" in rows[0]
+    # one data row per paper
+    assert len(rows) == 1 + len(comp.papers)
+    # check cell values for the first paper
+    title_col = rows[0].index("标题")
+    assert rows[1][title_col] == "FlashAttention-2"
+    arxiv_col = rows[0].index("arXiv")
+    assert rows[1][arxiv_col] == "2307.08691"
+
+
+def test_comparison_csv_via_method(tmp_path):
+    comp = _comparison()
+    csv_text = comp.to_csv()
+    assert "faster attention" in csv_text
+    assert "attention-only arch" in csv_text
+
+    out = tmp_path / "compare.csv"
+    comp.to_csv(str(out))
+    assert out.exists()
+    assert "faster attention" in out.read_text(encoding="utf-8")
+
+
+def test_comparison_csv_with_synthesis():
+    import csv
+    import io
+
+    from papermind.output.schema import ComparedPaper, Comparison
+
+    comp = Comparison(
+        papers=[
+            ComparedPaper(title="A", arxiv_id="1"),
+            ComparedPaper(title="B", arxiv_id="2"),
+        ],
+        synthesis="Both papers focus on efficiency.",
+    )
+    text = to_csv(comp)
+    rows = list(csv.reader(io.StringIO(text)))
+    # synthesis appended after a blank row
+    non_empty = [r for r in rows if any(c.strip() for c in r)]
+    assert any("对比小结" in r[0] for r in non_empty)
+    assert any("Both papers focus on efficiency." in " ".join(r) for r in non_empty)
 
 
 def test_compare_orchestration_reuses_mocked_analyze(monkeypatch):
