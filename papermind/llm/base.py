@@ -334,8 +334,10 @@ class LLMClient:
                 model=model, prompt_tokens=prompt_tokens, completion_tokens=completion_tokens
             )
             cost = float(prompt_cost) + float(completion_cost)
-        except Exception:  # noqa: BLE001 - cost is best-effort; many models lack pricing
-            cost = 0.0
+        except (KeyboardInterrupt, SystemExit):
+            raise
+        except BaseException:  # noqa: BLE001 - cost is best-effort; pyo3/Rust extensions may
+            cost = 0.0  # raise BaseException (not Exception) on concurrent first-import
         with self._usage_lock:
             self.usage.record(prompt_tokens, completion_tokens, cost)
 
