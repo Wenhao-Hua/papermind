@@ -2,9 +2,12 @@
 
 from __future__ import annotations
 
+import csv
+import io
+
 import papermind.compare as compare_mod
 from papermind.compare import build_comparison
-from papermind.output.compare_render import to_html, to_markdown
+from papermind.output.compare_render import to_csv, to_html, to_markdown
 from papermind.output.schema import (
     Benchmark,
     Contributions,
@@ -67,6 +70,30 @@ def test_comparison_json_round_trip():
     data = comp.to_dict()
     assert data["papers"][0]["arxiv_id"] == "2307.08691"
     assert "usage" not in data  # usage excluded from export
+
+
+def test_comparison_csv_structure():
+    rows = list(csv.reader(io.StringIO(to_csv(_comparison()))))
+    # header row + one row per paper
+    assert len(rows) == 3
+    header = rows[0]
+    assert header[0] == "arxiv_id"
+    assert "核心贡献" in header
+    assert "关键方法" in header
+    # first data row
+    r0 = dict(zip(header, rows[1]))
+    assert r0["arxiv_id"] == "2307.08691"
+    assert r0["title"] == "FlashAttention-2"
+    assert r0["核心贡献"] == "faster attention"
+    assert r0["关键方法"] == "Tiling"
+
+
+def test_comparison_csv_file_write(tmp_path):
+    out = str(tmp_path / "compare.csv")
+    text = _comparison().to_csv(out)
+    assert (tmp_path / "compare.csv").read_text(encoding="utf-8") == text
+    rows = list(csv.reader(io.StringIO(text)))
+    assert len(rows) == 3  # header + 2 papers
 
 
 def test_has_compare_modules_rejects_partial_report():
