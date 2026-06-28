@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import papermind.compare as compare_mod
 from papermind.compare import build_comparison
-from papermind.output.compare_render import to_html, to_markdown
+from papermind.output.compare_render import to_csv, to_html, to_markdown
 from papermind.output.schema import (
     Benchmark,
     Contributions,
@@ -67,6 +67,46 @@ def test_comparison_json_round_trip():
     data = comp.to_dict()
     assert data["papers"][0]["arxiv_id"] == "2307.08691"
     assert "usage" not in data  # usage excluded from export
+
+
+def test_comparison_csv_header_and_rows():
+    csv_text = to_csv(_comparison())
+    lines = csv_text.strip().splitlines()
+    # header row: 维度, then one column per paper
+    assert lines[0] == "维度,2307.08691,1706.03762"
+    # dimension rows present
+    labels = [line.split(",")[0] for line in lines[1:]]
+    assert "核心贡献" in labels
+    assert "关键方法" in labels
+    assert "年份" in labels
+
+
+def test_comparison_csv_values():
+    csv_text = to_csv(_comparison())
+    assert "faster attention" in csv_text
+    assert "attention-only arch" in csv_text
+    assert "Tiling" in csv_text
+    assert "Self-Attention" in csv_text
+
+
+def test_comparison_csv_with_synthesis():
+    from papermind.output.schema import Comparison, ComparedPaper
+
+    comp = Comparison(
+        papers=[ComparedPaper(title="A", arxiv_id="1"), ComparedPaper(title="B", arxiv_id="2")],
+        synthesis="A is faster, B is older.",
+    )
+    csv_text = to_csv(comp)
+    assert "对比小结" in csv_text
+    assert "A is faster, B is older." in csv_text
+
+
+def test_comparison_to_csv_method_writes_file(tmp_path):
+    out = tmp_path / "compare.csv"
+    _comparison().to_csv(str(out))
+    content = out.read_text(encoding="utf-8")
+    assert "维度" in content
+    assert "2307.08691" in content
 
 
 def test_has_compare_modules_rejects_partial_report():

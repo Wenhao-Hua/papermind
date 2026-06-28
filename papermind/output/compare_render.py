@@ -85,5 +85,22 @@ def _html_cell(label: str, value: str) -> str:
     return _e(value)
 
 
+def to_csv(comparison: Comparison) -> str:
+    """Return a UTF-8 CSV string with dimensions as rows and papers as columns."""
+    import csv
+    import io
+
+    headers = _headers(comparison)
+    buf = io.StringIO()
+    writer = csv.writer(buf, lineterminator="\n")
+    writer.writerow(["维度"] + headers)
+    for label, values in _rows(comparison):
+        writer.writerow([label] + values)
+    if comparison.synthesis:
+        writer.writerow([])
+        writer.writerow(["对比小结", comparison.synthesis])
+    return buf.getvalue()
+
+
 def _e(text) -> str:
     return _html.escape(str(text)) if text is not None else ""
