@@ -2,9 +2,12 @@
 
 from __future__ import annotations
 
+import csv
+import io
+
 import papermind.compare as compare_mod
 from papermind.compare import build_comparison
-from papermind.output.compare_render import to_html, to_markdown
+from papermind.output.compare_render import to_csv, to_html, to_markdown
 from papermind.output.schema import (
     Benchmark,
     Contributions,
@@ -67,6 +70,44 @@ def test_comparison_json_round_trip():
     data = comp.to_dict()
     assert data["papers"][0]["arxiv_id"] == "2307.08691"
     assert "usage" not in data  # usage excluded from export
+
+
+def test_comparison_csv_structure():
+    comp = _comparison()
+    text = to_csv(comp)
+    reader = csv.reader(io.StringIO(text))
+    rows = list(reader)
+    # header row: 维度 + one column per paper
+    assert rows[0] == ["维度", "2307.08691", "1706.03762"]
+    # each data row has 3 columns
+    for row in rows[1:]:
+        if row:  # skip blank separator row
+            assert len(row) == 3
+    # specific content checks
+    labels = [r[0] for r in rows if r]
+    assert "核心贡献" in labels
+    assert "关键方法" in labels
+    contrib_row = next(r for r in rows if r and r[0] == "核心贡献")
+    assert contrib_row[1] == "faster attention"
+    assert contrib_row[2] == "attention-only arch"
+
+
+def test_comparison_csv_via_schema_method():
+    comp = _comparison()
+    text = comp.to_csv()
+    assert "维度" in text
+    assert "2307.08691" in text
+    assert "faster attention" in text
+
+
+def test_comparison_csv_file_write(tmp_path):
+    comp = _comparison()
+    out = str(tmp_path / "compare.csv")
+    returned = comp.to_csv(out)
+    from pathlib import Path
+    written = Path(out).read_text(encoding="utf-8")
+    assert written == returned
+    assert "维度" in written
 
 
 def test_has_compare_modules_rejects_partial_report():
