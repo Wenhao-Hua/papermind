@@ -12,6 +12,7 @@ import mimetypes
 from pathlib import Path
 from typing import List, Optional
 
+from papermind.output import estimate_reading_time
 from papermind.output.cite import to_bibtex
 from papermind.output.schema import Connection, Reproduction, Report, Source, TechnicalPoint
 
@@ -220,6 +221,8 @@ def _meta(report: Report) -> str:
         bits.append(f"<b>Year:</b> {paper.year}")
     if paper.arxiv_id:
         bits.append(f'<b>arXiv:</b> <a href="https://arxiv.org/abs/{esc(paper.arxiv_id)}">{esc(paper.arxiv_id)}</a>')
+    minutes = estimate_reading_time(report)
+    bits.append(f"<b>阅读时长:</b> 约 {minutes} 分钟")
     if paper.pdf_url:
         bits.append(f'<a href="{esc(paper.pdf_url)}">PDF</a>')
     return " &nbsp;•&nbsp; ".join(bits)

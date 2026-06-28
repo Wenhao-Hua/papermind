@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from papermind.modules import connections, contributions, reproduction, technical
+from papermind.output import estimate_reading_time
 from papermind.output.schema import (
     Contributions,
     PaperMeta,
@@ -224,3 +225,34 @@ def test_demo_plays_offline_instantly():
     assert "Attention Is All You Need" in out
     assert "论文事实" in out and "基于论文的推理" in out  # layered answer shown
     assert "原文依据" in out and "Section 3.2.1" in out
+
+
+def test_reading_time_estimate_in_markdown_and_html():
+    report = Report(
+        paper=PaperMeta(title="Attention Is All You Need", arxiv_id="1706.03762", year=2017),
+        contributions=Contributions(
+            main_contribution="A transformer architecture based purely on attention mechanisms.",
+            novelty="Eliminates recurrence and convolutions entirely for sequence transduction.",
+            problem_solved="Slow sequential computation limits parallelism in RNN models.",
+        ),
+        technical=TechnicalSection(
+            details=[
+                TechnicalPoint(
+                    name="Multi-Head Attention",
+                    explanation="Projects queries, keys, and values into h subspaces and attends jointly.",
+                    difficulty="high",
+                ),
+            ]
+        ),
+    )
+
+    minutes = estimate_reading_time(report)
+    assert minutes >= 1
+
+    md = report.to_markdown()
+    assert "阅读时长" in md
+    assert "分钟" in md
+
+    html = report.to_html()
+    assert "阅读时长" in html
+    assert "分钟" in html

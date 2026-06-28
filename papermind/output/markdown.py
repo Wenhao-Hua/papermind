@@ -11,6 +11,7 @@ from __future__ import annotations
 from pathlib import Path
 from typing import List, Optional
 
+from papermind.output import estimate_reading_time
 from papermind.output.schema import (
     Connection,
     Reproduction,
@@ -94,6 +95,8 @@ def _meta_line(report: Report) -> str:
         bits.append(f"**Year:** {paper.year}")
     if paper.arxiv_id:
         bits.append(f"**arXiv:** [{paper.arxiv_id}](https://arxiv.org/abs/{paper.arxiv_id})")
+    minutes = estimate_reading_time(report)
+    bits.append(f"**阅读时长:** 约 {minutes} 分钟")
     if paper.pdf_url:
         bits.append(f"[PDF]({paper.pdf_url})")
     return "  •  ".join(bits)
