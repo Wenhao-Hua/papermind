@@ -2,9 +2,12 @@
 
 from __future__ import annotations
 
+import csv
+import io
+
 import papermind.compare as compare_mod
 from papermind.compare import build_comparison
-from papermind.output.compare_render import to_html, to_markdown
+from papermind.output.compare_render import to_csv, to_html, to_markdown
 from papermind.output.schema import (
     Benchmark,
     Contributions,
@@ -76,6 +79,50 @@ def test_has_compare_modules_rejects_partial_report():
     partial = Report(paper=PaperMeta(title="P", arxiv_id="2"),
                      contributions=Contributions(main_contribution="c", novelty="n"))
     assert compare_mod._has_compare_modules(partial) is False
+
+
+def test_comparison_csv_structure():
+    comp = _comparison()
+    raw = to_csv(comp)
+    rows = list(csv.reader(io.StringIO(raw)))
+    # header: 维度, paper1, paper2
+    assert rows[0] == ["维度", "2307.08691", "1706.03762"]
+    # all dimension labels present
+    labels = [r[0] for r in rows[1:]]
+    assert "标题" in labels
+    assert "核心贡献" in labels
+    assert "关键方法" in labels
+    # correct number of columns per data row
+    for row in rows:
+        assert len(row) == 3
+
+
+def test_comparison_csv_cell_values():
+    comp = _comparison()
+    raw = to_csv(comp)
+    rows = list(csv.reader(io.StringIO(raw)))
+    by_label = {r[0]: r[1:] for r in rows[1:] if r[0]}
+    assert by_label["标题"] == ["FlashAttention-2", "Transformer"]
+    assert by_label["核心贡献"] == ["faster attention", "attention-only arch"]
+
+
+def test_comparison_csv_synthesis_row():
+    comp = _comparison()
+    comp.synthesis = "Paper A is faster; Paper B is foundational."
+    raw = to_csv(comp)
+    assert "对比小结" in raw
+    assert "Paper A is faster" in raw
+
+
+def test_comparison_to_csv_method_and_path(tmp_path):
+    comp = _comparison()
+    out = tmp_path / "compare.csv"
+    text = comp.to_csv(str(out))
+    assert out.exists()
+    # normalize line endings before comparing (csv uses \r\n; file read may differ)
+    assert text.replace("\r\n", "\n") == out.read_text(encoding="utf-8").replace("\r\n", "\n")
+    rows = list(csv.reader(io.StringIO(text)))
+    assert rows[0][0] == "维度"
 
 
 def test_compare_orchestration_reuses_mocked_analyze(monkeypatch):
