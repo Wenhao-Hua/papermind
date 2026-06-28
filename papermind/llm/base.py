@@ -27,6 +27,13 @@ OnNotice = Optional[Callable[[str], None]]
 OLLAMA_DEFAULT_MODEL = "ollama/llama3.1"
 _KEYLESS_PREFIXES = ("ollama/", "ollama_chat/", "local/")
 
+# Module-level litellm cache so concurrent threads never trigger a second import attempt.
+# pyo3 native extension initialisation is not safe to run concurrently; caching ensures
+# the import runs exactly once (under _LITELLM_IMPORT_LOCK) regardless of call site.
+_LITELLM_MODULE = None
+_LITELLM_IMPORT_FAILED = False
+_LITELLM_IMPORT_LOCK = threading.Lock()
+
 _JSON_OBJECT_RE = re.compile(r"\{.*\}", re.DOTALL)
 _JSON_ARRAY_RE = re.compile(r"\[.*\]", re.DOTALL)
 
@@ -334,7 +341,7 @@ class LLMClient:
                 model=model, prompt_tokens=prompt_tokens, completion_tokens=completion_tokens
             )
             cost = float(prompt_cost) + float(completion_cost)
-        except Exception:  # noqa: BLE001 - cost is best-effort; many models lack pricing
+        except BaseException:  # noqa: BLE001 - cost is best-effort; pyo3 PanicException is BaseException, not Exception
             cost = 0.0
         with self._usage_lock:
             self.usage.record(prompt_tokens, completion_tokens, cost)
@@ -446,13 +453,28 @@ def _get_local_encoder(model_name: str, cls):
 
 
 def _import_litellm():
-    try:
-        import litellm
+    global _LITELLM_MODULE, _LITELLM_IMPORT_FAILED
+    if _LITELLM_MODULE is not None:
+        return _LITELLM_MODULE
+    if _LITELLM_IMPORT_FAILED:
+        raise LLMError("litellm is required. Install with: pip install litellm")
+    with _LITELLM_IMPORT_LOCK:
+        if _LITELLM_MODULE is not None:
+            return _LITELLM_MODULE
+        if _LITELLM_IMPORT_FAILED:
+            raise LLMError("litellm is required. Install with: pip install litellm")
+        try:
+            import litellm
 
-        litellm.drop_params = True  # silently drop unsupported params per provider
-        return litellm
-    except ImportError as exc:  # pragma: no cover
-        raise LLMError("litellm is required. Install with: pip install litellm") from exc
+            litellm.drop_params = True  # silently drop unsupported params per provider
+            _LITELLM_MODULE = litellm
+        except ImportError as exc:
+            _LITELLM_IMPORT_FAILED = True
+            raise LLMError("litellm is required. Install with: pip install litellm") from exc
+        except BaseException:
+            _LITELLM_IMPORT_FAILED = True
+            raise
+    return _LITELLM_MODULE
 
 
 def _supports_json_mode(model: str) -> bool:
