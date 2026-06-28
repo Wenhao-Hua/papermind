@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import papermind.compare as compare_mod
 from papermind.compare import build_comparison
-from papermind.output.compare_render import to_html, to_markdown
+from papermind.output.compare_render import to_csv, to_html, to_markdown
 from papermind.output.schema import (
     Benchmark,
     Contributions,
@@ -60,6 +60,35 @@ def test_comparison_html_table_and_links():
     assert html.startswith("<!DOCTYPE html>")
     assert "<th>2307.08691</th>" in html
     assert "<a href='https://github.com/x/y'>" in html  # official code linked
+
+
+def test_comparison_csv_format():
+    import csv
+    import io
+
+    csv_text = to_csv(_comparison())
+    rows = list(csv.reader(io.StringIO(csv_text)))
+    header = rows[0]
+    assert header[0] == "维度"
+    assert "2307.08691" in header
+    assert "1706.03762" in header
+    labels = [r[0] for r in rows[1:] if r]
+    assert "核心贡献" in labels
+    assert "标题" in labels
+    # values present in correct columns
+    contrib_row = next(r for r in rows if r and r[0] == "核心贡献")
+    assert "faster attention" in contrib_row
+
+
+def test_comparison_csv_via_schema_method(tmp_path):
+    comp = _comparison()
+    csv_text = comp.to_csv()
+    assert "维度" in csv_text
+    assert "faster attention" in csv_text
+    out = tmp_path / "compare.csv"
+    comp.to_csv(str(out))
+    assert out.exists()
+    assert "核心贡献" in out.read_text(encoding="utf-8")
 
 
 def test_comparison_json_round_trip():
