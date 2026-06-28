@@ -2,9 +2,14 @@
 
 from __future__ import annotations
 
+import csv
+import io
+import tempfile
+import os
+
 import papermind.compare as compare_mod
 from papermind.compare import build_comparison
-from papermind.output.compare_render import to_html, to_markdown
+from papermind.output.compare_render import to_csv, to_html, to_markdown
 from papermind.output.schema import (
     Benchmark,
     Contributions,
@@ -76,6 +81,64 @@ def test_has_compare_modules_rejects_partial_report():
     partial = Report(paper=PaperMeta(title="P", arxiv_id="2"),
                      contributions=Contributions(main_contribution="c", novelty="n"))
     assert compare_mod._has_compare_modules(partial) is False
+
+
+def test_comparison_csv_header_and_rows():
+    csv_text = to_csv(_comparison())
+    reader = csv.reader(io.StringIO(csv_text))
+    rows = list(reader)
+    # Header: 维度, then arxiv IDs
+    assert rows[0] == ["维度", "2307.08691", "1706.03762"]
+    # Each dimension row has 3 columns
+    assert all(len(r) == 3 for r in rows)
+    labels = [r[0] for r in rows]
+    assert "核心贡献" in labels
+    assert "关键方法" in labels
+    assert "年份" in labels
+
+
+def test_comparison_csv_values():
+    csv_text = to_csv(_comparison())
+    reader = csv.reader(io.StringIO(csv_text))
+    rows = {r[0]: r[1:] for r in reader if r}
+    assert rows["核心贡献"] == ["faster attention", "attention-only arch"]
+    assert rows["关键方法"] == ["Tiling", "Self-Attention"]
+
+
+def test_comparison_csv_synthesis_row():
+    from papermind.output.schema import ComparedPaper, Comparison
+    comp = Comparison(
+        papers=[
+            ComparedPaper(arxiv_id="A", title="Alpha"),
+            ComparedPaper(arxiv_id="B", title="Beta"),
+        ],
+        synthesis="Both are important.",
+    )
+    csv_text = to_csv(comp)
+    reader = csv.reader(io.StringIO(csv_text))
+    rows = list(reader)
+    last = rows[-1]
+    assert last[0] == "对比小结"
+    assert last[1] == "Both are important."
+
+
+def test_comparison_csv_no_synthesis():
+    from papermind.output.schema import ComparedPaper, Comparison
+    comp = Comparison(papers=[ComparedPaper(arxiv_id="A"), ComparedPaper(arxiv_id="B")])
+    csv_text = to_csv(comp)
+    reader = csv.reader(io.StringIO(csv_text))
+    rows = list(reader)
+    assert all(r[0] != "对比小结" for r in rows)
+
+
+def test_comparison_to_csv_writes_file():
+    comp = _comparison()
+    with tempfile.TemporaryDirectory() as tmpdir:
+        path = os.path.join(tmpdir, "out.csv")
+        result = comp.to_csv(path)
+        assert os.path.isfile(path)
+        assert result == open(path).read()
+        assert "2307.08691" in result
 
 
 def test_compare_orchestration_reuses_mocked_analyze(monkeypatch):
