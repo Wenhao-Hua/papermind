@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import papermind.compare as compare_mod
 from papermind.compare import build_comparison
-from papermind.output.compare_render import to_html, to_markdown
+from papermind.output.compare_render import to_csv, to_html, to_markdown
 from papermind.output.schema import (
     Benchmark,
     Contributions,
@@ -76,6 +76,35 @@ def test_has_compare_modules_rejects_partial_report():
     partial = Report(paper=PaperMeta(title="P", arxiv_id="2"),
                      contributions=Contributions(main_contribution="c", novelty="n"))
     assert compare_mod._has_compare_modules(partial) is False
+
+
+def test_comparison_csv_structure():
+    import csv
+    import io
+
+    comp = _comparison()
+    text = to_csv(comp)
+    rows = list(csv.reader(io.StringIO(text)))
+    # header row: 维度 + one column per paper (arxiv_id)
+    assert rows[0] == ["维度", "2307.08691", "1706.03762"]
+    # find 标题 row
+    title_row = next(r for r in rows if r[0] == "标题")
+    assert title_row[1] == "FlashAttention-2"
+    assert title_row[2] == "Transformer"
+    # find 关键方法 row
+    method_row = next(r for r in rows if r[0] == "关键方法")
+    assert "Tiling" in method_row[1]
+
+
+def test_comparison_csv_via_schema_method():
+    import csv
+    import io
+
+    comp = _comparison()
+    text = comp.to_csv()
+    rows = list(csv.reader(io.StringIO(text)))
+    assert rows[0][0] == "维度"
+    assert len(rows[0]) == 3  # label + 2 papers
 
 
 def test_compare_orchestration_reuses_mocked_analyze(monkeypatch):
