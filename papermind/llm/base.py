@@ -334,7 +334,9 @@ class LLMClient:
                 model=model, prompt_tokens=prompt_tokens, completion_tokens=completion_tokens
             )
             cost = float(prompt_cost) + float(completion_cost)
-        except Exception:  # noqa: BLE001 - cost is best-effort; many models lack pricing
+        except (KeyboardInterrupt, SystemExit):  # never swallow control signals
+            raise
+        except BaseException:  # noqa: BLE001 - cost is best-effort; pyo3 panics are BaseException
             cost = 0.0
         with self._usage_lock:
             self.usage.record(prompt_tokens, completion_tokens, cost)
@@ -445,14 +447,33 @@ def _get_local_encoder(model_name: str, cls):
     return _LOCAL_ENCODERS[model_name]
 
 
-def _import_litellm():
-    try:
-        import litellm
+_litellm_import_lock = threading.Lock()
+_litellm_module = None
+_litellm_import_failed = False  # set on first BaseException to skip future attempts
 
-        litellm.drop_params = True  # silently drop unsupported params per provider
-        return litellm
-    except ImportError as exc:  # pragma: no cover
-        raise LLMError("litellm is required. Install with: pip install litellm") from exc
+
+def _import_litellm():
+    global _litellm_module, _litellm_import_failed
+    if _litellm_module is not None:
+        return _litellm_module
+    if _litellm_import_failed:
+        raise LLMError("litellm is required. Install with: pip install litellm")
+    with _litellm_import_lock:
+        if _litellm_module is not None:
+            return _litellm_module
+        if _litellm_import_failed:
+            raise LLMError("litellm is required. Install with: pip install litellm")
+        try:
+            import litellm
+
+            litellm.drop_params = True  # silently drop unsupported params per provider
+            _litellm_module = litellm
+            return litellm
+        except ImportError as exc:  # pragma: no cover
+            raise LLMError("litellm is required. Install with: pip install litellm") from exc
+        except BaseException:
+            _litellm_import_failed = True
+            raise
 
 
 def _supports_json_mode(model: str) -> bool:
