@@ -327,15 +327,23 @@ class LLMClient:
         return text
 
     def _record_usage(self, model: str, prompt_tokens: int, completion_tokens: int) -> None:
+        import sys
+
         cost = 0.0
-        try:
-            litellm = _import_litellm()
-            prompt_cost, completion_cost = litellm.cost_per_token(
-                model=model, prompt_tokens=prompt_tokens, completion_tokens=completion_tokens
-            )
-            cost = float(prompt_cost) + float(completion_cost)
-        except Exception:  # noqa: BLE001 - cost is best-effort; many models lack pricing
-            cost = 0.0
+        # Use litellm only if it is already in sys.modules — it will have been imported
+        # by _call/_stream in the same call chain.  Calling _import_litellm() here would
+        # trigger a first-time module import from a worker thread, which can cause a
+        # pyo3/cryptography panic (BaseException) that bypasses the except-Exception guard
+        # and kills the thread before usage.record() is ever reached.
+        litellm = sys.modules.get("litellm")
+        if litellm is not None:
+            try:
+                prompt_cost, completion_cost = litellm.cost_per_token(
+                    model=model, prompt_tokens=prompt_tokens, completion_tokens=completion_tokens
+                )
+                cost = float(prompt_cost) + float(completion_cost)
+            except Exception:  # noqa: BLE001 - cost is best-effort; many models lack pricing
+                cost = 0.0
         with self._usage_lock:
             self.usage.record(prompt_tokens, completion_tokens, cost)
 
