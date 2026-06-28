@@ -2,9 +2,12 @@
 
 from __future__ import annotations
 
+import csv
+import io
+
 import papermind.compare as compare_mod
 from papermind.compare import build_comparison
-from papermind.output.compare_render import to_html, to_markdown
+from papermind.output.compare_render import to_csv, to_html, to_markdown
 from papermind.output.schema import (
     Benchmark,
     Contributions,
@@ -93,3 +96,35 @@ def test_compare_orchestration_reuses_mocked_analyze(monkeypatch):
     assert [p.title for p in comp.papers] == ["FlashAttention-2", "Transformer"]
     assert comp.synthesis == ""  # synthesis skipped -> no LLM call
     assert comp.usage is not None
+
+
+def test_comparison_csv_columns_and_rows():
+    comp = _comparison()
+    csv_text = to_csv(comp)
+    rows = list(csv.reader(io.StringIO(csv_text)))
+    # First row is the header (dimension labels)
+    assert rows[0][0] == "标题"
+    assert "arXiv" in rows[0]
+    assert "核心贡献" in rows[0]
+    # One data row per paper
+    assert len(rows) == 3  # header + 2 papers
+    titles = [r[0] for r in rows[1:]]
+    assert "FlashAttention-2" in titles
+    assert "Transformer" in titles
+
+
+def test_comparison_csv_via_schema_method():
+    comp = _comparison()
+    csv_text = comp.to_csv()
+    assert "FlashAttention-2" in csv_text
+    assert "faster attention" in csv_text
+
+
+def test_comparison_csv_written_to_file(tmp_path):
+    comp = _comparison()
+    out = str(tmp_path / "compare.csv")
+    returned = comp.to_csv(out)
+    from pathlib import Path
+    written = Path(out).read_text(encoding="utf-8")
+    assert written == returned
+    assert "Transformer" in written
