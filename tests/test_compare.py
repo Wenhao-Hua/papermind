@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import papermind.compare as compare_mod
 from papermind.compare import build_comparison
-from papermind.output.compare_render import to_html, to_markdown
+from papermind.output.compare_render import to_csv, to_html, to_markdown
 from papermind.output.schema import (
     Benchmark,
     Contributions,
@@ -93,3 +93,57 @@ def test_compare_orchestration_reuses_mocked_analyze(monkeypatch):
     assert [p.title for p in comp.papers] == ["FlashAttention-2", "Transformer"]
     assert comp.synthesis == ""  # synthesis skipped -> no LLM call
     assert comp.usage is not None
+
+
+def test_comparison_csv_has_header_and_rows():
+    import csv
+    import io
+
+    comp = _comparison()
+    text = to_csv(comp)
+    reader = list(csv.reader(io.StringIO(text)))
+    assert reader[0] == ["标题", "arXiv", "年份", "核心贡献", "新颖之处", "关键方法", "性能/基准", "推荐硬件", "官方代码"]
+    # two data rows
+    assert len(reader) == 3
+    assert reader[1][0] == "FlashAttention-2"
+    assert reader[2][0] == "Transformer"
+    assert reader[1][1] == "2307.08691"
+    assert "Tiling" in reader[1][5]
+
+
+def test_comparison_csv_synthesis_appended():
+    import csv
+    import io
+
+    comp = _comparison()
+    comp.synthesis = "Flash wins on throughput."
+    text = to_csv(comp)
+    reader = list(csv.reader(io.StringIO(text)))
+    # blank row separator + synthesis row
+    assert any("Flash wins on throughput." in row for row in reader)
+
+
+def test_comparison_csv_via_schema_method(tmp_path):
+    comp = _comparison()
+    out = tmp_path / "compare.csv"
+    text = comp.to_csv(str(out))
+    assert out.exists()
+    assert "FlashAttention-2" in text
+    assert out.read_text(encoding="utf-8") == text
+
+
+def test_comparison_csv_special_chars():
+    """Pipe characters and commas in values must not break CSV parsing."""
+    import csv
+    import io
+
+    from papermind.output.schema import ComparedPaper, Comparison
+
+    comp = Comparison(papers=[
+        ComparedPaper(title='Paper, "A"', arxiv_id="1", main_contribution="a|b"),
+        ComparedPaper(title="Paper B", arxiv_id="2", main_contribution="normal"),
+    ])
+    text = to_csv(comp)
+    reader = list(csv.reader(io.StringIO(text)))
+    assert reader[1][0] == 'Paper, "A"'
+    assert reader[1][3] == "a|b"
