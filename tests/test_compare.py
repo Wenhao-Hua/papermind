@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import papermind.compare as compare_mod
 from papermind.compare import build_comparison
-from papermind.output.compare_render import to_html, to_markdown
+from papermind.output.compare_render import to_csv, to_html, to_markdown
 from papermind.output.schema import (
     Benchmark,
     Contributions,
@@ -60,6 +60,31 @@ def test_comparison_html_table_and_links():
     assert html.startswith("<!DOCTYPE html>")
     assert "<th>2307.08691</th>" in html
     assert "<a href='https://github.com/x/y'>" in html  # official code linked
+
+
+def test_comparison_csv_format():
+    import csv
+    import io
+
+    text = to_csv(_comparison())
+    rows = list(csv.reader(io.StringIO(text)))
+    assert rows[0][0] == "arxiv_id"
+    assert "标题" in rows[0]
+    assert "核心贡献" in rows[0]
+    assert "关键方法" in rows[0]
+    assert rows[1][0] == "2307.08691"
+    assert rows[2][0] == "1706.03762"
+    contrib_col = rows[0].index("核心贡献")
+    assert rows[1][contrib_col] == "faster attention"
+    assert rows[2][contrib_col] == "attention-only arch"
+
+
+def test_comparison_to_csv_writes_file(tmp_path):
+    path = str(tmp_path / "compare.csv")
+    _comparison().to_csv(path)
+    content = (tmp_path / "compare.csv").read_text(encoding="utf-8")
+    assert "arxiv_id" in content
+    assert "2307.08691" in content
 
 
 def test_comparison_json_round_trip():
