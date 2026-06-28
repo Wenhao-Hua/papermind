@@ -221,7 +221,8 @@ class LLMClient:
             resp = litellm.embedding(model=model, input=texts)
         except Exception as exc:  # noqa: BLE001 - litellm raises provider-specific errors
             raise _wrap_llm_error(exc, model) from exc
-        self._record_usage(model, _usage_value(resp, "prompt_tokens"), 0)
+        pt = _usage_value(resp, "prompt_tokens")
+        self._record_usage(model, pt, 0, _compute_cost(litellm, model, pt, 0))
         vectors = [item["embedding"] for item in resp["data"]]
         return np.asarray(vectors, dtype="float32")
 
@@ -284,9 +285,9 @@ class LLMClient:
             except Exception as exc2:  # noqa: BLE001
                 raise _wrap_llm_error(exc2, self.model) from exc2
 
-        self._record_usage(
-            self.model, _usage_value(resp, "prompt_tokens"), _usage_value(resp, "completion_tokens")
-        )
+        pt = _usage_value(resp, "prompt_tokens")
+        ct = _usage_value(resp, "completion_tokens")
+        self._record_usage(self.model, pt, ct, _compute_cost(litellm, self.model, pt, ct))
         try:
             return resp["choices"][0]["message"]["content"] or ""
         except (KeyError, IndexError, TypeError) as exc:
@@ -323,19 +324,10 @@ class LLMClient:
         else:  # provider didn't return usage in the stream; estimate
             pt = _count_tokens(litellm, self.model, messages=kwargs["messages"])
             ct = _count_tokens(litellm, self.model, text=text)
-        self._record_usage(self.model, pt, ct)
+        self._record_usage(self.model, pt, ct, _compute_cost(litellm, self.model, pt, ct))
         return text
 
-    def _record_usage(self, model: str, prompt_tokens: int, completion_tokens: int) -> None:
-        cost = 0.0
-        try:
-            litellm = _import_litellm()
-            prompt_cost, completion_cost = litellm.cost_per_token(
-                model=model, prompt_tokens=prompt_tokens, completion_tokens=completion_tokens
-            )
-            cost = float(prompt_cost) + float(completion_cost)
-        except Exception:  # noqa: BLE001 - cost is best-effort; many models lack pricing
-            cost = 0.0
+    def _record_usage(self, model: str, prompt_tokens: int, completion_tokens: int, cost: float = 0.0) -> None:
         with self._usage_lock:
             self.usage.record(prompt_tokens, completion_tokens, cost)
 
@@ -411,6 +403,17 @@ def _usage_value(resp, field: str) -> int:
         return int(value or 0)
     except (KeyError, AttributeError, TypeError, ValueError):
         return 0
+
+
+def _compute_cost(litellm, model: str, prompt_tokens: int, completion_tokens: int) -> float:
+    """Best-effort cost in USD; returns 0.0 on any failure (many models lack pricing)."""
+    try:
+        prompt_cost, completion_cost = litellm.cost_per_token(
+            model=model, prompt_tokens=prompt_tokens, completion_tokens=completion_tokens
+        )
+        return float(prompt_cost) + float(completion_cost)
+    except Exception:  # noqa: BLE001
+        return 0.0
 
 
 def _chunk_usage(chunk):
