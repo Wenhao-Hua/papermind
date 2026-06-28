@@ -334,7 +334,7 @@ class LLMClient:
                 model=model, prompt_tokens=prompt_tokens, completion_tokens=completion_tokens
             )
             cost = float(prompt_cost) + float(completion_cost)
-        except Exception:  # noqa: BLE001 - cost is best-effort; many models lack pricing
+        except BaseException:  # noqa: BLE001 - cost is best-effort; pyo3/Rust panics must not skip usage recording
             cost = 0.0
         with self._usage_lock:
             self.usage.record(prompt_tokens, completion_tokens, cost)
@@ -438,6 +438,10 @@ def _count_tokens(litellm, model: str, messages=None, text: str = "") -> int:
 
 _LOCAL_ENCODERS: dict = {}
 
+_litellm_lock = threading.Lock()
+_litellm_module = None   # cached after first successful import; avoids repeated pyo3 init in threads
+_litellm_failed = False  # True once an import has failed; skips future attempts to keep callers fast
+
 
 def _get_local_encoder(model_name: str, cls):
     if model_name not in _LOCAL_ENCODERS:
@@ -446,13 +450,29 @@ def _get_local_encoder(model_name: str, cls):
 
 
 def _import_litellm():
-    try:
-        import litellm
+    global _litellm_module, _litellm_failed
+    if _litellm_module is not None:
+        return _litellm_module
+    if _litellm_failed:
+        raise LLMError("litellm is required. Install with: pip install litellm")
+    with _litellm_lock:
+        if _litellm_module is not None:
+            return _litellm_module
+        if _litellm_failed:
+            raise LLMError("litellm is required. Install with: pip install litellm")
+        try:
+            import litellm
 
-        litellm.drop_params = True  # silently drop unsupported params per provider
-        return litellm
-    except ImportError as exc:  # pragma: no cover
-        raise LLMError("litellm is required. Install with: pip install litellm") from exc
+            litellm.drop_params = True  # silently drop unsupported params per provider
+            _litellm_module = litellm
+            return litellm
+        except ImportError as exc:  # pragma: no cover
+            _litellm_failed = True
+            raise LLMError("litellm is required. Install with: pip install litellm") from exc
+        except BaseException:  # noqa: BLE001 - pyo3 panics are permanent; mark failed to skip retries
+            _litellm_failed = True
+            raise LLMError("litellm is required. Install with: pip install litellm") from None
+    return _litellm_module  # pragma: no cover
 
 
 def _supports_json_mode(model: str) -> bool:
