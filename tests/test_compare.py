@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import papermind.compare as compare_mod
 from papermind.compare import build_comparison
-from papermind.output.compare_render import to_html, to_markdown
+from papermind.output.compare_render import to_csv, to_html, to_markdown
 from papermind.output.schema import (
     Benchmark,
     Contributions,
@@ -76,6 +76,57 @@ def test_has_compare_modules_rejects_partial_report():
     partial = Report(paper=PaperMeta(title="P", arxiv_id="2"),
                      contributions=Contributions(main_contribution="c", novelty="n"))
     assert compare_mod._has_compare_modules(partial) is False
+
+
+def test_comparison_csv_headers_and_rows():
+    import csv
+    import io
+
+    comp = _comparison()
+    text = to_csv(comp)
+    rows = list(csv.reader(io.StringIO(text)))
+    assert rows[0] == ["维度", "2307.08691", "1706.03762"]
+    labels = [r[0] for r in rows[1:]]
+    assert "核心贡献" in labels
+    assert "关键方法" in labels
+    # data rows have 3 columns each
+    for row in rows[1:]:
+        assert len(row) == 3
+
+
+def test_comparison_csv_escapes_pipe_and_newline():
+    """Cells with commas must be properly quoted by csv.writer."""
+    import csv
+    import io
+
+    comp = _comparison()
+    comp.papers[0].main_contribution = "fast, efficient"
+    text = to_csv(comp)
+    rows = list(csv.reader(io.StringIO(text)))
+    contrib_row = next(r for r in rows if r[0] == "核心贡献")
+    assert contrib_row[1] == "fast, efficient"
+
+
+def test_comparison_csv_synthesis_row():
+    import csv
+    import io
+
+    comp = _comparison()
+    comp.synthesis = "Both papers advance attention."
+    text = to_csv(comp)
+    rows = list(csv.reader(io.StringIO(text)))
+    last = rows[-1]
+    assert last[0] == "对比小结"
+    assert last[1] == "Both papers advance attention."
+
+
+def test_comparison_to_csv_method_roundtrip(tmp_path):
+    comp = _comparison()
+    out = tmp_path / "compare.csv"
+    result = comp.to_csv(str(out))
+    assert out.exists()
+    assert out.read_text(encoding="utf-8") == result
+    assert "维度" in result
 
 
 def test_compare_orchestration_reuses_mocked_analyze(monkeypatch):
