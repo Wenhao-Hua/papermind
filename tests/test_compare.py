@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import papermind.compare as compare_mod
 from papermind.compare import build_comparison
-from papermind.output.compare_render import to_html, to_markdown
+from papermind.output.compare_render import to_csv, to_html, to_markdown
 from papermind.output.schema import (
     Benchmark,
     Contributions,
@@ -93,3 +93,49 @@ def test_compare_orchestration_reuses_mocked_analyze(monkeypatch):
     assert [p.title for p in comp.papers] == ["FlashAttention-2", "Transformer"]
     assert comp.synthesis == ""  # synthesis skipped -> no LLM call
     assert comp.usage is not None
+
+
+def test_comparison_csv_structure():
+    comp = _comparison()
+    csv_text = to_csv(comp)
+    # UTF-8 BOM for Excel
+    assert csv_text.startswith("﻿")
+    lines = csv_text.lstrip("﻿").splitlines()
+    header = lines[0]
+    assert header.startswith("维度,")
+    assert "2307.08691" in header and "1706.03762" in header
+    # every dimension row is present
+    labels = [line.split(",")[0] for line in lines[1:] if line]
+    assert "核心贡献" in labels and "年份" in labels
+
+
+def test_comparison_csv_roundtrip_via_schema(tmp_path):
+    comp = _comparison()
+    path = str(tmp_path / "out.csv")
+    text = comp.to_csv(path)
+    assert (tmp_path / "out.csv").read_text(encoding="utf-8") == text
+    assert "faster attention" in text
+
+
+def test_comparison_csv_cli_format(tmp_path, monkeypatch):
+    from typer.testing import CliRunner
+
+    import papermind.compare as compare_mod
+    from papermind.cli import app
+
+    monkeypatch.setattr(
+        compare_mod,
+        "_report_for",
+        lambda src, *a, **k: _report(src, src, "contrib", "method", None),
+    )
+    runner = CliRunner()
+    out_base = str(tmp_path / "result")
+    result = runner.invoke(
+        app,
+        ["compare", "arxiv:2307.08691", "arxiv:1706.03762",
+         "--format", "csv", "--output", out_base, "--no-synthesis"],
+    )
+    assert result.exit_code == 0, result.output
+    assert (tmp_path / "result.csv").exists()
+    content = (tmp_path / "result.csv").read_text(encoding="utf-8")
+    assert "维度" in content and "2307.08691" in content

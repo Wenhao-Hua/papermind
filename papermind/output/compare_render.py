@@ -1,8 +1,10 @@
-"""Render a Comparison as a side-by-side Markdown or HTML table."""
+"""Render a Comparison as a side-by-side Markdown, HTML, or CSV table."""
 
 from __future__ import annotations
 
 import html as _html
+import io
+import csv as _csv
 from typing import Callable, List, Tuple
 
 from papermind.output.schema import ComparedPaper, Comparison
@@ -87,3 +89,17 @@ def _html_cell(label: str, value: str) -> str:
 
 def _e(text) -> str:
     return _html.escape(str(text)) if text is not None else ""
+
+
+def to_csv(comparison: Comparison) -> str:
+    """Render as CSV: one row per dimension, one column per paper (UTF-8 with BOM for Excel)."""
+    headers = _headers(comparison)
+    buf = io.StringIO()
+    writer = _csv.writer(buf, lineterminator="\n")
+    writer.writerow(["维度"] + headers)
+    for label, values in _rows(comparison):
+        writer.writerow([label] + values)
+    if comparison.synthesis:
+        writer.writerow([])
+        writer.writerow(["对比小结", comparison.synthesis])
+    return "﻿" + buf.getvalue()  # UTF-8 BOM so Excel opens CJK text correctly
