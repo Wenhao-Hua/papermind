@@ -2,9 +2,12 @@
 
 from __future__ import annotations
 
+import csv
+import io
+
 import papermind.compare as compare_mod
 from papermind.compare import build_comparison
-from papermind.output.compare_render import to_html, to_markdown
+from papermind.output.compare_render import to_csv, to_html, to_markdown
 from papermind.output.schema import (
     Benchmark,
     Contributions,
@@ -60,6 +63,39 @@ def test_comparison_html_table_and_links():
     assert html.startswith("<!DOCTYPE html>")
     assert "<th>2307.08691</th>" in html
     assert "<a href='https://github.com/x/y'>" in html  # official code linked
+
+
+def test_comparison_csv_export():
+    comp = _comparison()
+    text = to_csv(comp)
+    rows = list(csv.reader(io.StringIO(text)))
+    assert rows[0] == [
+        "title", "arxiv_id", "year", "main_contribution", "novelty",
+        "methods", "benchmark", "hardware", "official_code",
+    ]
+    assert len(rows) == 3  # header + 2 papers
+    assert rows[1][1] == "2307.08691"
+    assert rows[1][5] == "Tiling"
+    assert rows[2][1] == "1706.03762"
+    assert rows[2][5] == "Self-Attention"
+
+
+def test_comparison_csv_via_schema_method():
+    comp = _comparison()
+    text = comp.to_csv()
+    assert text.startswith("title,arxiv_id,")
+    assert "2307.08691" in text
+    assert "1706.03762" in text
+
+
+def test_comparison_csv_file_write(tmp_path):
+    comp = _comparison()
+    out = str(tmp_path / "compare.csv")
+    comp.to_csv(out)
+    content = (tmp_path / "compare.csv").read_text(encoding="utf-8")
+    rows = list(csv.reader(io.StringIO(content)))
+    assert rows[0][0] == "title"
+    assert rows[1][1] == "2307.08691"
 
 
 def test_comparison_json_round_trip():
