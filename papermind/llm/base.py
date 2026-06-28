@@ -327,15 +327,8 @@ class LLMClient:
         return text
 
     def _record_usage(self, model: str, prompt_tokens: int, completion_tokens: int) -> None:
-        cost = 0.0
-        try:
-            litellm = _import_litellm()
-            prompt_cost, completion_cost = litellm.cost_per_token(
-                model=model, prompt_tokens=prompt_tokens, completion_tokens=completion_tokens
-            )
-            cost = float(prompt_cost) + float(completion_cost)
-        except Exception:  # noqa: BLE001 - cost is best-effort; many models lack pricing
-            cost = 0.0
+        pt_rate, ct_rate = _get_model_cost_rates(model)
+        cost = pt_rate * prompt_tokens + ct_rate * completion_tokens
         with self._usage_lock:
             self.usage.record(prompt_tokens, completion_tokens, cost)
 
@@ -437,6 +430,34 @@ def _count_tokens(litellm, model: str, messages=None, text: str = "") -> int:
 
 
 _LOCAL_ENCODERS: dict = {}
+
+_cost_rate_cache: dict = {}
+_cost_rate_lock = threading.Lock()
+
+
+def _get_model_cost_rates(model: str) -> tuple:
+    """Return (prompt_rate, completion_rate) per token; cached after first lookup.
+
+    Cached to avoid calling litellm.cost_per_token on every LLM response — the
+    function is expensive and can trigger pyo3 panics in environments where cffi
+    is unavailable, which would kill worker threads if called repeatedly.
+    """
+    if model in _cost_rate_cache:
+        return _cost_rate_cache[model]
+    with _cost_rate_lock:
+        if model in _cost_rate_cache:
+            return _cost_rate_cache[model]
+        rates = (0.0, 0.0)
+        try:
+            litellm = _import_litellm()
+            p, c = litellm.cost_per_token(model=model, prompt_tokens=1000, completion_tokens=1000)
+            rates = (float(p) / 1000, float(c) / 1000)
+        except (KeyboardInterrupt, SystemExit):
+            raise
+        except BaseException:  # noqa: BLE001 - cost is best-effort; pyo3 PanicException is BaseException
+            pass
+        _cost_rate_cache[model] = rates
+    return rates
 
 
 def _get_local_encoder(model_name: str, cls):
