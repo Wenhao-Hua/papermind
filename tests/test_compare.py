@@ -2,9 +2,12 @@
 
 from __future__ import annotations
 
+import csv
+import io
+
 import papermind.compare as compare_mod
 from papermind.compare import build_comparison
-from papermind.output.compare_render import to_html, to_markdown
+from papermind.output.compare_render import to_csv, to_html, to_markdown
 from papermind.output.schema import (
     Benchmark,
     Contributions,
@@ -76,6 +79,44 @@ def test_has_compare_modules_rejects_partial_report():
     partial = Report(paper=PaperMeta(title="P", arxiv_id="2"),
                      contributions=Contributions(main_contribution="c", novelty="n"))
     assert compare_mod._has_compare_modules(partial) is False
+
+
+def test_comparison_csv_has_header_and_one_row_per_paper():
+    comp = _comparison()
+    raw = to_csv(comp)
+    rows = list(csv.reader(io.StringIO(raw)))
+    header = rows[0]
+    assert header[0] == "arxiv_id"
+    assert "title" in header
+    assert "main_contribution" in header
+    assert "official_code" in header
+    # two papers → header + 2 data rows (no synthesis here)
+    assert len(rows) == 3
+    assert rows[1][0] == "2307.08691"
+    assert rows[2][0] == "1706.03762"
+    assert rows[1][1] == "FlashAttention-2"
+
+
+def test_comparison_csv_with_synthesis():
+    comp = _comparison()
+    comp.synthesis = "Paper A is faster; Paper B is foundational."
+    raw = to_csv(comp)
+    rows = list(csv.reader(io.StringIO(raw)))
+    # header + 2 data rows + blank row + synthesis row = 5 total
+    assert len(rows) == 5
+    assert rows[3] == []
+    assert rows[4][0] == "synthesis"
+    assert "Paper A is faster" in rows[4][1]
+
+
+def test_comparison_csv_roundtrip_via_schema(tmp_path):
+    comp = _comparison()
+    out = tmp_path / "compare.csv"
+    text = comp.to_csv(str(out))
+    assert out.exists()
+    assert out.read_text() == text
+    rows = list(csv.reader(io.StringIO(text)))
+    assert rows[0][0] == "arxiv_id"
 
 
 def test_compare_orchestration_reuses_mocked_analyze(monkeypatch):
