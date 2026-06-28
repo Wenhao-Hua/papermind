@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import papermind.compare as compare_mod
 from papermind.compare import build_comparison
-from papermind.output.compare_render import to_html, to_markdown
+from papermind.output.compare_render import to_csv, to_html, to_markdown
 from papermind.output.schema import (
     Benchmark,
     Contributions,
@@ -76,6 +76,54 @@ def test_has_compare_modules_rejects_partial_report():
     partial = Report(paper=PaperMeta(title="P", arxiv_id="2"),
                      contributions=Contributions(main_contribution="c", novelty="n"))
     assert compare_mod._has_compare_modules(partial) is False
+
+
+def test_comparison_csv_structure():
+    import csv
+    import io
+
+    comp = _comparison()
+    text = to_csv(comp)
+    rows = list(csv.reader(io.StringIO(text)))
+    # header: Dimension, paper1_id, paper2_id
+    assert rows[0] == ["Dimension", "2307.08691", "1706.03762"]
+    # at least one data row
+    labels = [r[0] for r in rows[1:]]
+    assert "核心贡献" in labels
+    assert "关键方法" in labels
+    # faster attention appears in the right column
+    contrib_row = next(r for r in rows if r[0] == "核心贡献")
+    assert contrib_row[1] == "faster attention"
+    assert contrib_row[2] == "attention-only arch"
+
+
+def test_comparison_csv_with_synthesis():
+    import csv
+    import io
+
+    from papermind.output.schema import Comparison, ComparedPaper
+
+    comp = Comparison(
+        papers=[ComparedPaper(title="A", arxiv_id="1"), ComparedPaper(title="B", arxiv_id="2")],
+        synthesis="paper A is better",
+    )
+    text = to_csv(comp)
+    rows = list(csv.reader(io.StringIO(text)))
+    last = rows[-1]
+    assert last[0] == "Synthesis"
+    assert last[1] == "paper A is better"
+
+
+def test_comparison_to_csv_writes_file(tmp_path):
+    out = str(tmp_path / "cmp.csv")
+    comp = _comparison()
+    comp.to_csv(out)
+    import csv
+
+    with open(out, encoding="utf-8") as f:
+        rows = list(csv.reader(f))
+    assert rows[0][0] == "Dimension"
+    assert len(rows) > 1
 
 
 def test_compare_orchestration_reuses_mocked_analyze(monkeypatch):
