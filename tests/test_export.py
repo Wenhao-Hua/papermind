@@ -5,8 +5,18 @@ from __future__ import annotations
 import json
 
 from papermind.output.cite import to_bibtex
+from papermind.output.html import _reading_minutes
 from papermind.output.reproduce_export import to_notebook, to_setup_script
-from papermind.output.schema import CommonError, PaperMeta, Reproduction, Report, SetupStep
+from papermind.output.schema import (
+    CommonError,
+    Contributions,
+    PaperMeta,
+    Reproduction,
+    Report,
+    SetupStep,
+    TechnicalPoint,
+    TechnicalSection,
+)
 
 
 def _report():
@@ -68,3 +78,37 @@ def test_bibtex_without_arxiv_is_misc():
     meta = PaperMeta(title="Some Local Paper", authors=["Jane Doe"], year=2020)
     bib = to_bibtex(meta)
     assert bib.startswith("@misc{doe2020some,")
+
+
+def test_reading_time_minimum_one_minute():
+    report = Report(paper=PaperMeta(title="Empty Paper"))
+    assert _reading_minutes(report) == 1
+
+
+def test_reading_time_grows_with_content():
+    short_report = Report(
+        paper=PaperMeta(title="T"),
+        contributions=Contributions(main_contribution="short", novelty="a", problem_solved="b"),
+    )
+    long_text = "这是一段很长的解释文字，描述了一个复杂的技术细节和算法原理。 " * 40
+    long_report = Report(
+        paper=PaperMeta(title="T"),
+        technical=TechnicalSection(
+            details=[TechnicalPoint(name="X", explanation=long_text, difficulty="high")]
+        ),
+    )
+    assert _reading_minutes(long_report) > _reading_minutes(short_report)
+
+
+def test_reading_time_appears_in_markdown():
+    report = Report(paper=PaperMeta(title="Test Paper", year=2024))
+    md = report.to_markdown()
+    assert "预计阅读" in md
+    assert "分钟" in md
+
+
+def test_reading_time_appears_in_html():
+    report = Report(paper=PaperMeta(title="Test Paper", year=2024))
+    h = report.to_html()
+    assert "预计阅读" in h
+    assert "分钟" in h
