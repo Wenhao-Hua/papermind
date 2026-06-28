@@ -1,12 +1,15 @@
-"""Tests for reproduction export (setup.sh / notebook) and BibTeX citation."""
+"""Tests for reproduction export (setup.sh / notebook), BibTeX citation, and CSV compare export."""
 
 from __future__ import annotations
 
+import csv
+import io
 import json
 
 from papermind.output.cite import to_bibtex
+from papermind.output.compare_render import to_csv as compare_to_csv
 from papermind.output.reproduce_export import to_notebook, to_setup_script
-from papermind.output.schema import CommonError, PaperMeta, Reproduction, Report, SetupStep
+from papermind.output.schema import CommonError, ComparedPaper, Comparison, PaperMeta, Reproduction, Report, SetupStep
 
 
 def _report():
@@ -68,3 +71,80 @@ def test_bibtex_without_arxiv_is_misc():
     meta = PaperMeta(title="Some Local Paper", authors=["Jane Doe"], year=2020)
     bib = to_bibtex(meta)
     assert bib.startswith("@misc{doe2020some,")
+
+
+def _comparison():
+    return Comparison(
+        papers=[
+            ComparedPaper(
+                title="Paper A",
+                arxiv_id="2301.00001",
+                year=2023,
+                main_contribution="Contribution A",
+                novelty="Novel A",
+                methods=["MethodX", "MethodY"],
+                benchmark="BLEU: 40.1",
+                hardware="8x A100",
+                official_code="https://github.com/example/a",
+            ),
+            ComparedPaper(
+                title="Paper B",
+                arxiv_id="2301.00002",
+                year=2022,
+                main_contribution="Contribution B",
+                novelty="Novel B",
+                methods=["MethodZ"],
+                benchmark=None,
+                hardware=None,
+                official_code=None,
+            ),
+        ],
+        synthesis="Paper A outperforms Paper B.",
+    )
+
+
+def test_compare_to_csv_header_row():
+    csv_text = compare_to_csv(_comparison())
+    reader = csv.reader(io.StringIO(csv_text))
+    rows = list(reader)
+    assert rows[0] == ["维度", "2301.00001", "2301.00002"]
+
+
+def test_compare_to_csv_contains_all_dimensions():
+    csv_text = compare_to_csv(_comparison())
+    assert "标题" in csv_text
+    assert "核心贡献" in csv_text
+    assert "关键方法" in csv_text
+    assert "性能/基准" in csv_text
+
+
+def test_compare_to_csv_values():
+    csv_text = compare_to_csv(_comparison())
+    reader = csv.reader(io.StringIO(csv_text))
+    rows = {r[0]: r[1:] for r in reader if r}
+    assert rows["标题"] == ["Paper A", "Paper B"]
+    assert rows["年份"] == ["2023", "2022"]
+    assert "MethodX" in rows["关键方法"][0]
+    assert rows["关键方法"][1] == "MethodZ"
+    assert rows["性能/基准"][1] == "-"
+
+
+def test_compare_to_csv_synthesis_appended():
+    csv_text = compare_to_csv(_comparison())
+    assert "对比小结" in csv_text
+    assert "Paper A outperforms Paper B." in csv_text
+
+
+def test_compare_to_csv_no_synthesis():
+    comp = Comparison(papers=_comparison().papers, synthesis="")
+    csv_text = compare_to_csv(comp)
+    assert "对比小结" not in csv_text
+
+
+def test_comparison_to_csv_method(tmp_path):
+    comp = _comparison()
+    out = tmp_path / "compare.csv"
+    result = comp.to_csv(str(out))
+    assert out.exists()
+    assert "Paper A" in result
+    assert "Paper A" in out.read_text(encoding="utf-8")
