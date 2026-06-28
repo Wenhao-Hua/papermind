@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import papermind.compare as compare_mod
 from papermind.compare import build_comparison
-from papermind.output.compare_render import to_html, to_markdown
+from papermind.output.compare_render import to_csv, to_html, to_markdown
 from papermind.output.schema import (
     Benchmark,
     Contributions,
@@ -60,6 +60,44 @@ def test_comparison_html_table_and_links():
     assert html.startswith("<!DOCTYPE html>")
     assert "<th>2307.08691</th>" in html
     assert "<a href='https://github.com/x/y'>" in html  # official code linked
+
+
+def test_comparison_csv_rows_and_header():
+    import csv
+    import io
+
+    text = to_csv(_comparison())
+    rows = list(csv.reader(io.StringIO(text)))
+    assert rows[0] == ["title", "arxiv_id", "year", "main_contribution", "novelty", "methods", "benchmark", "hardware", "official_code"]
+    assert rows[1][0] == "FlashAttention-2"
+    assert rows[1][1] == "2307.08691"
+    assert rows[2][0] == "Transformer"
+    assert rows[2][1] == "1706.03762"
+
+
+def test_comparison_csv_file_write(tmp_path):
+    path = tmp_path / "compare.csv"
+    _comparison().to_csv(str(path))
+    content = path.read_text(encoding="utf-8")
+    assert "title" in content
+    assert "FlashAttention-2" in content
+    assert "Transformer" in content
+
+
+def test_comparison_csv_no_pipe_injection():
+    """Pipe characters in text must not break CSV structure."""
+    import csv
+    import io
+
+    from papermind.output.schema import Comparison, ComparedPaper
+
+    comp = Comparison(papers=[
+        ComparedPaper(title="A|B", arxiv_id="1", main_contribution="x|y", novelty="n"),
+    ])
+    text = to_csv(comp)
+    rows = list(csv.reader(io.StringIO(text)))
+    assert rows[1][0] == "A|B"
+    assert rows[1][3] == "x|y"
 
 
 def test_comparison_json_round_trip():
