@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import papermind.compare as compare_mod
 from papermind.compare import build_comparison
-from papermind.output.compare_render import to_html, to_markdown
+from papermind.output.compare_render import to_csv, to_html, to_markdown
 from papermind.output.schema import (
     Benchmark,
     Contributions,
@@ -76,6 +76,34 @@ def test_has_compare_modules_rejects_partial_report():
     partial = Report(paper=PaperMeta(title="P", arxiv_id="2"),
                      contributions=Contributions(main_contribution="c", novelty="n"))
     assert compare_mod._has_compare_modules(partial) is False
+
+
+def test_comparison_csv_has_header_and_rows():
+    comp = _comparison()
+    csv_text = to_csv(comp)
+    lines = csv_text.splitlines()
+    assert lines[0].startswith("标题,arXiv,年份")
+    assert "FlashAttention-2" in lines[1]
+    assert "2307.08691" in lines[1]
+    assert "Transformer" in lines[2]
+    assert "1706.03762" in lines[2]
+
+
+def test_comparison_csv_via_schema_method(tmp_path):
+    comp = _comparison()
+    out = tmp_path / "compare.csv"
+    result = comp.to_csv(str(out))
+    assert out.exists()
+    assert "FlashAttention-2" in result
+    assert "FlashAttention-2" in out.read_text(encoding="utf-8")
+
+
+def test_comparison_csv_synthesis_appended():
+    comp = _comparison()
+    comp.synthesis = "Paper A is faster; Paper B is the classic."
+    csv_text = to_csv(comp)
+    assert "对比小结" in csv_text
+    assert "Paper A is faster" in csv_text
 
 
 def test_compare_orchestration_reuses_mocked_analyze(monkeypatch):
