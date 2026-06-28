@@ -182,6 +182,36 @@ def test_markdown_has_toc_with_anchors():
     assert '<a id="contributions"></a>' in md and '<a id="technical"></a>' in md
 
 
+def test_reading_time_shown_in_markdown_and_html():
+    from papermind.output.markdown import _reading_time
+
+    report = Report(
+        paper=PaperMeta(title="Attention Is All You Need", year=2017),
+        contributions=Contributions(
+            main_contribution=" ".join(["word"] * 200),
+            novelty="novel",
+            problem_solved="slow RNN",
+        ),
+    )
+    # _reading_time returns at least 1 and rounds words/200
+    rt = _reading_time(report)
+    assert rt >= 1
+    assert isinstance(rt, int)
+
+    md = report.to_markdown()
+    assert f"约 {rt} 分钟阅读" in md
+
+    html = report.to_html()
+    assert f"约 {rt} 分钟阅读" in html
+
+
+def test_reading_time_minimum_one_minute():
+    from papermind.output.markdown import _reading_time
+
+    report = Report(paper=PaperMeta(title="Tiny"))
+    assert _reading_time(report) == 1
+
+
 def test_html_export_self_contained(tmp_path):
     from papermind.output.schema import Figure
 
