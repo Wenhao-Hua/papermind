@@ -2,9 +2,12 @@
 
 from __future__ import annotations
 
+import csv
+import io
+
 import papermind.compare as compare_mod
 from papermind.compare import build_comparison
-from papermind.output.compare_render import to_html, to_markdown
+from papermind.output.compare_render import to_csv, to_html, to_markdown
 from papermind.output.schema import (
     Benchmark,
     Contributions,
@@ -67,6 +70,55 @@ def test_comparison_json_round_trip():
     data = comp.to_dict()
     assert data["papers"][0]["arxiv_id"] == "2307.08691"
     assert "usage" not in data  # usage excluded from export
+
+
+def test_comparison_csv_structure():
+    comp = _comparison()
+    text = to_csv(comp)
+    rows = list(csv.reader(io.StringIO(text)))
+    # header row: 维度 + one column per paper
+    assert rows[0] == ["维度", "2307.08691", "1706.03762"]
+    # every dimension row present
+    labels = [r[0] for r in rows[1:] if r]
+    assert "标题" in labels
+    assert "核心贡献" in labels
+    assert "关键方法" in labels
+
+
+def test_comparison_csv_values():
+    comp = _comparison()
+    rows = list(csv.reader(io.StringIO(to_csv(comp))))
+    by_label = {r[0]: r[1:] for r in rows if len(r) >= 2}
+    assert by_label["标题"] == ["FlashAttention-2", "Transformer"]
+    assert by_label["核心贡献"] == ["faster attention", "attention-only arch"]
+    assert by_label["关键方法"] == ["Tiling", "Self-Attention"]
+
+
+def test_comparison_csv_synthesis():
+    from papermind.output.schema import Comparison, ComparedPaper
+
+    comp = Comparison(
+        papers=[
+            ComparedPaper(title="A", arxiv_id="1", main_contribution="c1"),
+            ComparedPaper(title="B", arxiv_id="2", main_contribution="c2"),
+        ],
+        synthesis="Both papers are great.",
+    )
+    rows = list(csv.reader(io.StringIO(to_csv(comp))))
+    synth_rows = [r for r in rows if r and r[0] == "对比小结"]
+    assert synth_rows and synth_rows[0][1] == "Both papers are great."
+
+
+def test_comparison_to_csv_method_and_file(tmp_path):
+    comp = _comparison()
+    text = comp.to_csv()
+    assert "维度" in text
+    assert "2307.08691" in text
+
+    out = tmp_path / "compare.csv"
+    comp.to_csv(str(out))
+    assert out.exists()
+    assert "FlashAttention-2" in out.read_text(encoding="utf-8")
 
 
 def test_has_compare_modules_rejects_partial_report():
