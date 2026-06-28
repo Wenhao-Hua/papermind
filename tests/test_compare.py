@@ -2,9 +2,12 @@
 
 from __future__ import annotations
 
+import csv
+import io
+
 import papermind.compare as compare_mod
 from papermind.compare import build_comparison
-from papermind.output.compare_render import to_html, to_markdown
+from papermind.output.compare_render import to_csv, to_html, to_markdown
 from papermind.output.schema import (
     Benchmark,
     Contributions,
@@ -93,3 +96,39 @@ def test_compare_orchestration_reuses_mocked_analyze(monkeypatch):
     assert [p.title for p in comp.papers] == ["FlashAttention-2", "Transformer"]
     assert comp.synthesis == ""  # synthesis skipped -> no LLM call
     assert comp.usage is not None
+
+
+def test_comparison_csv_structure():
+    comp = _comparison()
+    raw = to_csv(comp)
+    rows = list(csv.reader(io.StringIO(raw)))
+    # header row: Dimension + one column per paper
+    assert rows[0] == ["Dimension", "2307.08691", "1706.03762"]
+    # each dimension has a row
+    dimensions = [r[0] for r in rows[1:]]
+    assert "核心贡献" in dimensions
+    assert "关键方法" in dimensions
+    assert "年份" in dimensions
+    # correct number of data columns per row
+    for row in rows:
+        assert len(row) == 3
+
+
+def test_comparison_csv_values():
+    comp = _comparison()
+    raw = to_csv(comp)
+    rows = list(csv.reader(io.StringIO(raw)))
+    by_dim = {r[0]: r[1:] for r in rows[1:]}
+    assert by_dim["核心贡献"][0] == "faster attention"
+    assert by_dim["关键方法"][0] == "Tiling"
+    assert by_dim["年份"] == ["2023", "2023"]
+
+
+def test_comparison_csv_path_write(tmp_path):
+    comp = _comparison()
+    out = tmp_path / "compare.csv"
+    comp.to_csv(str(out))
+    assert out.exists()
+    rows = list(csv.reader(out.open(encoding="utf-8")))
+    assert rows[0][0] == "Dimension"
+    assert len(rows) > 5  # at least 9 dimension rows + header
