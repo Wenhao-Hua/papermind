@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import papermind.compare as compare_mod
 from papermind.compare import build_comparison
-from papermind.output.compare_render import to_html, to_markdown
+from papermind.output.compare_render import to_csv, to_html, to_markdown
 from papermind.output.schema import (
     Benchmark,
     Contributions,
@@ -93,3 +93,54 @@ def test_compare_orchestration_reuses_mocked_analyze(monkeypatch):
     assert [p.title for p in comp.papers] == ["FlashAttention-2", "Transformer"]
     assert comp.synthesis == ""  # synthesis skipped -> no LLM call
     assert comp.usage is not None
+
+
+def test_comparison_csv_structure():
+    import csv
+    import io
+
+    comp = _comparison()
+    text = to_csv(comp)
+
+    reader = csv.DictReader(io.StringIO(text))
+    rows = list(reader)
+    assert len(rows) == 2
+    assert rows[0]["arxiv_id"] == "2307.08691"
+    assert rows[1]["arxiv_id"] == "1706.03762"
+    assert rows[0]["title"] == "FlashAttention-2"
+    assert rows[0]["methods"] == "Tiling"
+    assert rows[1]["methods"] == "Self-Attention"
+
+
+def test_comparison_csv_no_pipe_injection():
+    comp = _comparison()
+    text = to_csv(comp)
+    # CSV should not use pipe separators (unlike Markdown)
+    lines = text.splitlines()
+    assert any("," in line for line in lines[1:])  # comma-delimited
+
+
+def test_comparison_csv_write_to_file(tmp_path):
+    comp = _comparison()
+    out = str(tmp_path / "compare.csv")
+    comp.to_csv(out)
+    content = open(out, encoding="utf-8").read()
+    assert "arxiv_id" in content
+    assert "2307.08691" in content
+    assert "1706.03762" in content
+
+
+def test_comparison_csv_empty_fields():
+    from papermind.output.schema import ComparedPaper, Comparison
+
+    comp = Comparison(
+        papers=[
+            ComparedPaper(title="Minimal", arxiv_id="0000.00000"),
+        ]
+    )
+    text = to_csv(comp)
+    import csv, io
+    rows = list(csv.DictReader(io.StringIO(text)))
+    assert rows[0]["benchmark"] == ""
+    assert rows[0]["hardware"] == ""
+    assert rows[0]["official_code"] == ""
