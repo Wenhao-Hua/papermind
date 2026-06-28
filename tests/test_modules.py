@@ -224,3 +224,38 @@ def test_demo_plays_offline_instantly():
     assert "Attention Is All You Need" in out
     assert "论文事实" in out and "基于论文的推理" in out  # layered answer shown
     assert "原文依据" in out and "Section 3.2.1" in out
+
+
+def test_reading_time_appears_in_markdown_and_html():
+    from papermind.output.markdown import _reading_time_minutes
+
+    report = Report(
+        paper=PaperMeta(title="T"),
+        contributions=Contributions(
+            main_contribution="faster attention mechanism for transformers",
+            novelty="sub-quadratic complexity in sequence length",
+            problem_solved="memory bottleneck in long-context attention",
+        ),
+        technical=TechnicalSection(
+            details=[TechnicalPoint(name="Tiling", explanation="block compute reduces HBM traffic", difficulty="mid")]
+        ),
+    )
+
+    # reading time >= 1 minute for any report
+    minutes = _reading_time_minutes(report)
+    assert minutes >= 1
+
+    # appears in markdown meta line
+    md = report.to_markdown()
+    assert "阅读时长" in md and "分钟" in md
+
+    # appears in HTML meta block
+    html_doc = report.to_html()
+    assert "阅读时长" in html_doc and "分钟" in html_doc
+
+
+def test_reading_time_empty_report_is_one_minute():
+    from papermind.output.markdown import _reading_time_minutes
+
+    report = Report(paper=PaperMeta(title="Empty"))
+    assert _reading_time_minutes(report) == 1
