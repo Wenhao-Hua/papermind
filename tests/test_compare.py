@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import papermind.compare as compare_mod
 from papermind.compare import build_comparison
-from papermind.output.compare_render import to_html, to_markdown
+from papermind.output.compare_render import to_csv, to_html, to_markdown
 from papermind.output.schema import (
     Benchmark,
     Contributions,
@@ -60,6 +60,36 @@ def test_comparison_html_table_and_links():
     assert html.startswith("<!DOCTYPE html>")
     assert "<th>2307.08691</th>" in html
     assert "<a href='https://github.com/x/y'>" in html  # official code linked
+
+
+def test_comparison_csv_format():
+    csv_text = to_csv(_comparison())
+    lines = csv_text.strip().splitlines()
+    # header row: dimension column + one column per paper
+    assert lines[0] == "维度,2307.08691,1706.03762"
+    # content rows: each dimension present
+    assert any("faster attention" in line for line in lines)
+    assert any("attention-only arch" in line for line in lines)
+    # no HTML or markdown artefacts
+    assert "<" not in csv_text
+    assert "|" not in csv_text
+
+
+def test_comparison_csv_via_model_method():
+    comp = _comparison()
+    csv_text = comp.to_csv()
+    assert "维度" in csv_text
+    assert "2307.08691" in csv_text
+
+
+def test_comparison_csv_writes_file(tmp_path):
+    comp = _comparison()
+    out = str(tmp_path / "compare.csv")
+    returned = comp.to_csv(out)
+    import pathlib
+    on_disk = pathlib.Path(out).read_text(encoding="utf-8")
+    assert on_disk == returned
+    assert "faster attention" in on_disk
 
 
 def test_comparison_json_round_trip():
