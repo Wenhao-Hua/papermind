@@ -2,9 +2,12 @@
 
 from __future__ import annotations
 
+import csv
+import io
+
 import papermind.compare as compare_mod
 from papermind.compare import build_comparison
-from papermind.output.compare_render import to_html, to_markdown
+from papermind.output.compare_render import to_csv, to_html, to_markdown
 from papermind.output.schema import (
     Benchmark,
     Contributions,
@@ -76,6 +79,51 @@ def test_has_compare_modules_rejects_partial_report():
     partial = Report(paper=PaperMeta(title="P", arxiv_id="2"),
                      contributions=Contributions(main_contribution="c", novelty="n"))
     assert compare_mod._has_compare_modules(partial) is False
+
+
+def test_comparison_csv_structure():
+    comp = _comparison()
+    text = to_csv(comp)
+    rows = list(csv.reader(io.StringIO(text)))
+    assert rows[0] == ["标题", "arXiv", "年份", "核心贡献", "新颖之处", "关键方法", "性能/基准", "推荐硬件", "官方代码"]
+    assert len(rows) == 3  # header + 2 papers
+    assert rows[1][0] == "FlashAttention-2"
+    assert rows[1][1] == "2307.08691"
+    assert rows[1][2] == "2023"
+    assert rows[1][3] == "faster attention"
+    assert rows[1][5] == "Tiling"
+    assert rows[2][0] == "Transformer"
+
+
+def test_comparison_csv_via_schema_method():
+    comp = _comparison()
+    text = comp.to_csv()
+    rows = list(csv.reader(io.StringIO(text)))
+    assert rows[0][0] == "标题"
+    assert rows[1][1] == "2307.08691"
+
+
+def test_comparison_csv_writes_file(tmp_path):
+    comp = _comparison()
+    out = tmp_path / "result.csv"
+    comp.to_csv(str(out))
+    assert out.exists()
+    content = out.read_text(encoding="utf-8")
+    rows = list(csv.reader(io.StringIO(content)))
+    assert len(rows) == 3 and rows[0][0] == "标题"
+
+
+def test_comparison_csv_special_chars():
+    from papermind.output.schema import ComparedPaper, Comparison
+
+    comp = Comparison(papers=[
+        ComparedPaper(title='A "quoted" title', main_contribution="val,with,commas", methods=["a", "b"]),
+    ])
+    text = to_csv(comp)
+    rows = list(csv.reader(io.StringIO(text)))
+    assert rows[1][0] == 'A "quoted" title'
+    assert rows[1][3] == "val,with,commas"
+    assert rows[1][5] == "a; b"
 
 
 def test_compare_orchestration_reuses_mocked_analyze(monkeypatch):
