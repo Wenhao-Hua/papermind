@@ -1,0 +1,31 @@
+# The image installs the `papermind` package (pip install ".[web]"); everything
+# below is either VCS/build cruft or not part of the installed package, so it only
+# bloats the image and busts the COPY cache layer.
+
+# VCS + local notes
+.git
+.gitignore
+.github
+nightly-notes.md
+
+# Python caches / build artifacts
+__pycache__/
+*.py[cod]
+*.egg-info/
+.pytest_cache/
+.ruff_cache/
+build/
+dist/
+
+# Not used at runtime (not shipped in the `papermind` wheel)
+examples/
+data/
+report/
+docs/
+tests/
+trainer/
+evaluation/
+
+# Local virtualenvs
+.venv/
+venv/
