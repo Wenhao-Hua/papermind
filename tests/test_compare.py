@@ -2,9 +2,12 @@
 
 from __future__ import annotations
 
+import csv
+import io
+
 import papermind.compare as compare_mod
 from papermind.compare import build_comparison
-from papermind.output.compare_render import to_html, to_markdown
+from papermind.output.compare_render import to_csv, to_html, to_markdown
 from papermind.output.schema import (
     Benchmark,
     Contributions,
@@ -67,6 +70,32 @@ def test_comparison_json_round_trip():
     data = comp.to_dict()
     assert data["papers"][0]["arxiv_id"] == "2307.08691"
     assert "usage" not in data  # usage excluded from export
+
+
+def test_comparison_csv_header_and_rows():
+    csv_text = to_csv(_comparison())
+    reader = csv.reader(io.StringIO(csv_text))
+    rows = list(reader)
+    assert rows[0] == ["维度", "2307.08691", "1706.03762"]
+    labels = [r[0] for r in rows[1:] if r]
+    assert "核心贡献" in labels
+    assert "关键方法" in labels
+
+
+def test_comparison_csv_values():
+    csv_text = to_csv(_comparison())
+    reader = csv.reader(io.StringIO(csv_text))
+    rows = {row[0]: row[1:] for row in reader if row}
+    assert rows["核心贡献"] == ["faster attention", "attention-only arch"]
+    assert rows["关键方法"] == ["Tiling", "Self-Attention"]
+
+
+def test_comparison_csv_to_file(tmp_path):
+    comp = _comparison()
+    out = str(tmp_path / "compare.csv")
+    text = comp.to_csv(out)
+    assert (tmp_path / "compare.csv").read_text(encoding="utf-8") == text
+    assert "维度" in text
 
 
 def test_has_compare_modules_rejects_partial_report():
