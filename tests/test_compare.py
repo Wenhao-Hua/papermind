@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import papermind.compare as compare_mod
 from papermind.compare import build_comparison
-from papermind.output.compare_render import to_html, to_markdown
+from papermind.output.compare_render import to_csv, to_html, to_markdown
 from papermind.output.schema import (
     Benchmark,
     Contributions,
@@ -60,6 +60,42 @@ def test_comparison_html_table_and_links():
     assert html.startswith("<!DOCTYPE html>")
     assert "<th>2307.08691</th>" in html
     assert "<a href='https://github.com/x/y'>" in html  # official code linked
+
+
+def test_comparison_csv_export():
+    comp = _comparison()
+    csv_text = to_csv(comp)
+    lines = csv_text.strip().splitlines()
+    # Header: "维度,<paper1>,<paper2>"
+    assert lines[0].startswith("维度,")
+    assert "2307.08691" in lines[0]
+    assert "1706.03762" in lines[0]
+    # All dimension rows present
+    row_labels = [line.split(",")[0] for line in lines[1:]]
+    assert "标题" in row_labels
+    assert "核心贡献" in row_labels
+    assert "关键方法" in row_labels
+    # Values appear in output
+    assert "faster attention" in csv_text
+    assert "Tiling" in csv_text
+    # Schema method round-trips identically
+    assert comp.to_csv() == csv_text
+
+
+def test_comparison_csv_export_with_synthesis():
+    comp = _comparison()
+    comp.synthesis = "Both papers improve attention; FlashAttention-2 focuses on speed."
+    csv_text = to_csv(comp)
+    assert "对比小结" in csv_text
+    assert "FlashAttention-2 focuses on speed" in csv_text
+
+
+def test_comparison_csv_written_to_file(tmp_path):
+    comp = _comparison()
+    out = str(tmp_path / "compare.csv")
+    result = comp.to_csv(out)
+    assert (tmp_path / "compare.csv").read_text(encoding="utf-8") == result
+    assert "2307.08691" in result
 
 
 def test_comparison_json_round_trip():
