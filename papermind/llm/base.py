@@ -327,15 +327,23 @@ class LLMClient:
         return text
 
     def _record_usage(self, model: str, prompt_tokens: int, completion_tokens: int) -> None:
+        import sys
+
         cost = 0.0
-        try:
-            litellm = _import_litellm()
-            prompt_cost, completion_cost = litellm.cost_per_token(
-                model=model, prompt_tokens=prompt_tokens, completion_tokens=completion_tokens
-            )
-            cost = float(prompt_cost) + float(completion_cost)
-        except Exception:  # noqa: BLE001 - cost is best-effort; many models lack pricing
-            cost = 0.0
+        # Use litellm for cost only if it is already in sys.modules — importing it here would
+        # trigger heavy extension-module initialisation (pyo3/cryptography) which is unsafe when
+        # called for the first time from a non-main thread and can deadlock the import machinery.
+        # In the normal call flow _call() imports litellm before reaching this method, so cost
+        # is still calculated correctly for all real LLM calls.
+        litellm_mod = sys.modules.get("litellm")
+        if litellm_mod is not None:
+            try:
+                prompt_cost, completion_cost = litellm_mod.cost_per_token(
+                    model=model, prompt_tokens=prompt_tokens, completion_tokens=completion_tokens
+                )
+                cost = float(prompt_cost) + float(completion_cost)
+            except Exception:  # noqa: BLE001 - cost is best-effort; many models lack pricing
+                cost = 0.0
         with self._usage_lock:
             self.usage.record(prompt_tokens, completion_tokens, cost)
 
