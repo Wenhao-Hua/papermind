@@ -5,6 +5,31 @@ All notable changes to PaperMind are documented here. The format follows
 
 ## [Unreleased]
 
+## [0.1.4] — 2026-06-29
+
+### Added
+- **CSV export for `compare`** — `papermind compare --format csv` (and the
+  `Comparison.to_csv` API) writes the side-by-side table as UTF-8 CSV.
+- **Reading-time estimate** in the report meta line ("预计阅读 N 分钟"), counted
+  CJK-aware (each Chinese character/punctuation is a reading unit).
+
+### Fixed
+- **Security — escape Mermaid figure bodies** in the served report: a
+  model-generated diagram could otherwise break out of `<pre>` and inject script
+  (stored XSS in `papermind serve` / shared report HTML).
+- **Security — redact Google/Gemini keys** (`AIza…`) and `?key=` params in
+  user-facing error messages (only `sk-`/`Bearer` were caught before).
+- **Security — neutralise CSV formula injection** in the compare export: a
+  paper-derived cell starting with `= + - @` is now prefixed so spreadsheets
+  don't evaluate it.
+- **`_record_usage` thread-safety** — it no longer triggers litellm's first
+  import from a worker thread, where a native (pyo3) panic could kill the thread
+  and drop usage accounting.
+
+### Internal
+- Removed dead hero-image loaders; deduped the reading-time helper into
+  `papermind.output.reading`; added `.dockerignore`; refreshed stale docs/comments.
+
 ## [0.1.3] — 2026-06-20
 
 ### Changed
