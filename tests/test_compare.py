@@ -2,9 +2,12 @@
 
 from __future__ import annotations
 
+import csv
+import io
+
 import papermind.compare as compare_mod
 from papermind.compare import build_comparison
-from papermind.output.compare_render import to_html, to_markdown
+from papermind.output.compare_render import to_csv, to_html, to_markdown
 from papermind.output.schema import (
     Benchmark,
     Contributions,
@@ -93,3 +96,54 @@ def test_compare_orchestration_reuses_mocked_analyze(monkeypatch):
     assert [p.title for p in comp.papers] == ["FlashAttention-2", "Transformer"]
     assert comp.synthesis == ""  # synthesis skipped -> no LLM call
     assert comp.usage is not None
+
+
+def test_comparison_csv_has_header_and_one_row_per_paper():
+    comp = _comparison()
+    text = to_csv(comp)
+    rows = list(csv.reader(io.StringIO(text)))
+    # first row is header
+    assert rows[0][0] == "arxiv_id"
+    assert "核心贡献" in rows[0]
+    assert "关键方法" in rows[0]
+    # one data row per paper
+    paper_ids = [r[0] for r in rows[1:] if r and r[0]]
+    assert "2307.08691" in paper_ids
+    assert "1706.03762" in paper_ids
+
+
+def test_comparison_csv_values_correct():
+    comp = _comparison()
+    text = to_csv(comp)
+    rows = list(csv.reader(io.StringIO(text)))
+    header = rows[0]
+    contrib_idx = header.index("核心贡献")
+    method_idx = header.index("关键方法")
+    data = {r[0]: r for r in rows[1:] if r and r[0]}
+    assert data["2307.08691"][contrib_idx] == "faster attention"
+    assert data["2307.08691"][method_idx] == "Tiling"
+    assert data["1706.03762"][contrib_idx] == "attention-only arch"
+
+
+def test_comparison_csv_synthesis_appended():
+    from papermind.output.schema import Comparison, ComparedPaper
+
+    comp = Comparison(
+        papers=[
+            ComparedPaper(arxiv_id="1234.5678", title="A", main_contribution="contrib"),
+            ComparedPaper(arxiv_id="8765.4321", title="B", main_contribution="other"),
+        ],
+        synthesis="Both papers are great.",
+    )
+    text = to_csv(comp)
+    assert "Both papers are great." in text
+
+
+def test_comparison_csv_via_schema_method(tmp_path):
+    comp = _comparison()
+    out = tmp_path / "compare.csv"
+    result = comp.to_csv(str(out))
+    assert out.exists()
+    assert out.read_text(encoding="utf-8") == result
+    assert "arxiv_id" in result
+    assert "2307.08691" in result
