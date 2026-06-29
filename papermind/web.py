@@ -286,7 +286,7 @@ def create_app(live: bool = False, rate_per_ip: int = 8, rate_global: int = 300,
     # -- analyze -------------------------------------------------------------- #
     @app.get("/", response_class=HTMLResponse)
     def index():
-        return _page("/", _analyze_form(live) + _home_demo(), live)
+        return _page("/", _home_app(live), live)
 
     def _analyze_async(request, src, model, refresh):
         """Live analysis -> background job + polling page (avoids the 100s timeout).
@@ -652,30 +652,61 @@ button.btn-2:hover{background:var(--accent-soft);color:var(--accent-press);borde
   .tool-in button{padding:14px}
 }
 
-/* home example showcase — real output shown, no marketing copy */
-.hx{max-width:940px;margin:16px auto 0;padding:0 0 60px}
-.hx-head{text-align:center;margin:0 0 26px}
-.hx-eyebrow{display:inline-block;font-size:.74rem;letter-spacing:.05em;font-weight:600;color:var(--accent);
-  background:var(--accent-soft);border:1px solid var(--accent-ring);border-radius:999px;padding:5px 13px;margin-bottom:14px}
-.hx-title{font-size:1.5rem;font-weight:800;letter-spacing:-.02em;line-height:1.2;margin:0 0 7px}
-.hx-meta{color:var(--soft);font-size:.9rem;margin:0;line-height:1.6}
-.hx-grid{display:grid;grid-template-columns:1fr 1fr;gap:18px;align-items:start}
-.hx-card{background:var(--surface);border:1px solid var(--line);border-radius:16px;padding:22px 24px;box-shadow:var(--shadow)}
-.hx-wide,.hx-fw{grid-column:1/-1}
-.hx-label{font-size:.73rem;letter-spacing:.03em;font-weight:700;color:var(--accent);margin:0 0 14px;
-  padding-bottom:11px;border-bottom:1px solid var(--line)}
-.hx-k{font-weight:700;font-size:.85rem;color:var(--ink);margin:15px 0 5px}
-.hx-card>.hx-k:first-of-type{margin-top:0}
-.hx-p{font-size:.92rem;line-height:1.62;color:var(--soft);margin:0 0 4px}
-.hx-src{font-size:.8rem;color:var(--faint);margin:11px 0 0}
-.hx-svg{overflow:auto}.hx-svg svg{max-width:100%;height:auto;display:block;margin:0 auto}
-.hx-sh{background:#0f1117;color:#e7e9ef;border-radius:12px;padding:15px 17px;overflow-x:auto;font:12.5px/1.7 var(--mono);margin:0}
-.hx-card .q{font-size:.95rem;margin:0 0 12px}.hx-card .seg{margin:13px 0}
-.hx-card h3{font-size:.9rem;margin:15px 0 5px;letter-spacing:-.01em}
-.hx-card table{width:100%;border-collapse:collapse;font-size:.84rem}
-.hx-card td{padding:7px 9px;border-top:1px solid var(--line);vertical-align:top;color:var(--soft)}
-.hx-card td.aid{white-space:nowrap;color:var(--faint);font-family:var(--mono);font-size:.78rem}
-@media(max-width:760px){.hx-grid{grid-template-columns:1fr}}
+/* home: single-screen workspace (input left · live example right), no page scroll */
+@supports(selector(:has(*))){
+  body:has(.pm-app){overflow:hidden}
+  .pm-wrap:has(.pm-app){padding:0;max-width:none}
+  .pm-wrap:has(.pm-app) .pm-foot{display:none}
+}
+.pm-app{height:calc(100dvh - 57px);max-width:1280px;margin:0 auto;
+  padding:clamp(14px,3vh,40px) clamp(20px,4vw,46px);
+  display:grid;grid-template-columns:minmax(330px,5fr) 7fr;gap:clamp(22px,3.6vw,52px);align-items:center}
+.app-l{min-width:0}
+.app-h{font-size:clamp(1.7rem,2.7vw,2.35rem);font-weight:800;letter-spacing:-.025em;line-height:1.12;margin:0 0 .35em}
+.app-sub{color:var(--soft);font-size:.98rem;line-height:1.6;margin:0 0 24px;max-width:34ch}
+.app-form{margin:0}
+.app-in{display:flex;gap:9px}
+.app-in input{flex:1;min-width:0;font-size:1.04rem;padding:15px 16px;border-radius:13px;border-color:var(--line-strong);box-shadow:var(--shadow-input);transition:box-shadow .2s,border-color .2s}
+.app-in input:focus{border-color:var(--accent);box-shadow:0 0 0 4px var(--accent-ring),var(--shadow-input)}
+.app-in button{margin:0;white-space:nowrap;padding:15px 24px;border-radius:13px}
+.app-opts{display:flex;flex-wrap:wrap;align-items:center;gap:8px 16px;margin-top:12px;font-size:.83rem;color:var(--soft)}
+.app-opts .upl input[type=file]{width:auto;font-size:.8rem}
+.app-opts .chk{display:inline-flex;align-items:center;gap:7px;cursor:pointer}.app-opts .chk input{width:auto;margin:0}
+.app-ask{margin-top:20px;padding-top:18px;border-top:1px solid var(--line)}
+.app-ask-h{font-weight:650;font-size:.92rem;margin:0 0 10px}.app-ask-h .hint{font-weight:400;color:var(--faint)}
+.app-ask .chk2{display:inline-flex;align-items:center;gap:8px;margin-top:11px;font-size:.83rem;color:var(--soft)}
+.app-ask .chk2 select{width:auto;padding:7px 10px;font-size:.83rem}
+.app-note{font-size:.8rem;color:var(--faint);margin:14px 0 0}
+.app-r{height:100%;min-height:0;display:flex;flex-direction:column;background:var(--surface);
+  border:1px solid var(--line);border-radius:18px;overflow:hidden;box-shadow:var(--shadow-lift),0 0 0 1px rgba(30,58,138,.05)}
+.app-pv-head{flex:none;display:flex;align-items:center;gap:9px;padding:13px 18px;border-bottom:1px solid var(--line);font-size:.83rem;font-weight:600;color:var(--soft)}
+.pv-dot{width:8px;height:8px;border-radius:50%;background:#22c55e;box-shadow:0 0 0 3px rgba(34,197,94,.18);flex:none}
+.app-tabs{flex:none;display:flex;gap:4px;padding:9px 11px;border-bottom:1px solid var(--line);overflow-x:auto;scrollbar-width:none}
+.app-tabs::-webkit-scrollbar{display:none}
+.app-tabs button{margin:0;background:none;color:var(--soft);border:0;border-radius:9px;padding:7px 13px;font-size:.85rem;font-weight:600;cursor:pointer;white-space:nowrap;box-shadow:none;transition:background .15s,color .15s}
+.app-tabs button:hover{background:var(--accent-soft);transform:none;filter:none;box-shadow:none}
+.app-tabs button.on{background:var(--accent);color:#fff}
+.app-pv{flex:1;min-height:0;overflow:auto;padding:20px 22px}
+.app-pv::-webkit-scrollbar{width:8px}.app-pv::-webkit-scrollbar-thumb{background:var(--line-strong);border-radius:8px}
+.tc{display:none}.tc.on{display:block}
+.tc.on[data-t='fw']{display:flex;align-items:center;justify-content:center;min-height:100%}
+.tc[data-t='fw'] svg{max-width:100%;max-height:calc(100dvh - 250px);height:auto;display:block;margin:0 auto}
+.app-pv .hx-k{font-weight:700;font-size:.85rem;color:var(--ink);margin:14px 0 5px}.app-pv .hx-k:first-child{margin-top:0}
+.app-pv .hx-p{font-size:.92rem;line-height:1.62;color:var(--soft);margin:0 0 4px}
+.app-pv .hx-src{font-size:.8rem;color:var(--faint);margin:11px 0 0}
+.app-pv .q{font-size:.95rem;margin:0 0 12px}.app-pv .seg{margin:13px 0}
+.app-pv h3{font-size:.9rem;margin:15px 0 5px;letter-spacing:-.01em}
+.app-pv table{width:100%;border-collapse:collapse;font-size:.84rem}
+.app-pv td{padding:7px 9px;border-top:1px solid var(--line);vertical-align:top;color:var(--soft)}
+.app-pv td.aid{white-space:nowrap;color:var(--faint);font-family:var(--mono);font-size:.78rem}
+.app-pv .hx-sh{background:#0f1117;color:#e7e9ef;border-radius:12px;padding:15px 17px;font:12.5px/1.7 var(--mono);margin:0;white-space:pre-wrap;word-break:break-word}
+@media(max-width:860px){
+  body:has(.pm-app){overflow:auto}
+  .pm-wrap:has(.pm-app) .pm-foot{display:block}
+  .pm-app{height:auto;grid-template-columns:1fr;gap:24px;padding:24px}
+  .app-r{height:auto}.app-pv{max-height:460px}
+  .tc.on[data-t='fw']{min-height:0}.tc[data-t='fw'] svg{max-height:none}
+}
 
 /* panels & type */
 .panel{background:var(--surface);border:1px solid var(--line);border-radius:var(--r);
@@ -884,13 +915,40 @@ def _analyze_form(live: bool, error: str = "") -> str:
     )
 
 
-@lru_cache(maxsize=1)
-def _home_demo() -> str:
-    """Show a real example analysis on the home (no marketing copy): every feature
-    appears as actual output — 4-module read, framework diagram, grounded Q&A with
-    citations, reproduction — so the tool's usefulness is shown, not claimed.
+def _home_app(live: bool, error: str = "") -> str:
+    """The home: a single-screen, no-scroll workspace — the analyze input on the left,
+    a live tabbed example of the actual output on the right, so every feature shows as
+    real output (not marketing): framework diagram / 4-module read / grounded Q&A /
+    reproduction."""
+    note = "" if live else "<p class='app-note'>演示模式：仅展示已缓存论文；分析新论文请用 CLI 或以 <code>--live</code> 启动。</p>"
+    left = (
+        "<div class='app-l'>"
+        f"{_err(error)}"
+        "<h1 class='app-h'>分析一篇论文</h1>"
+        "<p class='app-sub'>粘 arXiv 链接 / DOI / 标题，或直接传 PDF —— 得到右边这样一份解读。</p>"
+        "<form class='app-form' method='post' action='/analyze' enctype='multipart/form-data'>"
+        "<div class='app-in'><input name='source' placeholder='arXiv 链接 / DOI / 论文标题 / PDF…' autofocus>"
+        "<button formaction='/analyze'>开始读</button></div>"
+        "<div class='app-opts'><span class='upl'>或上传 PDF <input type='file' name='file' accept='application/pdf'></span>"
+        "<label class='chk'><input type='checkbox' name='refresh' value='1'>忽略缓存</label></div>"
+        "<div class='app-ask'><div class='app-ask-h'>或，直接问这篇论文 <span class='hint'>就用上面填的那篇</span></div>"
+        "<div class='app-in'><input name='question' id='q-inline' placeholder='例：为什么要除以 √d_k？'>"
+        "<button class='btn-2' formaction='/ask'>问 AI</button></div>"
+        "<label class='chk2'>回答风格 <select name='mode'><option value='balanced'>均衡</option>"
+        "<option value='strict'>严格</option><option value='explore'>发散</option></select></label></div>"
+        "</form>"
+        f"{_examples_row()}{note}"
+        "<script>(function(){var q=document.getElementById('q-inline');if(!q)return;"
+        "q.addEventListener('keydown',function(e){if(e.key==='Enter'){e.preventDefault();"
+        "var b=document.querySelector(\"button[formaction='/ask']\");if(b)b.click();}});})();</script>"
+        "</div>"
+    )
+    return f"<div class='pm-app'>{left}{_home_preview()}</div>"
 
-    Cached: the demo output is static, so it's built (incl. the SVG) once."""
+
+@lru_cache(maxsize=1)
+def _home_preview() -> str:
+    """Right pane: a live tabbed example of real output. Static -> built once."""
     from papermind.demo import build_demo_answer, build_demo_report
     from papermind.figures.framework import render_framework_svg
 
@@ -911,27 +969,27 @@ def _home_demo() -> str:
     if err and err.fix_command:
         sh.append(f"# 常见坑（{err.error}）—— {err.fix_command}")
     setup = "\n".join(sh)
-    authors = "、".join(r.paper.authors[:3]) + ("　等" if len(r.paper.authors) > 3 else "")
-    meta = " · ".join(x for x in [authors, str(r.paper.year or ""), f"arXiv {r.paper.arxiv_id}" if r.paper.arxiv_id else ""] if x)
+    mod = (f"<p class='hx-k'>核心贡献</p><p class='hx-p'>{_e(c.main_contribution)}</p>"
+           f"<p class='hx-k'>技术细节 · {_e(p.name)}</p><p class='hx-p'>{_e(p.explanation)}</p>"
+           f"<p class='hx-src'>原文出处：{_e(p.source_section)} · p.{p.page}</p>")
+    qa = f"<p class='q'>{_e(ans.question)}</p>{_answer_segments_html(ans)}"
     return (
-        "<section class='hx'>"
-        "<div class='hx-head'>"
-        "<span class='hx-eyebrow'>真实示例 · 实际分析输出</span>"
-        f"<h2 class='hx-title'>{_e(r.paper.title)}</h2>"
-        f"<p class='hx-meta'>{_e(meta)}　—　把上面换成你自己的论文，得到的就是下面这样一份。</p>"
+        "<div class='app-r'>"
+        f"<div class='app-pv-head'><span class='pv-dot'></span>实时示例 · {_e(r.paper.title)} · {r.paper.year}</div>"
+        "<div class='app-tabs'><button class='on' data-t='fw'>方法框架图</button>"
+        "<button data-t='mod'>四模块解读</button><button data-t='qa'>带出处问答</button>"
+        "<button data-t='rep'>复现</button></div>"
+        "<div class='app-pv'>"
+        f"<div class='tc on' data-t='fw'>{fw}</div>"
+        f"<div class='tc' data-t='mod'>{mod}</div>"
+        f"<div class='tc' data-t='qa'>{qa}</div>"
+        f"<div class='tc' data-t='rep'><pre class='hx-sh'>{_e(setup)}</pre></div>"
         "</div>"
-        "<div class='hx-grid'>"
-        "<article class='hx-card'><div class='hx-label'>四模块结构化解读</div>"
-        f"<p class='hx-k'>核心贡献</p><p class='hx-p'>{_e(c.main_contribution)}</p>"
-        f"<p class='hx-k'>技术细节 · {_e(p.name)}</p><p class='hx-p'>{_e(p.explanation)}</p>"
-        f"<p class='hx-src'>原文出处：{_e(p.source_section)} · p.{p.page}</p></article>"
-        "<article class='hx-card'><div class='hx-label'>带原文出处的问答</div>"
-        f"<p class='q'>{_e(ans.question)}</p>{_answer_segments_html(ans)}</article>"
-        "<article class='hx-card hx-fw'><div class='hx-label'>整篇方法的框架图</div>"
-        f"<div class='hx-svg'>{fw}</div></article>"
-        "<article class='hx-card hx-wide'><div class='hx-label'>照着能跑的复现（取自真实代码仓库）</div>"
-        f"<pre class='hx-sh'>{_e(setup)}</pre></article>"
-        "</div></section>"
+        "<script>(function(){var r=document.currentScript.parentNode;"
+        "r.querySelectorAll('.app-tabs button').forEach(function(b){b.addEventListener('click',function(){"
+        "r.querySelectorAll('.app-tabs button').forEach(function(x){x.classList.toggle('on',x===b)});"
+        "r.querySelectorAll('.tc').forEach(function(c){c.classList.toggle('on',c.dataset.t===b.dataset.t)});});});})();</script>"
+        "</div>"
     )
 
 
