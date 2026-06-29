@@ -22,6 +22,7 @@ import secrets
 import sys
 import threading
 import time
+from functools import lru_cache
 from typing import Optional
 
 from papermind.errors import PaperMindError, SourceError
@@ -285,7 +286,7 @@ def create_app(live: bool = False, rate_per_ip: int = 8, rate_global: int = 300,
     # -- analyze -------------------------------------------------------------- #
     @app.get("/", response_class=HTMLResponse)
     def index():
-        return _page("/", _analyze_form(live), live)
+        return _page("/", _analyze_form(live) + _home_demo(), live)
 
     def _analyze_async(request, src, model, refresh):
         """Live analysis -> background job + polling page (avoids the 100s timeout).
@@ -651,6 +652,31 @@ button.btn-2:hover{background:var(--accent-soft);color:var(--accent-press);borde
   .tool-in button{padding:14px}
 }
 
+/* home example showcase — real output shown, no marketing copy */
+.hx{max-width:940px;margin:16px auto 0;padding:0 0 60px}
+.hx-head{text-align:center;margin:0 0 26px}
+.hx-eyebrow{display:inline-block;font-size:.74rem;letter-spacing:.05em;font-weight:600;color:var(--accent);
+  background:var(--accent-soft);border:1px solid var(--accent-ring);border-radius:999px;padding:5px 13px;margin-bottom:14px}
+.hx-title{font-size:1.5rem;font-weight:800;letter-spacing:-.02em;line-height:1.2;margin:0 0 7px}
+.hx-meta{color:var(--soft);font-size:.9rem;margin:0;line-height:1.6}
+.hx-grid{display:grid;grid-template-columns:1fr 1fr;gap:18px;align-items:start}
+.hx-card{background:var(--surface);border:1px solid var(--line);border-radius:16px;padding:22px 24px;box-shadow:var(--shadow)}
+.hx-wide,.hx-fw{grid-column:1/-1}
+.hx-label{font-size:.73rem;letter-spacing:.03em;font-weight:700;color:var(--accent);margin:0 0 14px;
+  padding-bottom:11px;border-bottom:1px solid var(--line)}
+.hx-k{font-weight:700;font-size:.85rem;color:var(--ink);margin:15px 0 5px}
+.hx-card>.hx-k:first-of-type{margin-top:0}
+.hx-p{font-size:.92rem;line-height:1.62;color:var(--soft);margin:0 0 4px}
+.hx-src{font-size:.8rem;color:var(--faint);margin:11px 0 0}
+.hx-svg{overflow:auto}.hx-svg svg{max-width:100%;height:auto;display:block;margin:0 auto}
+.hx-sh{background:#0f1117;color:#e7e9ef;border-radius:12px;padding:15px 17px;overflow-x:auto;font:12.5px/1.7 var(--mono);margin:0}
+.hx-card .q{font-size:.95rem;margin:0 0 12px}.hx-card .seg{margin:13px 0}
+.hx-card h3{font-size:.9rem;margin:15px 0 5px;letter-spacing:-.01em}
+.hx-card table{width:100%;border-collapse:collapse;font-size:.84rem}
+.hx-card td{padding:7px 9px;border-top:1px solid var(--line);vertical-align:top;color:var(--soft)}
+.hx-card td.aid{white-space:nowrap;color:var(--faint);font-family:var(--mono);font-size:.78rem}
+@media(max-width:760px){.hx-grid{grid-template-columns:1fr}}
+
 /* panels & type */
 .panel{background:var(--surface);border:1px solid var(--line);border-radius:var(--r);
   padding:26px 28px;margin:18px 0;box-shadow:var(--shadow)}
@@ -855,6 +881,57 @@ def _analyze_form(live: bool, error: str = "") -> str:
         "分析一篇论文",
         "粘 arXiv 链接 / DOI / 标题，或直接传 PDF —— 得到四模块解读和整篇方法的框架图。也可以就这篇论文直接问 AI。",
         inner, note=note, error=error,
+    )
+
+
+@lru_cache(maxsize=1)
+def _home_demo() -> str:
+    """Show a real example analysis on the home (no marketing copy): every feature
+    appears as actual output — 4-module read, framework diagram, grounded Q&A with
+    citations, reproduction — so the tool's usefulness is shown, not claimed.
+
+    Cached: the demo output is static, so it's built (incl. the SVG) once."""
+    from papermind.demo import build_demo_answer, build_demo_report
+    from papermind.figures.framework import render_framework_svg
+
+    r = build_demo_report()
+    c = r.contributions
+    p = r.technical.details[0]
+    ans = build_demo_answer()
+    fw = render_framework_svg(r.framework) if r.framework else ""
+    rp = r.reproduction
+    err = rp.common_errors[0] if rp and rp.common_errors else None
+    sh = []
+    if rp and rp.official_code:
+        sh.append(f"git clone {rp.official_code}   # 官方实现")
+    if rp and rp.recommended_hardware:
+        sh.append(f"# 推荐硬件：{rp.recommended_hardware}")
+    if rp and rp.key_hyperparams:
+        sh.append(f"# 关键超参：{' · '.join(rp.key_hyperparams[:5])}")
+    if err and err.fix_command:
+        sh.append(f"# 常见坑（{err.error}）—— {err.fix_command}")
+    setup = "\n".join(sh)
+    authors = "、".join(r.paper.authors[:3]) + ("　等" if len(r.paper.authors) > 3 else "")
+    meta = " · ".join(x for x in [authors, str(r.paper.year or ""), f"arXiv {r.paper.arxiv_id}" if r.paper.arxiv_id else ""] if x)
+    return (
+        "<section class='hx'>"
+        "<div class='hx-head'>"
+        "<span class='hx-eyebrow'>真实示例 · 实际分析输出</span>"
+        f"<h2 class='hx-title'>{_e(r.paper.title)}</h2>"
+        f"<p class='hx-meta'>{_e(meta)}　—　把上面换成你自己的论文，得到的就是下面这样一份。</p>"
+        "</div>"
+        "<div class='hx-grid'>"
+        "<article class='hx-card'><div class='hx-label'>四模块结构化解读</div>"
+        f"<p class='hx-k'>核心贡献</p><p class='hx-p'>{_e(c.main_contribution)}</p>"
+        f"<p class='hx-k'>技术细节 · {_e(p.name)}</p><p class='hx-p'>{_e(p.explanation)}</p>"
+        f"<p class='hx-src'>原文出处：{_e(p.source_section)} · p.{p.page}</p></article>"
+        "<article class='hx-card'><div class='hx-label'>带原文出处的问答</div>"
+        f"<p class='q'>{_e(ans.question)}</p>{_answer_segments_html(ans)}</article>"
+        "<article class='hx-card hx-fw'><div class='hx-label'>整篇方法的框架图</div>"
+        f"<div class='hx-svg'>{fw}</div></article>"
+        "<article class='hx-card hx-wide'><div class='hx-label'>照着能跑的复现（取自真实代码仓库）</div>"
+        f"<pre class='hx-sh'>{_e(setup)}</pre></article>"
+        "</div></section>"
     )
 
 
