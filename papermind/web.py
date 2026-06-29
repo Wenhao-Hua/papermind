@@ -1,15 +1,16 @@
 """Full-featured web app for PaperMind (``papermind serve`` / ``papermind ui``).
 
-Tabs for every capability — 分析 / 问答 / 速读 / 对比 / 复现 / 搜索 — each reusing
-the same core functions and HTML renderers as the CLI.
+A focused tool, not a marketing page: the home is 分析 itself (with an inline
+"问 AI" block that reuses the same paper), plus 搜索. The whole-method framework
+diagram and the reproduction guide ship inside the analysis report; every result
+reuses the same core functions and HTML renderers as the CLI.
 
 Safe by default (**demo mode**): features that would call a model only run when
 their result is already cached; ``--live`` unlocks live analysis using the
 server's configured keys. (搜索 is always available — it makes no model calls.)
 
-The look is a single minimal-academic design system (system serif display + sans
-body, warm paper, one ink-navy accent, light/dark via CSS variables). No model
-picker — the active model is shown subtly in the footer.
+The look is a clean, modern light-product design system (system sans, a soft
+cool canvas, one blue accent, light/dark via CSS variables).
 """
 
 from __future__ import annotations
@@ -528,8 +529,8 @@ def _resolve_upload(source: str, file) -> Optional[str]:
 
 
 # --------------------------------------------------------------------------- #
-# Design system — minimal academic (system serif display + sans body, warm
-# paper, one ink-navy accent). Light/dark via CSS variables; reduced-motion safe.
+# Design system — modern light product (system sans, soft cool canvas, one blue
+# accent). Light/dark via CSS variables; reduced-motion safe.
 # --------------------------------------------------------------------------- #
 _FAVICON = (
     "<link rel='icon' href=\"data:image/svg+xml,"
@@ -783,8 +784,8 @@ def _examples_row() -> str:
 
 
 def _tool_page(title: str, sub: str, inner: str, note: str = "", error: str = "") -> str:
-    """The one focused, viewport-centered layout every function tool shares
-    (分析/问答/速读/框架图/对比/复现/搜索) — same as the home, no marketing chrome."""
+    """The one focused, viewport-centered layout the tool pages share
+    (分析 home, 搜索, and the Q&A follow-up) — no marketing chrome."""
     return (
         "<section class='pm-tool'><div class='tool-card'>"
         f"<h1 class='tool-h'>{title}</h1>"

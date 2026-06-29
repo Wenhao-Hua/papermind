@@ -1,7 +1,7 @@
 # PaperMind
 
 > **把任意论文，读懂到能复现 —— 关键判断都标原文出处、逐条核验。**
-> 粘贴 arXiv 链接 / DOI / 论文标题 / 论文页面 / PDF（也可上传）：结构化分析、带原文依据并核验的问答、整篇方法的框架图（可下载 SVG）、接真实代码仓库的复现指南。
+> 粘贴 arXiv 链接 / DOI / 论文标题 / 论文页面 / PDF（也可上传）：结构化分析、带原文依据并核验的问答、整篇方法的框架图、接真实代码仓库的复现指南。
 
 [![CI](https://github.com/Wenhao-Hua/papermind/actions/workflows/ci.yml/badge.svg)](https://github.com/Wenhao-Hua/papermind/actions/workflows/ci.yml)
 [![PyPI](https://img.shields.io/pypi/v/papermind-ai)](https://pypi.org/project/papermind-ai/)
@@ -22,7 +22,7 @@
 
 - **🔬 自训练检索重排器 —— 相对强稠密基线 Recall@5 +14pt**（QASPER 独立 test）。多数「和论文对话」工具只是套 API；PaperMind 的证据检索是我们自己微调并实测的 cross-encoder（数据见[下方](#实测重排器是自训练实测的不是黑箱)）。
 - **🔎 关键判断分层标注、逐条核验。** 回答分 **论文事实 / 推理（带置信度）/ 超纲**，每条引用都对着原文核验——核不到标 ⚠️，绝不默默当真。
-- **📐 整篇方法的框架图。** 把端到端方法重建成一张 Figure-1 式架构图（论文只隐含、未画出的步骤标注为*推断*），网页 `/framework` 可看、可下载 SVG。
+- **📐 整篇方法的框架图。** 把端到端方法重建成一张 Figure-1 式架构图（论文只隐含、未画出的步骤标注为*推断*），作为「方法框架」一节直接嵌在分析报告里。
 - **🛠️ 复现接论文真实代码仓库。** 用仓库里**真实的依赖文件和 README 运行命令**生成 `setup.sh`，不是模型瞎猜。
 - **🆓 全本地、零成本可跑。** `papermind demo` 离线看；`--local` 全程走 Ollama；没 key 自动回退本地。
 
@@ -47,10 +47,9 @@ papermind config set deepseek-key sk-...
 
 | 命令 | 作用 |
 | --- | --- |
-| `analyze` | 四模块报告：核心贡献 · 方法与图示 · 关联工作 · 复现要点 |
+| `analyze` | 四模块报告（含整篇方法的端到端框架图）：核心贡献 · 方法与图示 · 关联工作 · 复现要点 |
 | `ask` / `chat` | 带原文依据并核验的问答 |
 | `summary` | 一句话 TL;DR + 要点 |
-| `framework` | 整篇方法的端到端框架图（可下载 SVG） |
 | `compare` | 2–4 篇论文横向对照 |
 | `reproduce` | 导出 `setup.sh` / notebook |
 | `search` · `batch` · `cite` | 检索 arXiv · 批量 · 生成引用 |
