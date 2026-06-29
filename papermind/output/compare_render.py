@@ -91,15 +91,23 @@ def _e(text) -> str:
     return _html.escape(str(text)) if text is not None else ""
 
 
+def _csv_safe(value) -> str:
+    """Neutralise spreadsheet formula injection: cells come from LLM-extracted paper
+    text, and Excel/LibreOffice evaluate a cell starting with = + - @ (or tab/CR) as a
+    formula (CWE-1236). Prefix such a value with a single quote so it stays literal."""
+    s = str(value)
+    return "'" + s if s[:1] in ("=", "+", "-", "@", "\t", "\r") else s
+
+
 def to_csv(comparison: Comparison) -> str:
     """Return a UTF-8 CSV string with one row per comparison dimension."""
     headers = _headers(comparison)
     buf = io.StringIO()
     writer = csv.writer(buf, lineterminator="\n")
-    writer.writerow(["维度"] + headers)
+    writer.writerow([_csv_safe(c) for c in ["维度"] + headers])
     for label, values in _rows(comparison):
-        writer.writerow([label] + values)
+        writer.writerow([_csv_safe(c) for c in [label] + values])
     if comparison.synthesis:
         writer.writerow([])
-        writer.writerow(["对比小结", comparison.synthesis])
+        writer.writerow([_csv_safe(c) for c in ["对比小结", comparison.synthesis]])
     return buf.getvalue()

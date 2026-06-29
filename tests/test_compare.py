@@ -10,6 +10,8 @@ from papermind.compare import build_comparison
 from papermind.output.compare_render import to_csv, to_html, to_markdown
 from papermind.output.schema import (
     Benchmark,
+    ComparedPaper,
+    Comparison,
     Contributions,
     PaperMeta,
     Reproduction,
@@ -116,6 +118,21 @@ def test_comparison_to_csv_method_matches_render(tmp_path):
     out = tmp_path / "out.csv"
     comp.to_csv(str(out))
     assert out.read_text(encoding="utf-8") == render_csv(comp)
+
+
+def test_comparison_csv_neutralises_formula_injection():
+    # Cells come from LLM-extracted paper text; a value starting with = + - @ must be
+    # prefixed so Excel/LibreOffice don't evaluate it as a formula (CWE-1236).
+    comp = Comparison(
+        papers=[ComparedPaper(title="=HYPERLINK(0)", arxiv_id="1", main_contribution="@SUM(1+1)",
+                              methods=["+cmd|calc"])],
+        synthesis="-1+1",
+    )
+    rows = {r[0]: r for r in csv.reader(io.StringIO(to_csv(comp))) if r}
+    assert rows["标题"][1] == "'=HYPERLINK(0)"     # leading = neutralised
+    assert rows["核心贡献"][1] == "'@SUM(1+1)"       # leading @ neutralised
+    assert rows["关键方法"][1] == "'+cmd|calc"        # leading + neutralised
+    assert rows["对比小结"][1] == "'-1+1"             # synthesis leading - neutralised
 
 
 def test_compare_orchestration_reuses_mocked_analyze(monkeypatch):
