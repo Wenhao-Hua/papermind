@@ -13,6 +13,7 @@ from pathlib import Path
 from typing import List, Optional
 
 from papermind.output.cite import to_bibtex
+from papermind.output.reading import reading_minutes
 from papermind.output.schema import Connection, Reproduction, Report, Source, TechnicalPoint
 
 _DIFFICULTY = {"high": ("high", "#e5484d"), "mid": ("mid", "#f5a623"), "low": ("low", "#30a46c")}
@@ -119,35 +120,6 @@ _MATHJAX = (
 )
 
 
-def _reading_minutes(report: Report) -> int:
-    """Estimate reading time in minutes from report text content.
-
-    Counts whitespace-separated tokens (English/mixed) plus individual CJK characters
-    (each is a reading unit in Chinese), then divides by 200 units/min (academic pace).
-    """
-    texts: List[str] = []
-    if report.contributions:
-        c = report.contributions
-        texts += [c.main_contribution, c.novelty, c.problem_solved]
-    for p in report.technical.details:
-        texts += [p.explanation, p.analogy or ""]
-    for w in report.connections.related_works:
-        texts.append(w.relationship)
-    if report.reproduction:
-        r = report.reproduction
-        texts += [r.requirements or "", r.recommended_hardware or ""]
-        for step in r.env_setup_steps:
-            texts.append(step.desc or "")
-        texts += list(r.gotchas)
-    total = 0
-    for text in texts:
-        if not text:
-            continue
-        total += len(text.split())
-        total += sum(1 for ch in text if "一" <= ch <= "鿿")
-    return max(1, round(total / 200))
-
-
 def to_html(report: Report, path: Optional[str] = None) -> str:
     doc = "\n".join(_render(report))
     if path:
@@ -251,7 +223,7 @@ def _meta(report: Report) -> str:
         bits.append(f'<b>arXiv:</b> <a href="https://arxiv.org/abs/{esc(paper.arxiv_id)}">{esc(paper.arxiv_id)}</a>')
     if paper.pdf_url:
         bits.append(f'<a href="{esc(paper.pdf_url)}">PDF</a>')
-    mins = _reading_minutes(report)
+    mins = reading_minutes(report)
     bits.append(f"预计阅读 {mins} 分钟")
     return " &nbsp;•&nbsp; ".join(bits)
 

@@ -5,7 +5,7 @@ from __future__ import annotations
 import json
 
 from papermind.output.cite import to_bibtex
-from papermind.output.html import _reading_minutes
+from papermind.output.reading import reading_minutes
 from papermind.output.reproduce_export import to_notebook, to_setup_script
 from papermind.output.schema import (
     CommonError,
@@ -119,7 +119,7 @@ def test_bibtex_without_arxiv_is_misc():
 
 def test_reading_time_minimum_one_minute():
     report = Report(paper=PaperMeta(title="Empty Paper"))
-    assert _reading_minutes(report) == 1
+    assert reading_minutes(report) == 1
 
 
 def test_reading_time_grows_with_content():
@@ -134,7 +134,7 @@ def test_reading_time_grows_with_content():
             details=[TechnicalPoint(name="X", explanation=long_text, difficulty="high")]
         ),
     )
-    assert _reading_minutes(long_report) > _reading_minutes(short_report)
+    assert reading_minutes(long_report) > reading_minutes(short_report)
 
 
 def test_reading_time_appears_in_markdown():
