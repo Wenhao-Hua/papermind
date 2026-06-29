@@ -210,6 +210,32 @@ def _toc(report: Report) -> str:
     return f'<nav class="toc">{links}</nav>'
 
 
+def _reading_time_min(report: Report) -> int:
+    """Estimate minutes to read this report at 200 wpm (academic reading speed)."""
+    texts: List[str] = []
+    if report.paper.abstract:
+        texts.append(report.paper.abstract)
+    if report.contributions:
+        c = report.contributions
+        texts += [c.main_contribution, c.novelty, c.problem_solved]
+    for pt in report.technical.details:
+        texts.append(pt.explanation)
+        if pt.analogy:
+            texts.append(pt.analogy)
+    for cw in report.connections.related_works:
+        texts += [cw.concept, cw.relationship]
+    if report.reproduction:
+        r = report.reproduction
+        if r.requirements:
+            texts.append(r.requirements)
+        for step in r.env_setup_steps:
+            if step.desc:
+                texts.append(step.desc)
+        texts += list(r.gotchas)
+    words = sum(len(t.split()) for t in texts if t)
+    return max(1, round(words / 200))
+
+
 def _meta(report: Report) -> str:
     paper = report.paper
     bits = []
@@ -222,6 +248,8 @@ def _meta(report: Report) -> str:
         bits.append(f'<b>arXiv:</b> <a href="https://arxiv.org/abs/{esc(paper.arxiv_id)}">{esc(paper.arxiv_id)}</a>')
     if paper.pdf_url:
         bits.append(f'<a href="{esc(paper.pdf_url)}">PDF</a>')
+    rt = _reading_time_min(report)
+    bits.append(f"⏱&thinsp;约&nbsp;{rt}&nbsp;分钟阅读")
     return " &nbsp;•&nbsp; ".join(bits)
 
 

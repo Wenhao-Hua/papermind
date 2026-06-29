@@ -1,12 +1,23 @@
-"""Tests for reproduction export (setup.sh / notebook) and BibTeX citation."""
+"""Tests for reproduction export (setup.sh / notebook), BibTeX citation, and reading-time estimate."""
 
 from __future__ import annotations
 
 import json
 
 from papermind.output.cite import to_bibtex
+from papermind.output.html import to_html
+from papermind.output.markdown import to_markdown
 from papermind.output.reproduce_export import to_notebook, to_setup_script
-from papermind.output.schema import CommonError, PaperMeta, Reproduction, Report, SetupStep
+from papermind.output.schema import (
+    CommonError,
+    Contributions,
+    PaperMeta,
+    Reproduction,
+    Report,
+    SetupStep,
+    TechnicalPoint,
+    TechnicalSection,
+)
 
 
 def _report():
@@ -68,3 +79,62 @@ def test_bibtex_without_arxiv_is_misc():
     meta = PaperMeta(title="Some Local Paper", authors=["Jane Doe"], year=2020)
     bib = to_bibtex(meta)
     assert bib.startswith("@misc{doe2020some,")
+
+
+# --------------------------------------------------------------------------- #
+# Reading-time estimate
+# --------------------------------------------------------------------------- #
+
+def _rich_report():
+    """Report with enough text content that reading-time estimate is > 1 min."""
+    long_text = "word " * 250
+    return Report(
+        paper=PaperMeta(
+            title="Attention Is All You Need",
+            arxiv_id="1706.03762",
+            authors=["Ashish Vaswani"],
+            year=2017,
+            abstract=long_text,
+        ),
+        contributions=Contributions(
+            main_contribution=long_text,
+            novelty="a novel approach",
+            problem_solved="recurrence in seq2seq models",
+        ),
+        technical=TechnicalSection(details=[
+            TechnicalPoint(
+                name="Multi-Head Attention",
+                explanation=long_text,
+                difficulty="high",
+            )
+        ]),
+    )
+
+
+def test_html_includes_reading_time():
+    doc = to_html(_report())
+    assert "分钟" in doc
+    assert "⏱" in doc
+
+
+def test_markdown_includes_reading_time():
+    md = to_markdown(_report())
+    assert "分钟" in md
+    assert "阅读时长" in md
+
+
+def test_reading_time_scales_with_content():
+    from papermind.output.html import _reading_time_min
+
+    bare = Report(paper=PaperMeta(title="X"))
+    assert _reading_time_min(bare) == 1
+
+    rich = _rich_report()
+    assert _reading_time_min(rich) > _reading_time_min(bare)
+
+
+def test_reading_time_minimum_is_one():
+    from papermind.output.html import _reading_time_min
+
+    empty = Report(paper=PaperMeta(title="X"))
+    assert _reading_time_min(empty) >= 1
