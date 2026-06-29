@@ -68,7 +68,7 @@ papermind = "papermind.cli:app"
 
 [tool.hatch.build.targets.wheel]
 packages = ["papermind"]
-artifacts = ["papermind/assets/*.svg"]  # bundle the homepage hero figure into the wheel
+artifacts = ["papermind/assets/*.svg", "papermind/assets/fonts/*.woff2"]  # hero figure + self-hosted Geist fonts
 
 [tool.hatch.build.targets.sdist]
 # Keep the sdist lean. The gallery (examples/) is ~18 MB of original-paper images —
