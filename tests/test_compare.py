@@ -2,9 +2,12 @@
 
 from __future__ import annotations
 
+import csv
+import io
+
 import papermind.compare as compare_mod
 from papermind.compare import build_comparison
-from papermind.output.compare_render import to_html, to_markdown
+from papermind.output.compare_render import to_csv, to_html, to_markdown
 from papermind.output.schema import (
     Benchmark,
     Contributions,
@@ -76,6 +79,29 @@ def test_has_compare_modules_rejects_partial_report():
     partial = Report(paper=PaperMeta(title="P", arxiv_id="2"),
                      contributions=Contributions(main_contribution="c", novelty="n"))
     assert compare_mod._has_compare_modules(partial) is False
+
+
+def test_comparison_csv_structure():
+    csv_text = to_csv(_comparison())
+    # BOM for Excel compatibility
+    assert csv_text.startswith("﻿")
+    rows = list(csv.reader(io.StringIO(csv_text.lstrip("﻿"))))
+    assert rows[0] == ["标题", "arXiv", "年份", "核心贡献", "新颖之处", "关键方法", "性能/基准", "推荐硬件", "官方代码"]
+    assert len(rows) == 3  # header + 2 papers
+    assert rows[1][0] == "FlashAttention-2"
+    assert rows[1][1] == "2307.08691"
+    assert rows[1][2] == "2023"
+    assert rows[1][3] == "faster attention"
+    assert rows[1][5] == "Tiling"
+    assert rows[2][0] == "Transformer"
+
+
+def test_comparison_csv_to_file(tmp_path):
+    path = str(tmp_path / "compare.csv")
+    _comparison().to_csv(path)
+    content = open(path, encoding="utf-8-sig").read()
+    assert "FlashAttention-2" in content
+    assert "2307.08691" in content
 
 
 def test_compare_orchestration_reuses_mocked_analyze(monkeypatch):
