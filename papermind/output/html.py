@@ -18,14 +18,33 @@ from papermind.output.schema import Connection, Reproduction, Report, Source, Te
 
 _DIFFICULTY = {"high": ("high", "#e5484d"), "mid": ("mid", "#f5a623"), "low": ("low", "#30a46c")}
 
+
+def _geist_mono_face() -> str:
+    """Embed Geist Mono (base64) so the standalone report stays self-contained while
+    matching the web shell's mono for code / citations / section refs."""
+    import base64
+    import pathlib
+
+    p = pathlib.Path(__file__).resolve().parent.parent / "assets" / "fonts" / "GeistMono.woff2"
+    try:
+        b64 = base64.b64encode(p.read_bytes()).decode("ascii")
+    except Exception:  # noqa: BLE001 - missing font just falls back to system mono
+        return ""
+    return ("@font-face{font-family:'GeistMono';src:url(data:font/woff2;base64,"
+            + b64 + ") format('woff2');font-weight:400 600;font-display:swap}")
+
+
+_GEIST_MONO = _geist_mono_face()
+
 _CSS = """
-:root { --fg:#0f172a; --muted:#475569; --faint:#94a3b8; --accent:#2563eb; --accent-press:#1d4ed8;
-  --border:#e8edf3; --border-strong:#d4dbe4; --bg:#f5f7fa; --card:#ffffff; --soft:#f1f5f9; --accent-soft:#eff5ff;
-  --shadow:0 1px 2px rgba(15,23,42,.04),0 6px 18px -8px rgba(15,23,42,.10); }
+:root { --fg:#0a0a0a; --muted:#525252; --faint:#8f8f8f; --accent:#006bff; --accent-press:#0058d4;
+  --border:#e6e6e6; --border-strong:#d4d4d4; --bg:#ffffff; --card:#ffffff; --soft:#fafafa; --accent-soft:#f0f5ff;
+  --mono:'GeistMono',ui-monospace,'SF Mono','Cascadia Code',Consolas,monospace;
+  --shadow:0 1px 2px rgba(0,0,0,.05); }
 @media (prefers-color-scheme: dark) {
-  :root { --fg:#e8ecf3; --muted:#9aa6b7; --faint:#606b7c; --accent:#5b8cff; --accent-press:#7aa2ff;
-    --border:#212733; --border-strong:#2f3744; --bg:#0b0d12; --card:#13161d; --soft:#171b24; --accent-soft:#16203a;
-    --shadow:0 1px 2px rgba(0,0,0,.5),0 6px 18px -8px rgba(0,0,0,.6); }
+  :root { --fg:#fafafa; --muted:#a1a1a1; --faint:#6f6f6f; --accent:#3b82f6; --accent-press:#60a5fa;
+    --border:#262626; --border-strong:#383838; --bg:#0a0a0a; --card:#141414; --soft:#171717; --accent-soft:#10192e;
+    --shadow:0 1px 2px rgba(0,0,0,.6); }
 }
 html { scroll-behavior:smooth; }
 * { box-sizing:border-box; }
@@ -46,13 +65,13 @@ a { color:var(--accent); text-decoration:none; } a:hover { text-decoration:under
 .pill { display:inline-block; font-size:.7rem; font-weight:700; letter-spacing:.02em; color:#fff; padding:2px 9px; border-radius:999px; vertical-align:middle; margin-left:10px; }
 .analogy { background:var(--accent-soft); border-left:3px solid var(--accent); padding:11px 16px; border-radius:0 8px 8px 0; margin:14px 0; }
 .formula { overflow-x:auto; padding:6px 0; margin:12px 0; }
-.src { color:var(--faint); font-size:.85rem; }
+.src { color:var(--faint); font-size:.82rem; font-family:var(--mono); }
 blockquote { margin:14px 0; padding:10px 18px; border-left:3px solid var(--border-strong); color:var(--muted); background:var(--soft); border-radius:0 8px 8px 0; }
 table { border-collapse:collapse; width:100%; margin:14px 0; font-size:.93rem; }
 th,td { border:1px solid var(--border); padding:9px 13px; text-align:left; vertical-align:top; }
 th { background:var(--soft); font-weight:600; }
-code { background:var(--accent-soft); color:var(--accent-press); padding:1px 6px; border-radius:5px; font-size:.86em; }
-pre { background:#0f1117; color:#e7e9ef; padding:15px 17px; border-radius:9px; overflow-x:auto; }
+code { background:var(--soft); color:var(--fg); border:1px solid var(--border); padding:1px 5px; border-radius:5px; font-size:.84em; font-family:var(--mono); }
+pre { background:#0a0a0a; color:#e7e9ef; padding:15px 17px; border-radius:9px; overflow-x:auto; font-family:var(--mono); }
 pre code { background:none; color:inherit; padding:0; }
 pre.mermaid { background:var(--card); border:1px solid var(--border); border-radius:10px; text-align:center; padding:18px; color:var(--fg); }
 pre.mermaid svg { max-width:100%; height:auto; }
@@ -94,8 +113,8 @@ _MERMAID = (
     "import mermaid from 'https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.esm.min.mjs';"
     "mermaid.initialize({startOnLoad:true, theme:'base', themeVariables:{"
     "fontFamily:'-apple-system,Segoe UI,Microsoft YaHei,sans-serif', fontSize:'15px',"
-    "primaryColor:'#eff5ff', primaryBorderColor:'#2563eb', primaryTextColor:'#0f172a',"
-    "lineColor:'#94a3b8'}});"
+    "primaryColor:'#fafafa', primaryBorderColor:'#c4c4c4', primaryTextColor:'#0a0a0a',"
+    "lineColor:'#737373'}});"
     "</script>"
 )
 
@@ -138,11 +157,11 @@ def _render(report: Report) -> List[str]:
         '<meta name="viewport" content="width=device-width, initial-scale=1">',
         ("<link rel='icon' href=\"data:image/svg+xml,"
          "<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'>"
-         "<rect width='32' height='32' rx='7' fill='%232563eb'/>"
+         "<rect width='32' height='32' rx='7' fill='%23006bff'/>"
          "<g stroke='%23fff' stroke-width='2.4' stroke-linecap='round'>"
          "<path d='M10 11h12'/><path d='M10 16h12'/><path d='M10 21h7'/></g></svg>\">"),
         f"<title>{esc(paper.title)} · PaperMind</title>",
-        f"<style>{_CSS}</style>",
+        f"<style>{_GEIST_MONO}{_CSS}</style>",
         _MERMAID,
         _MATHJAX,
         '</head><body><div id="pm-progress"></div>'

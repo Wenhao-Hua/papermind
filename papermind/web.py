@@ -551,7 +551,7 @@ def _resolve_upload(source: str, file) -> Optional[str]:
 _FAVICON = (
     "<link rel='icon' href=\"data:image/svg+xml,"
     "<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'>"
-    "<rect width='32' height='32' rx='7' fill='%232563eb'/>"
+    "<rect width='32' height='32' rx='7' fill='%23006bff'/>"
     "<g stroke='%23fff' stroke-width='2.4' stroke-linecap='round'>"
     "<path d='M10 11h12'/><path d='M10 16h12'/><path d='M10 21h7'/></g></svg>\">"
 )
