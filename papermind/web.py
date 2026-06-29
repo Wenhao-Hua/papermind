@@ -571,7 +571,7 @@ _CSS = """
   --sans:"Geist",-apple-system,BlinkMacSystemFont,"Segoe UI","PingFang SC","Microsoft YaHei","Source Han Sans SC",sans-serif;
   --mono:"GeistMono",ui-monospace,"SF Mono","Cascadia Code",Consolas,monospace;
   --shadow:0 1px 2px rgba(0,0,0,.05);
-  --shadow-lift:0 1px 2px rgba(0,0,0,.04),0 10px 30px -14px rgba(0,0,0,.13);
+  --shadow-lift:0 1px 2px rgba(0,0,0,.05);
   --shadow-input:0 1px 2px rgba(0,0,0,.04);
   --bar:rgba(255,255,255,.82);
 }
@@ -582,7 +582,7 @@ _CSS = """
   --primary:#fafafa;--primary-press:#ffffff;--on-primary:#0a0a0a;
   --warn:#e0934a;--green:#34d399;--amber:#e0b252;--red:#f0726c;
   --shadow:0 1px 2px rgba(0,0,0,.6);
-  --shadow-lift:0 1px 2px rgba(0,0,0,.5),0 10px 30px -14px rgba(0,0,0,.7);
+  --shadow-lift:0 1px 2px rgba(0,0,0,.5);
   --shadow-input:0 1px 2px rgba(0,0,0,.5);
   --bar:rgba(10,10,10,.82);
 }}
@@ -634,8 +634,8 @@ main>.pm-tool:only-child{min-height:calc(100dvh - 150px);display:flex;flex-direc
 .ask-h .hint{font-weight:400}
 .chk2{display:inline-flex;align-items:center;gap:9px;margin-top:13px;font-size:.85rem;font-weight:500;color:var(--soft)}
 .chk2 select{width:auto;padding:8px 11px;font-size:.85rem}
-button.btn-2{background:var(--surface);color:var(--accent);border:1px solid var(--line-strong);box-shadow:var(--shadow)}
-button.btn-2:hover{background:var(--accent-soft);color:var(--accent-press);border-color:var(--accent);box-shadow:var(--shadow)}
+button.btn-2{background:none;color:var(--accent);border:1px solid var(--line-strong);box-shadow:none}
+button.btn-2:hover{background:var(--accent-soft);color:var(--accent-press);border-color:var(--accent);box-shadow:none}
 .tool-demo{margin-top:20px;font-size:.88rem}
 /* staggered entry */
 @media(prefers-reduced-motion:no-preference){
@@ -671,10 +671,13 @@ button.btn-2:hover{background:var(--accent-soft);color:var(--accent-press);borde
 .app-h{font-size:clamp(1.7rem,2.7vw,2.3rem);font-weight:700;letter-spacing:-.035em;line-height:1.12;margin:0 0 .35em}
 .app-sub{color:var(--soft);font-size:.98rem;line-height:1.6;margin:0 0 24px;max-width:34ch}
 .app-form{margin:0}
-.app-in{display:flex;gap:9px}
-.app-in input{flex:1;min-width:0;font-size:1.04rem;padding:15px 16px;border-radius:13px;border-color:var(--line-strong);box-shadow:var(--shadow-input);transition:box-shadow .2s,border-color .2s}
-.app-in input:focus{border-color:var(--accent);box-shadow:0 0 0 4px var(--accent-ring),var(--shadow-input)}
-.app-in button{margin:0;white-space:nowrap;padding:15px 24px;border-radius:13px}
+.app-in{display:flex;align-items:stretch;border:1px solid var(--line-strong);border-radius:10px;background:var(--bg);transition:border-color .15s,box-shadow .15s}
+.app-in:focus-within{border-color:var(--accent);box-shadow:0 0 0 3px var(--accent-ring)}
+.app-in input{flex:1;min-width:0;font-size:1.02rem;padding:13px 15px;border:0;background:none;box-shadow:none;border-radius:10px 0 0 10px}
+.app-in input:focus{box-shadow:none}
+.app-in button{margin:0;white-space:nowrap;padding:0 22px;border-radius:0 9px 9px 0;box-shadow:none;font-size:.92rem}
+.app-in button.btn-2{background:none;color:var(--accent);border:0;border-left:1px solid var(--line-strong)}
+.app-in button.btn-2:hover{background:var(--accent-soft);color:var(--accent-press)}
 .app-opts{display:flex;flex-wrap:wrap;align-items:center;gap:8px 16px;margin-top:12px;font-size:.83rem;color:var(--soft)}
 .app-opts .upl input[type=file]{width:auto;font-size:.8rem}
 .app-opts .chk{display:inline-flex;align-items:center;gap:7px;cursor:pointer}.app-opts .chk input{width:auto;margin:0}
@@ -684,7 +687,7 @@ button.btn-2:hover{background:var(--accent-soft);color:var(--accent-press);borde
 .app-ask .chk2 select{width:auto;padding:7px 10px;font-size:.83rem}
 .app-note{font-size:.8rem;color:var(--faint);margin:14px 0 0}
 .app-r{height:100%;min-height:0;display:flex;flex-direction:column;background:var(--surface);
-  border:1px solid var(--line);border-radius:14px;overflow:hidden;box-shadow:var(--shadow-lift)}
+  border:1px solid var(--line);border-radius:10px;overflow:hidden;box-shadow:var(--shadow-lift)}
 .app-pv-head{flex:none;display:flex;align-items:center;gap:9px;padding:13px 18px;border-bottom:1px solid var(--line);font-size:.83rem;font-weight:600;color:var(--soft)}
 .pv-dot{width:8px;height:8px;border-radius:50%;background:#22c55e;box-shadow:0 0 0 3px rgba(34,197,94,.18);flex:none}
 .app-tabs{flex:none;display:flex;gap:4px;padding:9px 11px;border-bottom:1px solid var(--line);overflow-x:auto;scrollbar-width:none}
@@ -743,10 +746,14 @@ button:active{transform:translateY(.5px)}
 
 /* example chips (kept .ex a hook) */
 .ex{margin:20px 0 0;color:var(--faint);font-size:.86rem}
-.ex a{display:inline-block;margin:5px 0 0 7px;padding:5px 12px;border:1px solid var(--line-strong);border-radius:999px;
-  background:var(--surface);color:var(--soft);font-weight:500;box-shadow:var(--shadow);
-  transition:transform .16s,background .16s,border-color .16s,color .16s}
-.ex a:hover{background:var(--accent-soft);border-color:var(--accent);color:var(--accent-press);transform:translateY(-1px)}
+.ex a{display:inline-block;margin:5px 0 0 7px;padding:5px 12px;border:1px solid var(--line);border-radius:8px;
+  background:none;color:var(--soft);font-weight:500;transition:background .15s,border-color .15s,color .15s}
+.ex a:hover{background:var(--accent-soft);border-color:var(--accent);color:var(--accent-press)}
+/* suggested-question pills (zero-typing Q&A entry) */
+.app-qsug{margin-top:14px;display:flex;flex-wrap:wrap;align-items:center;gap:7px;font-size:.8rem;color:var(--faint)}
+.app-qsug a{border:1px solid var(--line);border-radius:8px;padding:4px 11px;color:var(--soft);cursor:pointer;
+  transition:background .15s,border-color .15s,color .15s}
+.app-qsug a:hover{border-color:var(--accent);color:var(--accent-press);background:var(--accent-soft)}
 
 /* Q&A chat + evidence segments */
 .chat .turn{padding:20px 0;border-top:1px solid var(--line)}
@@ -938,12 +945,17 @@ def _home_app(live: bool, error: str = "") -> str:
         "<div class='app-in'><input name='question' id='q-inline' placeholder='例：为什么要除以 √d_k？'>"
         "<button class='btn-2' formaction='/ask'>问 AI</button></div>"
         "<label class='chk2'>回答风格 <select name='mode'><option value='balanced'>均衡</option>"
-        "<option value='strict'>严格</option><option value='explore'>发散</option></select></label></div>"
+        "<option value='strict'>严格</option><option value='explore'>发散</option></select></label>"
+        "<div class='app-qsug'><span>试问</span><a data-q='为什么要除以 √d_k？'>除以 √d_k</a>"
+        "<a data-q='多头注意力为什么有效？'>多头注意力</a><a data-q='和 RNN / CNN 相比强在哪？'>对比 RNN</a></div>"
+        "</div>"
         "</form>"
         f"{_examples_row()}{note}"
         "<script>(function(){var q=document.getElementById('q-inline');if(!q)return;"
         "q.addEventListener('keydown',function(e){if(e.key==='Enter'){e.preventDefault();"
-        "var b=document.querySelector(\"button[formaction='/ask']\");if(b)b.click();}});})();</script>"
+        "var b=document.querySelector(\"button[formaction='/ask']\");if(b)b.click();}});"
+        "document.querySelectorAll('.app-qsug a').forEach(function(a){a.addEventListener('click',function(e){"
+        "e.preventDefault();q.value=a.dataset.q;q.focus();});});})();</script>"
         "</div>"
     )
     return f"<div class='pm-app'>{left}{_home_preview()}</div>"
