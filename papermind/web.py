@@ -782,38 +782,6 @@ def _examples_row() -> str:
     return f"<p class='ex'>{_t('No target? Try', '没链接？点一篇名作先试试')} {chips}</p>"
 
 
-def _load_hero_svg(name: str = "hero.svg") -> str:
-    """The homepage hero figure. Bundled at ``papermind/assets/`` so it ships in the wheel
-    (a pip-installed ``papermind serve`` shows it too); falls back to the repo's examples
-    during local development. Absent entirely -> the hero renders without a figure."""
-    import pathlib
-
-    here = pathlib.Path(__file__).resolve().parent
-    for path in (here / "assets" / name, here.parent / "examples" / "figures" / "transformer-fig2.svg"):
-        try:
-            return path.read_text(encoding="utf-8")
-        except Exception:  # noqa: BLE001
-            continue
-    return ""
-
-
-def _load_zh_hero() -> str:
-    """The Chinese hero figure, bundled at ``papermind/assets/hero.zh.svg`` (a Chinese
-    translation of the English hero, so it ships in the wheel). Falls back to the English
-    hero only if the asset is somehow missing."""
-    import pathlib
-
-    p = pathlib.Path(__file__).resolve().parent / "assets" / "hero.zh.svg"
-    try:
-        return p.read_text(encoding="utf-8")
-    except Exception:  # noqa: BLE001
-        return _HERO_EN
-
-
-_HERO_EN = _load_hero_svg("hero.svg")  # English, bundled in the wheel
-_HERO_ZH = _load_zh_hero()
-
-
 def _tool_page(title: str, sub: str, inner: str, note: str = "", error: str = "") -> str:
     """The one focused, viewport-centered layout every function tool shares
     (分析/问答/速读/框架图/对比/复现/搜索) — same as the home, no marketing chrome."""
