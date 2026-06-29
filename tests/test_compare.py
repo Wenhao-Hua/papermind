@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import papermind.compare as compare_mod
 from papermind.compare import build_comparison
-from papermind.output.compare_render import to_html, to_markdown
+from papermind.output.compare_render import to_csv, to_html, to_markdown
 from papermind.output.schema import (
     Benchmark,
     Contributions,
@@ -93,3 +93,45 @@ def test_compare_orchestration_reuses_mocked_analyze(monkeypatch):
     assert [p.title for p in comp.papers] == ["FlashAttention-2", "Transformer"]
     assert comp.synthesis == ""  # synthesis skipped -> no LLM call
     assert comp.usage is not None
+
+
+def test_comparison_csv_format():
+    import csv
+    import io
+
+    comp = _comparison()
+    text = to_csv(comp)
+    rows = list(csv.reader(io.StringIO(text)))
+    # header row: 维度 + one column per paper
+    assert rows[0] == ["维度", "2307.08691", "1706.03762"]
+    # each data row has 3 columns
+    assert all(len(r) == 3 for r in rows if r)
+    # spot-check key rows
+    labels = [r[0] for r in rows if r]
+    assert "核心贡献" in labels
+    assert "关键方法" in labels
+    contrib_row = next(r for r in rows if r and r[0] == "核心贡献")
+    assert contrib_row[1] == "faster attention"
+
+
+def test_comparison_csv_via_schema_method():
+    import csv
+    import io
+    import tempfile
+    import os
+
+    comp = _comparison()
+    text = comp.to_csv()
+    rows = list(csv.reader(io.StringIO(text)))
+    assert rows[0][0] == "维度"
+    assert len(rows[0]) == 3
+
+    with tempfile.NamedTemporaryFile(suffix=".csv", mode="w", delete=False) as f:
+        tmp = f.name
+    try:
+        comp.to_csv(tmp)
+        content = open(tmp, encoding="utf-8").read()
+        assert "核心贡献" in content
+        assert "2307.08691" in content
+    finally:
+        os.unlink(tmp)
