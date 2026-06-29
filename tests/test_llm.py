@@ -61,6 +61,30 @@ def test_non_stream_records_usage(monkeypatch):
     assert client.usage.prompt_tokens == 12 and client.usage.completion_tokens == 8
 
 
+def test_record_usage_tracks_cost_when_litellm_loaded(monkeypatch):
+    # When litellm is already imported, _record_usage looks up per-token cost.
+    import sys
+
+    fake = NS(cost_per_token=lambda model, prompt_tokens, completion_tokens: (0.001, 0.002))
+    monkeypatch.setitem(sys.modules, "litellm", fake)
+    client = LLMClient(model="gpt-4o-mini")
+    client._record_usage("gpt-4o-mini", 100, 50)
+    assert client.usage.cost_usd == pytest.approx(0.003)
+    assert client.usage.prompt_tokens == 100 and client.usage.completion_tokens == 50
+
+
+def test_record_usage_skips_cost_when_litellm_not_loaded(monkeypatch):
+    # In a worker thread where litellm isn't imported yet, _record_usage must record
+    # tokens WITHOUT importing litellm (which can pyo3-panic off the main thread).
+    import sys
+
+    monkeypatch.delitem(sys.modules, "litellm", raising=False)
+    client = LLMClient(model="gpt-4o-mini")
+    client._record_usage("gpt-4o-mini", 10, 5)
+    assert client.usage.cost_usd == 0.0
+    assert client.usage.prompt_tokens == 10 and client.usage.completion_tokens == 5
+
+
 def test_stream_forwards_deltas_and_records_usage(monkeypatch):
     chunks = [
         NS(choices=[NS(delta=NS(content='{"seg'))], usage=None),
