@@ -503,7 +503,13 @@ def _extract(text: str, pattern: re.Pattern) -> Optional[str]:
 
 # Some providers echo the offending API key / bearer token in an auth error; never
 # let that reach a user-facing message (these errors are shown on the public web too).
-_SECRET_RE = re.compile(r"\b(?:sk|pk|rk)[-_][A-Za-z0-9]{12,}\b|\bBearer\s+[A-Za-z0-9._-]{12,}\b", re.IGNORECASE)
+_SECRET_RE = re.compile(
+    r"\b(?:sk|pk|rk)[-_][A-Za-z0-9]{12,}\b"     # OpenAI / DeepSeek / DashScope / Anthropic style
+    r"|\bBearer\s+[A-Za-z0-9._-]{12,}\b"        # bearer tokens
+    r"|\bAIza[0-9A-Za-z_-]{35}\b"               # Google / Gemini API keys
+    r"|[?&]key=[A-Za-z0-9._-]{16,}",            # ...incl. when passed as a ?key= query param
+    re.IGNORECASE,
+)
 
 
 def _redact_secrets(s: str) -> str:

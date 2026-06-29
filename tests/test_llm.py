@@ -242,3 +242,12 @@ def test_wrap_error_redacts_leaked_api_key():
     leaked = "Incorrect API key provided: sk-abcd1234efgh5678ijkl. Check your key."
     msg = str(_wrap_llm_error(Exception(leaked), "gpt-4o"))
     assert "sk-abcd1234efgh5678ijkl" not in msg and "[REDACTED]" in msg
+
+
+def test_wrap_error_redacts_google_gemini_key():
+    # Gemini/Google keys (AIza + 35 chars) must also be redacted — Gemini errors
+    # often echo the request, and our prod stack uses a Gemini key.
+    gkey = "AIzaSyDmockkey0123456789abcdefghijklmno"  # AIza + 35 chars (39 total)
+    leaked = f"403 API key not valid: {gkey} (generativelanguage.googleapis.com)"
+    msg = str(_wrap_llm_error(Exception(leaked), "gemini/gemini-embedding-001"))
+    assert gkey not in msg and "[REDACTED]" in msg
