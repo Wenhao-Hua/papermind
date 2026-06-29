@@ -98,6 +98,23 @@ def test_svg_renders_inline_in_html_and_datauri_in_md():
     assert "data:image/svg+xml;base64," in md
 
 
+def test_mermaid_figure_body_is_escaped_no_xss():
+    # The mermaid body is model-generated; it must be HTML-escaped so a crafted
+    # "</pre><script>" can't break out of the served report (mermaid.js reads
+    # textContent, so escaping does not affect diagram rendering).
+    evil = "graph TD;</pre><script>alert(1)</script>"
+    report = Report(
+        paper=PaperMeta(title="T"),
+        technical=TechnicalSection(details=[
+            TechnicalPoint(name="X", explanation="...", figure=Figure(type="ai_generated", mermaid=evil)),
+        ]),
+    )
+    html = report.to_html()
+    assert "<script>alert(1)</script>" not in html      # not injected as live markup
+    assert "&lt;script&gt;alert(1)&lt;/script&gt;" in html  # escaped inside the <pre>
+    assert "</pre><script>" not in html                 # the breakout sequence is neutralised
+
+
 def test_figure_explain_renders_in_html_and_md():
     from papermind.output.schema import FigureExplain
 

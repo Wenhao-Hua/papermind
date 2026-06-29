@@ -341,7 +341,7 @@ def _figure(p: TechnicalPoint) -> List[str]:
         ]
     if fig.type == "ai_generated" and fig.mermaid:
         cap = esc(fig.caption or "AI 生成示意图")
-        return [f'<pre class="mermaid">{fig.mermaid}</pre>', f'<figcaption class="ai-tag">{cap}</figcaption>']
+        return [f'<pre class="mermaid">{esc(fig.mermaid)}</pre>', f'<figcaption class="ai-tag">{cap}</figcaption>']
     return []
 
 
