@@ -150,3 +150,46 @@ def test_compare_orchestration_reuses_mocked_analyze(monkeypatch):
     assert [p.title for p in comp.papers] == ["FlashAttention-2", "Transformer"]
     assert comp.synthesis == ""  # synthesis skipped -> no LLM call
     assert comp.usage is not None
+
+
+def test_comparison_csv_has_header_and_rows():
+    csv_text = to_csv(_comparison())
+    reader = csv.DictReader(io.StringIO(csv_text))
+    rows = list(reader)
+    assert len(rows) == 2
+    assert rows[0]["arxiv_id"] == "2307.08691"
+    assert rows[0]["title"] == "FlashAttention-2"
+    assert rows[0]["year"] == "2023"
+    assert rows[0]["main_contribution"] == "faster attention"
+    assert rows[0]["methods"] == "Tiling"
+    assert rows[1]["arxiv_id"] == "1706.03762"
+
+
+def test_comparison_csv_method_via_schema(tmp_path):
+    comp = _comparison()
+    csv_text = comp.to_csv()
+    reader = csv.DictReader(io.StringIO(csv_text))
+    rows = list(reader)
+    assert len(rows) == 2
+    assert "official_code" in (reader.fieldnames or [])
+    assert rows[0]["official_code"] == "https://github.com/x/y"
+
+
+def test_comparison_csv_writes_file(tmp_path):
+    out = tmp_path / "compare.csv"
+    _comparison().to_csv(str(out))
+    assert out.exists()
+    content = out.read_text(encoding="utf-8")
+    assert "arxiv_id" in content
+    assert "2307.08691" in content
+
+
+def test_comparison_csv_with_synthesis():
+    from papermind.output.schema import Comparison, ComparedPaper
+    comp = Comparison(
+        papers=[ComparedPaper(title="A", arxiv_id="1234.56789")],
+        synthesis="Great paper overall.",
+    )
+    csv_text = to_csv(comp)
+    assert "1234.56789" in csv_text
+    assert "Great paper overall." in csv_text

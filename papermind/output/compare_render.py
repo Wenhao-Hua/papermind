@@ -81,6 +81,29 @@ def to_html(comparison: Comparison) -> str:
     )
 
 
+def to_csv(comparison: Comparison) -> str:
+    """Return comparison as CSV with one paper per row."""
+    buf = io.StringIO()
+    fieldnames = ["title", "arxiv_id", "year", "main_contribution", "novelty", "methods", "benchmark", "hardware", "official_code"]
+    writer = csv.DictWriter(buf, fieldnames=fieldnames, lineterminator="\n")
+    writer.writeheader()
+    for p in comparison.papers:
+        writer.writerow({
+            "title": p.title or "",
+            "arxiv_id": p.arxiv_id or "",
+            "year": str(p.year) if p.year else "",
+            "main_contribution": p.main_contribution or "",
+            "novelty": p.novelty or "",
+            "methods": "; ".join(p.methods) if p.methods else "",
+            "benchmark": p.benchmark or "",
+            "hardware": p.hardware or "",
+            "official_code": p.official_code or "",
+        })
+    if comparison.synthesis:
+        buf.write(f"\n# synthesis: {comparison.synthesis.replace(chr(10), ' ')}\n")
+    return buf.getvalue()
+
+
 def _html_cell(label: str, value: str) -> str:
     if label == "官方代码" and value.startswith("http"):
         return f"<a href='{_e(value)}'>{_e(value)}</a>"
