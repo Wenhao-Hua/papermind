@@ -46,6 +46,19 @@ def to_markdown(comparison: Comparison) -> str:
     return "\n".join(lines) + "\n"
 
 
+def to_csv(comparison: Comparison) -> str:
+    headers = _headers(comparison)
+    buf = io.StringIO()
+    writer = csv.writer(buf, lineterminator="\n")
+    writer.writerow(["维度"] + headers)
+    for label, values in _rows(comparison):
+        writer.writerow([label] + values)
+    if comparison.synthesis:
+        writer.writerow([])
+        writer.writerow(["对比小结", comparison.synthesis])
+    return buf.getvalue()
+
+
 def _md_cell(value: str) -> str:
     return value.replace("\n", " ").replace("|", "\\|")
 
