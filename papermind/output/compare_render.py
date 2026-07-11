@@ -50,6 +50,19 @@ def _md_cell(value: str) -> str:
     return value.replace("\n", " ").replace("|", "\\|")
 
 
+def to_csv(comparison: Comparison) -> str:
+    """Render comparison as CSV with one row per dimension and one column per paper."""
+    buf = io.StringIO()
+    writer = csv.writer(buf)
+    writer.writerow(["维度"] + _headers(comparison))
+    for label, values in _rows(comparison):
+        writer.writerow([label] + values)
+    if comparison.synthesis:
+        writer.writerow([])
+        writer.writerow(["对比小结", comparison.synthesis])
+    return buf.getvalue()
+
+
 _CSS = (
     "body{font:16px/1.6 -apple-system,Segoe UI,Roboto,'PingFang SC','Microsoft YaHei',sans-serif;"
     "max-width:1000px;margin:40px auto;padding:0 20px;color:#1a1a2e}"
