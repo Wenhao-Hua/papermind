@@ -150,3 +150,64 @@ def test_compare_orchestration_reuses_mocked_analyze(monkeypatch):
     assert [p.title for p in comp.papers] == ["FlashAttention-2", "Transformer"]
     assert comp.synthesis == ""  # synthesis skipped -> no LLM call
     assert comp.usage is not None
+
+
+def test_comparison_csv_header_and_rows():
+    import csv
+    import io
+
+    comp = _comparison()
+    text = to_csv(comp)
+    rows = list(csv.reader(io.StringIO(text)))
+    # first row: ["维度", "2307.08691", "1706.03762"]
+    assert rows[0] == ["维度", "2307.08691", "1706.03762"]
+    labels = [r[0] for r in rows[1:]]
+    assert "核心贡献" in labels
+    assert "关键方法" in labels
+    assert "标题" in labels
+
+
+def test_comparison_csv_values_correct():
+    import csv
+    import io
+
+    comp = _comparison()
+    text = to_csv(comp)
+    rows = {r[0]: r[1:] for r in csv.reader(io.StringIO(text))}
+    assert rows["核心贡献"] == ["faster attention", "attention-only arch"]
+    assert rows["关键方法"] == ["Tiling", "Self-Attention"]
+
+
+def test_comparison_csv_synthesis_appended():
+    import csv
+    import io
+
+    from papermind.output.schema import Comparison, ComparedPaper
+
+    comp = Comparison(
+        papers=[
+            ComparedPaper(title="A", arxiv_id="0001.00001", main_contribution="c1"),
+            ComparedPaper(title="B", arxiv_id="0002.00002", main_contribution="c2"),
+        ],
+        synthesis="Both papers advance attention.",
+    )
+    text = to_csv(comp)
+    rows = list(csv.reader(io.StringIO(text)))
+    last = rows[-1]
+    assert last[0] == "对比小结" and "Both papers" in last[1]
+
+
+def test_comparison_csv_to_file(tmp_path):
+    comp = _comparison()
+    out = str(tmp_path / "result.csv")
+    returned = comp.to_csv(out)
+    assert (tmp_path / "result.csv").read_text(encoding="utf-8") == returned
+    assert "维度" in returned and "2307.08691" in returned
+
+
+def test_comparison_csv_no_pipes_or_html():
+    """CSV must not contain Markdown pipe characters or HTML tags."""
+    comp = _comparison()
+    text = to_csv(comp)
+    assert "<" not in text
+    assert ">" not in text

@@ -50,6 +50,24 @@ def _md_cell(value: str) -> str:
     return value.replace("\n", " ").replace("|", "\\|")
 
 
+def to_csv(comparison: Comparison) -> str:
+    """Return a UTF-8 CSV string with one row per dimension and one column per paper.
+
+    The first column is the dimension label; subsequent columns are paper values
+    keyed by arXiv ID (or '#N' for papers without one).  A trailing synthesis row
+    is appended when present so the full comparison is self-contained in one file.
+    """
+    buf = io.StringIO()
+    writer = csv.writer(buf, lineterminator="\n")
+    headers = _headers(comparison)
+    writer.writerow(["维度"] + headers)
+    for label, values in _rows(comparison):
+        writer.writerow([label] + [v.replace("\n", " ") for v in values])
+    if comparison.synthesis:
+        writer.writerow(["对比小结"] + [comparison.synthesis] + [""] * (len(headers) - 1))
+    return buf.getvalue()
+
+
 _CSS = (
     "body{font:16px/1.6 -apple-system,Segoe UI,Roboto,'PingFang SC','Microsoft YaHei',sans-serif;"
     "max-width:1000px;margin:40px auto;padding:0 20px;color:#1a1a2e}"
