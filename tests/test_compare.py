@@ -74,6 +74,27 @@ def test_comparison_json_round_trip():
     assert "usage" not in data  # usage excluded from export
 
 
+def test_comparison_csv_export():
+    csv_text = to_csv(_comparison())
+    rows = list(csv.DictReader(io.StringIO(csv_text)))
+    assert len(rows) == 2
+    assert rows[0]["arxiv_id"] == "2307.08691"
+    assert rows[0]["标题"] == "FlashAttention-2"
+    assert rows[0]["年份"] == "2023"
+    assert rows[0]["核心贡献"] == "faster attention"
+    assert rows[0]["关键方法"] == "Tiling"
+    assert rows[1]["arxiv_id"] == "1706.03762"
+    assert rows[1]["关键方法"] == "Self-Attention"
+
+
+def test_comparison_csv_to_file(tmp_path):
+    out = tmp_path / "compare.csv"
+    _comparison().to_csv(str(out))
+    rows = list(csv.DictReader(out.open(encoding="utf-8")))
+    assert len(rows) == 2
+    assert rows[0]["arxiv_id"] == "2307.08691"
+
+
 def test_has_compare_modules_rejects_partial_report():
     full = _report("F", "1", "c", "M", "2x")  # contributions + technical + reproduction
     assert compare_mod._has_compare_modules(full) is True

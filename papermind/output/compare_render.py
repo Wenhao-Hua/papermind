@@ -87,6 +87,27 @@ def _html_cell(label: str, value: str) -> str:
     return _e(value)
 
 
+def to_csv(comparison: Comparison) -> str:
+    """Return a CSV where each row is one paper and each column is a dimension."""
+    buf = io.StringIO()
+    fieldnames = ["arxiv_id", "标题", "年份", "核心贡献", "新颖之处", "关键方法", "性能/基准", "推荐硬件", "官方代码"]
+    writer = csv.DictWriter(buf, fieldnames=fieldnames, lineterminator="\n")
+    writer.writeheader()
+    for p in comparison.papers:
+        writer.writerow({
+            "arxiv_id": p.arxiv_id or "",
+            "标题": p.title or "",
+            "年份": str(p.year) if p.year else "",
+            "核心贡献": p.main_contribution or "",
+            "新颖之处": p.novelty or "",
+            "关键方法": "; ".join(p.methods) if p.methods else "",
+            "性能/基准": p.benchmark or "",
+            "推荐硬件": p.hardware or "",
+            "官方代码": p.official_code or "",
+        })
+    return buf.getvalue()
+
+
 def _e(text) -> str:
     return _html.escape(str(text)) if text is not None else ""
 
