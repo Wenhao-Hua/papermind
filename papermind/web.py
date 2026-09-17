@@ -273,6 +273,19 @@ def create_app(live: bool = False, rate_per_ip: int = 8, rate_global: int = 300,
         ok, scope = limiter.take(_client_ip(request))
         return None if ok else _quota_msg(scope, limiter)
 
+    @app.get('/traces', response_class=HTMLResponse)
+    def traces(pm_sid: Optional[str] = Cookie(None)):
+        from papermind.trace_view import render_traces
+        sess = _session_for(pm_sid)
+        history = sess.get('log', []) if sess else []
+        return render_traces([answer.trace for _, answer in history if answer.trace])
+
+    @app.get('/metrics')
+    def metrics():
+        from fastapi.responses import Response
+        from papermind.observability import prometheus_text
+        return Response(prometheus_text(), media_type='text/plain; version=0.0.4')
+
     @app.get("/healthz")
     def healthz():
         return {"ok": True, "live": live}
@@ -418,7 +431,7 @@ def create_app(live: bool = False, rate_per_ip: int = 8, rate_global: int = 300,
             answer = sess2["chat"].ask(q)
             sess2["log"].append((q, answer))
             _store_session(sid, sess2)
-            return _page("/", _chat_log_html(sess2["log"]) + _ask_form(live, source=paper), live)
+            return _page("/", '<p><a href="/traces">Inspect query traces →</a></p>' + _chat_log_html(sess2["log"]) + _ask_form(live, source=paper), live)
 
         jid = _start_job(work, kind="ask", on_fail=lambda: limiter.release(ip))
         return _with_session(HTMLResponse(_job_page(jid, live, "/")), sid)

@@ -87,3 +87,12 @@ docker run -p 8080:8080 -e DEEPSEEK_API_KEY=sk-... -e PAPERMIND_TRUST_PROXY=1 pa
 ## 贡献 / License
 
 欢迎 PR / issue（[CONTRIBUTING.md](CONTRIBUTING.md)）· [MIT](LICENSE)
+# Query observability and evaluation
+
+Q&A now returns per-query traces. In the web app, ask a question and open
+`/traces` to inspect stage timings, candidate passages, dense/reranker scores,
+selected chunks and usage. `/metrics` exports Prometheus counters/histograms.
+See [observability and reproducible evaluation](docs/observability.md) for setup,
+five-method retrieval benchmarks, standalone evaluation dashboards, measurement
+scope and unfinished experiments. New measurements are stored separately from
+the existing headline experiment results.

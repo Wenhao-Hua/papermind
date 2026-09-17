@@ -6,6 +6,7 @@ from typing import List, Optional, Tuple
 
 from papermind.llm.base import LLMClient
 from papermind.qa.index import Chunk, PaperIndex
+from papermind.observability import current_trace, span
 
 
 class Retriever:
@@ -23,13 +24,29 @@ class Retriever:
             pool = max(k * 3, k)
         else:
             pool = k
-        results = self.index.search(self.client.embed([query]), k=pool)
+        with span('embedding'):
+            vector = self.client.embed([query])
+        with span('retrieval'):
+            results = self.index.search(vector, k=pool)
         if section:
             results = [r for r in results if section.lower() in (r[0].section or "").lower()] or results
+        trace = current_trace()
+        if trace is not None:
+            trace.candidates = [{'chunk_id':c.idx,'section':c.section,'page':c.page,
+                                 'text':c.text,'dense_score':float(score),'rerank_score':None}
+                                for c,score in results]
         if self.reranker is not None and results:
-            ranked = self.reranker.rerank(query, [c.text for c, _ in results], top_k=k)
-            return [(results[i][0], float(score)) for i, score in ranked]
-        return results[:k]
+            with span('reranking'):
+                ranked = self.reranker.rerank(query, [c.text for c, _ in results], top_k=k)
+            selected = [(results[i][0], float(score)) for i, score in ranked]
+            if trace is not None:
+                for i,score in ranked:
+                    trace.candidates[i]['rerank_score'] = float(score)
+        else:
+            selected = results[:k]
+        if trace is not None:
+            trace.selected_chunk_ids = [c.idx for c,_ in selected]
+        return selected
 
     @staticmethod
     def format_passages(results: List[Tuple[Chunk, float]]) -> str:
