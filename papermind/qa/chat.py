@@ -20,6 +20,7 @@ from papermind.parser.arxiv import resolve
 from papermind.parser.pdf import parse_pdf
 from papermind.qa.index import PaperIndex
 from papermind.qa.retriever import Retriever
+from papermind.observability import query_trace, span
 
 _VALID_KINDS = {"fact", "inference", "out_of_scope"}
 _VALID_CONFIDENCE = {"high", "mid", "low"}
@@ -110,6 +111,20 @@ class PaperChat:
 
     # -- internals ---------------------------------------------------------- #
     def _answer(
+        self, system, make_user, retrieval_query, question_text, k, on_delta=None, section=None,
+    ) -> Answer:
+        before = self.client.usage.snapshot()
+        with query_trace() as trace:
+            try:
+                answer = self._answer_impl(system, make_user, retrieval_query, question_text, k, on_delta, section)
+                answer.usage = self.client.usage.minus(before)
+                trace.usage = answer.usage.model_dump()
+            finally:
+                self.last_trace = trace
+        answer.trace = trace.to_dict()
+        return answer
+
+    def _answer_impl(
         self,
         system: str,
         make_user: Callable[[str], str],
@@ -122,7 +137,8 @@ class PaperChat:
         # Follow-up questions retrieve better with a touch of prior context.
         query = f"{self._last_user}\n{retrieval_query}" if self._last_user else retrieval_query
         results = self.retriever.retrieve(query, k=k, section=section)
-        passages = Retriever.format_passages(results)
+        with span('context'):
+            passages = Retriever.format_passages(results)
 
         messages = (
             [{"role": "system", "content": system}]
@@ -130,7 +146,8 @@ class PaperChat:
             + [{"role": "user", "content": make_user(passages)}]
         )
         before = self.client.usage.snapshot()
-        data = self.client.complete_json_messages(messages, on_delta=on_delta)
+        with span('llm'):
+            data = self.client.complete_json_messages(messages, on_delta=on_delta)
         answer = self._parse_answer(question_text, data)
         _verify_evidence(answer.evidence, [chunk for chunk, _ in results])
         answer.usage = self.client.usage.minus(before)

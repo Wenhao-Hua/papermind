@@ -380,6 +380,7 @@ class SourceRef(BaseModel):
 
 class Answer(BaseModel):
     question: str
+    trace: Optional[dict] = None  # request-local timings, retrieval scores and usage
     segments: List[AnswerSegment] = Field(default_factory=list)
     evidence: List[EvidenceItem] = Field(default_factory=list)
     sources: List[SourceRef] = Field(default_factory=list)
