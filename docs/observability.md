@@ -50,8 +50,20 @@ unrun methods) and `.queries.json` (rankings, gold indices and per-query timings
 Use a clean commit for final research runs; the input hash identifies the actual
 evaluated sample even when code is being developed.
 
-This delivery runs BM25 on 40 dev papers / 116 eligible questions. It does not
-rerun existing Dense/Reranker headline results, and those numbers must not be
-compared directly to this smaller lexical sample. Full five-method evaluation,
+This delivery runs BM25, Dense and Hybrid on the same 40 dev papers / 116 eligible
+questions (`evaluation/results/retrieval-dev-40.json`). Dense uses the locally
+cached `sentence-transformers/all-MiniLM-L6-v2` on CPU. BM25 Recall@5 is 0.2995,
+Dense 0.4151, Hybrid 0.3731; MRR is 0.3249 / 0.3965 / 0.4473 respectively. RRF
+improves first-relevant ranking but reduces Recall@5 versus Dense on this sample.
+No claim is made that fusion improves every metric. Reproduce the three-method run:
+
+```bash
+python -m evaluation.eval_retrieval --methods all --reranker= --max-papers 40 --out evaluation/results/retrieval-dev-40.json
+python -m evaluation.dashboard evaluation/results/retrieval-dev-40.json
+```
+
+Existing full-corpus headline results use other settings and must not be directly
+compared to this smaller sample. No trained reranker checkpoint was available.
+Full five-method evaluation,
 negative-sampling/training ablations, and answer faithfulness/relevance evaluation
 remain follow-up work. The dashboard displays saved measurements only.

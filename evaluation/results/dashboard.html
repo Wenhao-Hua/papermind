@@ -1,20 +1,20 @@
-<!doctype html><html lang="en"><meta charset="utf-8"><title>PaperMind evaluation</title><style>body{font:16px system-ui;margin:48px;color:#173527;background:#f8faf6}table{border-collapse:collapse}th,td{padding:12px;border-bottom:1px solid #bdcabb;text-align:left}pre{white-space:pre-wrap}h1{font-size:40px}.scroll{overflow:auto}</style><h1>Retrieval evaluation</h1><p>Source: bm25-dev-40.json</p><div class="scroll"><table><tr><th>Method</th><th>Recall@1</th><th>Recall@5</th><th>Recall@10</th><th>Recall@20</th><th>MRR</th><th>nDCG@10</th><th>F1@5</th><th>n_queries</th><th>latency_p50_ms</th><th>latency_p95_ms</th></tr><tr><th>BM25</th><td>0.0797</td><td>0.2995</td><td>0.4506</td><td>0.6859</td><td>0.3249</td><td>0.2871</td><td>0.1546</td><td>116</td><td>0.0990999978967011</td><td>0.24884999584173784</td></tr></table></div><h2>Run provenance and limits</h2><pre>{
-  &quot;created_at&quot;: &quot;2026-09-17T10:30:52.787976+00:00&quot;,
-  &quot;git_revision&quot;: &quot;5960e4165786b08567377f35798e39521c83a41c&quot;,
-  &quot;git_dirty&quot;: true,
+<!doctype html><html lang="en"><meta charset="utf-8"><title>PaperMind evaluation</title><style>body{font:16px system-ui;margin:48px;color:#173527;background:#f8faf6}table{border-collapse:collapse}th,td{padding:12px;border-bottom:1px solid #bdcabb;text-align:left}pre{white-space:pre-wrap}h1{font-size:40px}.scroll{overflow:auto}</style><h1>Retrieval evaluation</h1><p>Source: retrieval-dev-40.json</p><div class="scroll"><table><tr><th>Method</th><th>Recall@1</th><th>Recall@5</th><th>Recall@10</th><th>Recall@20</th><th>MRR</th><th>nDCG@10</th><th>F1@5</th><th>n_queries</th><th>latency_p50_ms</th><th>latency_p95_ms</th></tr><tr><th>BM25</th><td>0.0797</td><td>0.2995</td><td>0.4506</td><td>0.6859</td><td>0.3249</td><td>0.2871</td><td>0.1546</td><td>116</td><td>0.33260000054724514</td><td>0.643850005872082</td></tr><tr><th>Dense</th><td>0.0945</td><td>0.4151</td><td>0.5952</td><td>0.8246</td><td>0.3965</td><td>0.3879</td><td>0.2243</td><td>116</td><td>17.4653000140097</td><td>21.888125011173543</td></tr><tr><th>Hybrid</th><td>0.1494</td><td>0.3731</td><td>0.606</td><td>0.7892</td><td>0.4473</td><td>0.4046</td><td>0.1994</td><td>116</td><td>17.84835002035834</td><td>22.570900022401474</td></tr></table></div><h2>Run provenance and limits</h2><pre>{
+  &quot;created_at&quot;: &quot;2026-09-17T14:16:08.351621+00:00&quot;,
+  &quot;git_revision&quot;: &quot;3916ed9457542db955fbdddb384b70a9a82646b1&quot;,
+  &quot;git_dirty&quot;: false,
   &quot;evaluator_sha256&quot;: &quot;e2cda19682cbf015492786ada815657e52138d2c0b65108d0d8deeb865921327&quot;,
   &quot;python&quot;: &quot;3.13.5&quot;,
   &quot;platform&quot;: &quot;Windows-11-10.0.26200-SP0&quot;,
   &quot;config&quot;: {
     &quot;raw_dir&quot;: &quot;data/raw&quot;,
-    &quot;methods&quot;: &quot;bm25&quot;,
+    &quot;methods&quot;: &quot;all&quot;,
     &quot;split&quot;: &quot;dev&quot;,
     &quot;dense_model&quot;: &quot;sentence-transformers/all-MiniLM-L6-v2&quot;,
     &quot;query_instruction&quot;: &quot;&quot;,
-    &quot;reranker&quot;: &quot;checkpoints/reranker&quot;,
+    &quot;reranker&quot;: &quot;&quot;,
     &quot;rerank_topk&quot;: 30,
     &quot;max_papers&quot;: 40,
-    &quot;out&quot;: &quot;evaluation/results/bm25-dev-40.json&quot;
+    &quot;out&quot;: &quot;evaluation/results/retrieval-dev-40.json&quot;
   },
   &quot;dataset&quot;: &quot;QASPER&quot;,
   &quot;split&quot;: &quot;dev&quot;,
@@ -23,8 +23,6 @@
   &quot;input_sha256&quot;: &quot;67f17be81cc2a7a9268c069172310ff6e75186c5b29eef1f35d753670ed248d4&quot;,
   &quot;timing_scope&quot;: &quot;Sequential query scoring; excludes corpus embedding, index build, model load and network download. Includes query embedding for dense methods.&quot;,
   &quot;not_run&quot;: [
-    &quot;Dense&quot;,
-    &quot;Hybrid&quot;,
     &quot;Dense+Reranker&quot;,
     &quot;Hybrid+Reranker&quot;
   ]
