@@ -7,7 +7,7 @@ chunk IDs, source text, dense scores, available rerank scores, selected chunks,
 and per-turn usage. Total time excludes paper download, parsing and index build.
 Usage now includes query embedding as well as answer generation.
 
-Start the existing web application (`papermind web --live`); after asking a
+Start the existing web application (`papermind ui`); after asking a
 question, follow **Inspect query traces** to `/traces`. The page reads only the
 current browser session, escapes document content, and does not persist trace
 passages to logs. Session expiration also removes its trace UI history.
