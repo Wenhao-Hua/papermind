@@ -1,0 +1,18 @@
+{
+  "original_files": {
+    "ablation.json": {
+      "sha256": "bc49c49fa298b1d680fde8a4dee018b6eab8bb7c9b4012d7dc1a95e896def721",
+      "status": "preserved original; original checkpoint unavailable, not independently reproduced"
+    },
+    "ablation_bge_dev.json": {
+      "sha256": "4233accb9b65023041939a66b68c74ab7c7f1835bc4e0d8b4958ef83741387b3",
+      "status": "preserved original; original checkpoint unavailable, not independently reproduced"
+    },
+    "ablation_bge_test.json": {
+      "sha256": "1314d2244a195c706577c7da3bdd78e61b59a29fee59a85ac720e6ecd739665c",
+      "status": "preserved original; original checkpoint unavailable, not independently reproduced"
+    }
+  },
+  "prior_40_paper_baselines": "all six ranking metrics match fresh rerun exactly",
+  "not_claimed": "Original full-corpus trained-reranker results were not reproduced."
+}

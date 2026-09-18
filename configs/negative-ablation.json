@@ -1,0 +1,15 @@
+{
+  "model": "prajjwal1/bert-tiny",
+  "dense_model": "sentence-transformers/all-MiniLM-L6-v2",
+  "train_papers": 20,
+  "dev_papers": 40,
+  "negative_strategies": ["random", "bm25", "dense", "mixed"],
+  "negatives_per_positive": 2,
+  "max_length": 128,
+  "topk": 20,
+  "epochs": 3,
+  "seed": 42,
+  "learning_rate": 0.00005,
+  "batch_size": 16,
+  "notes": "Recorded protocol; execute trainer.negative_ablation with its CLI defaults."
+}

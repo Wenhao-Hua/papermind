@@ -1,3 +1,19 @@
+# PaperMind — Retrieval & Reranking Research
+
+**Search -> Verifier -> Trajectory -> Learning -> Retrieval/Memory.**
+
+Research track: BM25, Dense, RRF Hybrid and two reranking pipelines on QASPER;
+controlled random/BM25/dense/mixed negative-mining experiments with real CPU training.
+The 116-query pilot records a negative result: Dense Recall@5 **0.4151**, tiny
+random-negative reranker **0.3984**. No improvement is claimed.
+
+[Protocol, complete metrics and reproduction](docs/retrieval-research.md) ·
+[Raw experiment](evaluation/results/negative-ablation/ablation.json)
+
+Historical results and the existing application are preserved below.
+
+---
+
 # PaperMind
 
 > **把任意论文，读懂到能复现 —— 关键判断都标原文出处、逐条核验。**
