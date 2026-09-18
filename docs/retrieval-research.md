@@ -4,6 +4,38 @@ PaperMind tests the Retrieval/Memory part of the Search -> Verifier -> Trajector
 -> Learning -> Retrieval/Memory portfolio. Existing paper-reading and RAG features
 remain available; research evaluation is independent from generated answer quality.
 
+## Three fixed-seed replication (42, 7, 2026)
+
+All four negative-mining variants were really retrained under the same protocol
+for two additional preselected seeds. Dense Recall@5 remains 0.4151. Values below
+are Dense+Reranker Recall@5; intervals are differences from Dense.
+
+| Negatives | Seed 42 | Seed 7 | Seed 2026 | Mean +/- SD | Paired delta 95% interval |
+|---|---:|---:|---:|---:|---:|
+| random | 0.3984 | 0.4167 | 0.3905 | 0.4019 +/- 0.0134 | [-0.0715, 0.0477] |
+| bm25 | 0.2733 | 0.3339 | 0.3094 | 0.3055 +/- 0.0305 | [-0.1759, -0.0369] |
+| dense | 0.2075 | 0.2672 | 0.2107 | 0.2285 +/- 0.0336 | [-0.2672, -0.1006] |
+| mixed | 0.3166 | 0.3664 | 0.3807 | 0.3546 +/- 0.0336 | [-0.1254, 0.0085] |
+
+Random negatives do not establish a robust gain over Dense. Bootstrap intervals
+resample 40 papers with replacement, preserving questions within papers and pairing
+methods, for 2,000 draws (seed 1709). They condition on these three trained models;
+they are not confidence intervals over all possible training seeds. Do not treat
+repeated seeds as independent evaluation questions. No new hyperparameter tuning
+was performed based on these dev outcomes.
+
+Reproduce after running trainer.negative_ablation with seeds 7 and 2026 into
+`evaluation/results/negative-ablation-seed7` and `negative-ablation-seed2026`:
+
+```sh
+python -m evaluation.seed_stability evaluation/results/negative-ablation evaluation/results/negative-ablation-seed7 evaluation/results/negative-ablation-seed2026
+```
+
+Git stores each raw ranking file as queries.json.gz; decompress to queries.json
+before aggregation. Loss histories and checkpoint hashes accompany each seed.
+Full local suite now has 273 passing tests. Initial single-seed analysis follows
+as historical context; the table above supersedes its one-seed scope limitation.
+
 ## Controlled CPU pilot
 
 QASPER train: first 20 eligible papers, 72 queries. QASPER dev: first 40 eligible
