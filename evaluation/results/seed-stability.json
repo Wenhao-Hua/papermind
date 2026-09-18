@@ -1,0 +1,80 @@
+{
+  "training_seeds": [
+    42,
+    7,
+    2026
+  ],
+  "papers": 40,
+  "queries": 116,
+  "dense_recall5": 0.4151,
+  "bootstrap": {
+    "draws": 2000,
+    "seed": 1709,
+    "unit": "paper",
+    "paired": true,
+    "interpretation": "percentile interval conditional on the three trained models; not uncertainty over all training seeds"
+  },
+  "input_sha256": {
+    "evaluation\\results\\negative-ablation": "34c9d48c38a910615e86c658d8c792677a9edadee1d2ee12af6d325ba6bc9d79",
+    "evaluation\\results\\negative-ablation-seed7": "52de3fa6651a0a2b3263325696602a9fc0b0e19dec1d6942a71bb653bec3d098",
+    "evaluation\\results\\negative-ablation-seed2026": "5d46f80ad3f79d1972784690e8cb0a0b27752c1b5b7e05fc7705c0635144253d"
+  },
+  "summary": {
+    "random": {
+      "recall5_per_seed": [
+        0.3984,
+        0.4167,
+        0.3905
+      ],
+      "mean_recall5": 0.40186666666666665,
+      "sample_std_recall5": 0.013439618050128265,
+      "paired_mean_delta_vs_dense": -0.01320259425609324,
+      "paired_paper_bootstrap_95_interval": [
+        -0.07148444746593813,
+        0.04774608597333004
+      ]
+    },
+    "bm25": {
+      "recall5_per_seed": [
+        0.2733,
+        0.3339,
+        0.3094
+      ],
+      "mean_recall5": 0.3055333333333333,
+      "sample_std_recall5": 0.030484476924056498,
+      "paired_mean_delta_vs_dense": -0.10955198171222512,
+      "paired_paper_bootstrap_95_interval": [
+        -0.17586964216198497,
+        -0.0369448071770473
+      ]
+    },
+    "dense": {
+      "recall5_per_seed": [
+        0.2075,
+        0.2672,
+        0.2107
+      ],
+      "mean_recall5": 0.22846666666666665,
+      "sample_std_recall5": 0.033582187738938826,
+      "paired_mean_delta_vs_dense": -0.18658480633632762,
+      "paired_paper_bootstrap_95_interval": [
+        -0.2671835121582508,
+        -0.1006077117748933
+      ]
+    },
+    "mixed": {
+      "recall5_per_seed": [
+        0.3166,
+        0.3664,
+        0.3807
+      ],
+      "mean_recall5": 0.35456666666666664,
+      "sample_std_recall5": 0.03364852646600343,
+      "paired_mean_delta_vs_dense": -0.060483575614153705,
+      "paired_paper_bootstrap_95_interval": [
+        -0.1254452616138406,
+        0.00849945933579064
+      ]
+    }
+  }
+}
